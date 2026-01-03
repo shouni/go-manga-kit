@@ -1,2 +1,6 @@
 github.com/shouni/gemini-image-kit v1.0.0 h1:/V++bEFo2D69+4AlO/DuIm9E5XLsm17ovxU/ajnnW/c=
 github.com/shouni/gemini-image-kit v1.0.0/go.mod h1:IM57a1w/Jy8C5Uvub61c84aQUOFFjw8dU9EsiCrconk=
+github.com/shouni/go-text-format v1.1.1 h1:fvO4AL9YnHHCiKnqPaHz8KNeiuyVc2Fwhr/lForj5mI=
+github.com/shouni/go-text-format v1.1.1/go.mod h1:7DbMhYBvi4xIdOM9u69c00SM74nxGBWPLjfUochyLl0=
+github.com/yuin/goldmark v1.7.13 h1:GPddIs617DnBLFFVJFgpo1aBfe/4xcvMc3SB5t/D0pA=
+github.com/yuin/goldmark v1.7.13/go.mod h1:ip/1k0VRfGynBgxOz0yCqHrbZXhcjxyuS66Brc7iBKg=
