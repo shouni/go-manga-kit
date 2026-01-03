@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/shouni/gemini-image-kit/pkg/domain"
@@ -18,6 +19,36 @@ func NewPromptBuilder(dna DNAMap, suffix string) *PromptBuilder {
 		dnaMap:        dna,
 		defaultSuffix: suffix,
 	}
+}
+
+// BuildFullPagePrompt は、全パネルの情報を統合し、1枚のマンガページを生成するための巨大なプロンプトを構築します。
+func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []string, dnas []CharacterDNA) string {
+	var sb strings.Builder
+
+	// 1. 全体構造の定義
+	sb.WriteString(MangaStructureHeader)
+	sb.WriteString(fmt.Sprintf("\n- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
+
+	// 2. タイトルと共通スタイルの適用
+	sb.WriteString(fmt.Sprintf("\n### TITLE: %s ###\n", mangaTitle))
+	sb.WriteString(RenderingStyle)
+	if pb.defaultSuffix != "" {
+		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pb.defaultSuffix))
+	}
+	sb.WriteString("\n")
+
+	// 3. 登場キャラクターのDNA定義
+	sb.WriteString(BuildCharacterIdentitySection(dnas))
+
+	// 4. 各パネルの具体的な内容を結合
+	for i, panelPrompt := range pages {
+		isBig := i == 0 // 最初のコマを大ゴマとする簡易ロジック
+		sb.WriteString(BuildPanelHeader(i+1, len(pages), isBig))
+		sb.WriteString(panelPrompt)
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
 }
 
 // BuildUnifiedPrompt は、パネル情報とキャラクターDNAを統合したプロンプトを生成します。
