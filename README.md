@@ -1,5 +1,10 @@
 # 🎨 Go Manga Kit
 
+[![Language](https://img.shields.io/badge/Language-Go-blue)](https://golang.org/)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/shouni/go-manga-kit)](https://golang.org/)
+[![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## 🚀 概要 (About) - テキストから「マンガ」を紡ぐ、AIオーケストレーション・キット
 
 **Go Manga Kit** は、AI（Gemini/Imagen）を用いたマンガ生成の複雑な工程を自動化し、構造化するためのGo言語向けライブラリなのだ。
