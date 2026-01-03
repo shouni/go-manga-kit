@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/shouni/gemini-image-kit/pkg/domain"
@@ -23,12 +22,14 @@ func NewPromptBuilder(dna DNAMap, suffix string) *PromptBuilder {
 
 // BuildUnifiedPrompt は、パネル情報とキャラクターDNAを統合したプロンプトを生成します。
 func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage) (string, int32) {
-	var sb strings.Builder
+	parts := make([]string, 0, 3)
 	seed := int32(0)
 
 	// 1. キャラクターDNAの注入
 	if dna, ok := pb.dnaMap[page.SpeakerID]; ok {
-		sb.WriteString(fmt.Sprintf("%s, ", dna.VisualCue))
+		if dna.VisualCue != "" {
+			parts = append(parts, dna.VisualCue)
+		}
 		seed = dna.Seed
 	} else if page.SpeakerID != "" {
 		// 未登録キャラクターでも名前からシードを固定
@@ -37,11 +38,13 @@ func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage) (string, int3
 
 	// 2. アクション/ビジュアルアンカーの追加
 	if page.VisualAnchor != "" {
-		sb.WriteString(fmt.Sprintf("%s, ", page.VisualAnchor))
+		parts = append(parts, page.VisualAnchor)
 	}
 
 	// 3. デフォルトサフィックスの結合
-	sb.WriteString(pb.defaultSuffix)
+	if pb.defaultSuffix != "" {
+		parts = append(parts, pb.defaultSuffix)
+	}
 
-	return sb.String(), seed
+	return strings.Join(parts, ", "), seed
 }
