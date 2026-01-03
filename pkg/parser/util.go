@@ -54,13 +54,17 @@ func resolveBaseURL(scriptURL string) string {
 		return finalURL.String()
 
 	case "http", "https":
-		// HTTP/S の場合はパスをディレクトリ階層までとし、末尾にスラッシュを付与します
-		u.Path = dir
-		if !strings.HasSuffix(u.Path, "/") {
-			u.Path += "/"
+		// ベースURLにクエリパラメータやフラグメントは不要なため、
+		// 必要な要素のみで新しいURLオブジェクトを構築する。
+		baseURL := &url.URL{
+			Scheme: u.Scheme,
+			Host:   u.Host,
+			Path:   dir,
 		}
-		// RawQuery 等を保持したまま String() で出力可能です
-		return u.String()
+		if !strings.HasSuffix(baseURL.Path, "/") {
+			baseURL.Path += "/"
+		}
+		return baseURL.String()
 
 	default:
 		slog.Debug("未対応のURLスキームです。ベースURLの解決をスキップします", "scheme", u.Scheme)

@@ -82,7 +82,7 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 				case fieldKeyLayout:
 					// 将来的な拡張（レイアウト指定等）のために予約
 				default:
-					slog.Debug("Unknown field key found in markdown", "key", key)
+					slog.Debug("Markdown内に未知のフィールドキーが見つかりました", "key", key)
 				}
 			}
 		}
