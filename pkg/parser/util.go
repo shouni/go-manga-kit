@@ -39,12 +39,8 @@ func resolveBaseURL(scriptURL string) string {
 		}
 
 		// バケット名(u.Host)とディレクトリパス(dir)を安全に結合します
-		pathElements := []string{u.Host}
-		if trimmedDir := strings.TrimPrefix(dir, "/"); trimmedDir != "" {
-			pathElements = append(pathElements, trimmedDir)
-		}
-
-		finalURL := baseURL.JoinPath(pathElements...)
+		// JoinPathは空の要素を無視するため、正規化されたdirが空でも問題ありません
+		finalURL := baseURL.JoinPath(u.Host, strings.TrimPrefix(dir, "/"))
 
 		// 構造体の Path フィールドを直接操作し、ディレクトリであることを示す
 		// スラッシュを末尾に保証します。これによりクエリ等が含まれてもURLが破損しません。
