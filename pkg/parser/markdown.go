@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 
 	"github.com/shouni/gemini-image-kit/pkg/domain"
@@ -32,23 +33,26 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 	lines := strings.Split(input, "\n")
 	var currentPage *domain.MangaPage
 
+	// 前のページを確定して追加するヘルパー関数
+	addPreviousPage := func() {
+		if currentPage != nil && p.hasContent(currentPage) {
+			manga.Pages = append(manga.Pages, *currentPage)
+		}
+	}
+
 	for _, line := range lines {
 		trimmedLine := strings.TrimSpace(line)
 		if trimmedLine == "" {
 			continue
 		}
 
-		// 1. タイトル行 (# Title) の解析
 		if m := TitleRegex.FindStringSubmatch(trimmedLine); m != nil {
 			manga.Title = strings.TrimSpace(m[1])
 			continue
 		}
 
-		// 2. パネル区切り (## Panel) の解析とアセットパスの解決
 		if m := PanelRegex.FindStringSubmatch(trimmedLine); m != nil {
-			if currentPage != nil && p.hasContent(currentPage) {
-				manga.Pages = append(manga.Pages, *currentPage)
-			}
+			addPreviousPage() // 新しいパネルの開始前に、前のパネルを追加する
 
 			var refPath string
 			if len(m) > 1 {
@@ -69,6 +73,7 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
 				switch key {
 				case fieldKeySpeaker:
+					// SpeakerIDはシステム内で一意に扱うため、小文字に正規化する
 					currentPage.SpeakerID = strings.ToLower(val)
 				case fieldKeyText:
 					currentPage.Dialogue = val
@@ -101,8 +106,15 @@ func (p *Parser) hasContent(page *domain.MangaPage) bool {
 }
 
 func (p *Parser) resolveFullPath(refPath string) string {
-	if refPath == "" || strings.HasPrefix(refPath, "http") {
+	if refPath == "" {
+		return ""
+	}
+
+	// URLをパースし、SchemeとHostが存在すれば絶対URLとみなす
+	u, err := url.Parse(refPath)
+	if err == nil && u.Scheme != "" && u.Host != "" {
 		return refPath
 	}
+
 	return p.baseURL + refPath
 }

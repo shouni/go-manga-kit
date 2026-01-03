@@ -23,7 +23,9 @@ func resolveBaseURL(scriptURL string) string {
 	}
 
 	dir := path.Dir(u.Path)
-	// ルートディレクトリの場合の挙動を正規化します
+	// path.Dir は、パスがファイル名のみ（"script.md"）の場合に "." を、
+	// ルートディレクトリ（"/script.md"）の場合に "/" を返します。
+	// これらを空文字列に正規化することで、ベースURLを正しく構築できるようにします。
 	if dir == "." || dir == "/" {
 		dir = ""
 	}
@@ -31,24 +33,33 @@ func resolveBaseURL(scriptURL string) string {
 	switch u.Scheme {
 	case "gs":
 		// GCSの場合は Google Cloud Storage の公開URL形式に変換します
-		// url.URL 構造体を使用して安全に組み立てます
 		baseURL := &url.URL{
 			Scheme: "https",
 			Host:   "storage.googleapis.com",
 		}
-		// u.Host (バケット名) と dir (ディレクトリパス) をパス要素として安全に結合します
+
+		// バケット名(u.Host)とディレクトリパス(dir)を安全に結合します
 		pathElements := []string{u.Host}
 		if trimmedDir := strings.TrimPrefix(dir, "/"); trimmedDir != "" {
 			pathElements = append(pathElements, trimmedDir)
 		}
+
 		finalURL := baseURL.JoinPath(pathElements...)
 
-		// ディレクトリを示すために末尾にスラッシュを追加
-		return finalURL.String() + "/"
+		// 構造体の Path フィールドを直接操作し、ディレクトリであることを示す
+		// スラッシュを末尾に保証します。これによりクエリ等が含まれてもURLが破損しません。
+		if !strings.HasSuffix(finalURL.Path, "/") {
+			finalURL.Path += "/"
+		}
+		return finalURL.String()
 
 	case "http", "https":
 		// HTTP/S の場合はパスをディレクトリ階層までとし、末尾にスラッシュを付与します
-		u.Path = dir + "/"
+		u.Path = dir
+		if !strings.HasSuffix(u.Path, "/") {
+			u.Path += "/"
+		}
+		// RawQuery 等を保持したまま String() で出力可能です
 		return u.String()
 
 	default:
