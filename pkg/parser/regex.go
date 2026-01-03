@@ -7,7 +7,7 @@ var (
 	TitleRegex = regexp.MustCompile(`^#\s+(.+)`)
 
 	// PanelRegex は "## Panel" で始まるパネル区切り行を特定します。
-	PanelRegex = regexp.MustCompile(`^##\s+Panel`)
+	PanelRegex = regexp.MustCompile(`^##\s+Panel(?::\s*(.*))?`)
 
 	// FieldRegex は "- key: value" 形式のフィールド行をキャプチャします。
 	FieldRegex = regexp.MustCompile(`^\s*-\s*([a-zA-Z0-9_-]+):\s*(.+)`)

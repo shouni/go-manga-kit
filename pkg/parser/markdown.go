@@ -2,12 +2,12 @@ package parser
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
-// Markdown解析で使用されるフィールドキーの定数定義
 const (
 	fieldKeySpeaker = "speaker"
 	fieldKeyText    = "text"
@@ -15,13 +15,11 @@ const (
 	fieldKeyLayout  = "layout"
 )
 
-// Parser はMarkdown形式の台本を解析し、構造化されたデータに変換する構造体です。
+// Parser はMarkdown形式の台本を解析し、構造化データに変換する構造体です。
 type Parser struct {
-	baseURL string // GCS等のアセット参照用ベースURL
+	baseURL string
 }
 
-// NewParser は新しい Parser インスタンスを生成します。
-// scriptURL が指定されている場合、そのディレクトリをベースURLとしてアセットのパスを解決します。
 func NewParser(scriptURL string) *Parser {
 	return &Parser{
 		baseURL: resolveBaseURL(scriptURL),
@@ -47,12 +45,15 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 		}
 
 		// 2. パネル区切り (## Panel) の解析とアセットパスの解決
-		if PanelRegex.MatchString(trimmedLine) {
-			if currentPage != nil {
+		if m := PanelRegex.FindStringSubmatch(trimmedLine); m != nil {
+			if currentPage != nil && p.hasContent(currentPage) {
 				manga.Pages = append(manga.Pages, *currentPage)
 			}
 
-			refPath := extractReferencePath(trimmedLine)
+			var refPath string
+			if len(m) > 1 {
+				refPath = strings.TrimSpace(m[1])
+			}
 			fullPath := p.resolveFullPath(refPath)
 
 			currentPage = &domain.MangaPage{
@@ -75,13 +76,15 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 					currentPage.VisualAnchor = val
 				case fieldKeyLayout:
 					// 将来的な拡張（レイアウト指定等）のために予約
+				default:
+					slog.Debug("Unknown field key found in markdown", "key", key)
 				}
 			}
 		}
 	}
 
-	// 最後のパネルをスライスに追加
-	if currentPage != nil {
+	// 最後のパネルのバリデーションと追加
+	if currentPage != nil && p.hasContent(currentPage) {
 		manga.Pages = append(manga.Pages, *currentPage)
 	}
 
@@ -92,19 +95,14 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 	return manga, nil
 }
 
-// resolveFullPath は相対パスをbaseURLと結合し、完全なURLを生成します。
+// hasContent はパネルに有効な情報が含まれているか判定します。
+func (p *Parser) hasContent(page *domain.MangaPage) bool {
+	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
+}
+
 func (p *Parser) resolveFullPath(refPath string) string {
 	if refPath == "" || strings.HasPrefix(refPath, "http") {
 		return refPath
 	}
 	return p.baseURL + refPath
-}
-
-// extractReferencePath は行から ":" 以降の参照パスを抽出します。
-func extractReferencePath(line string) string {
-	_, after, found := strings.Cut(line, ":")
-	if !found {
-		return ""
-	}
-	return strings.TrimSpace(after)
 }
