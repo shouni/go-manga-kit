@@ -93,9 +93,6 @@ func (p *Parser) resolveFullPath(refPath string) string {
 
 // extractReferencePath は "## Panel: path/to/ref.png" からパス部分だけを抜き出すのだ
 func extractReferencePath(line string) string {
-	if !strings.Contains(line, ":") {
-		return ""
-	}
 	_, after, found := strings.Cut(line, ":")
 	if !found {
 		return ""
