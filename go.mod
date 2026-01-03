@@ -1,4 +1,4 @@
-module go-manga-kit
+module github.com/shouni/go-manga-kit
 
 go 1.25
 
