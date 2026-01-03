@@ -35,11 +35,16 @@ func resolveBaseURL(scriptURL string) string {
 		baseURL := &url.URL{
 			Scheme: "https",
 			Host:   "storage.googleapis.com",
-			// u.Host (バケット名) と dir (ディレクトリパス) を結合します
-			// path.Join で要素が欠落しないよう、dir の先頭スラッシュを除去してから結合します
-			Path: path.Join(u.Host, strings.TrimPrefix(dir, "/")) + "/",
 		}
-		return baseURL.String()
+		// u.Host (バケット名) と dir (ディレクトリパス) をパス要素として安全に結合します
+		pathElements := []string{u.Host}
+		if trimmedDir := strings.TrimPrefix(dir, "/"); trimmedDir != "" {
+			pathElements = append(pathElements, trimmedDir)
+		}
+		finalURL := baseURL.JoinPath(pathElements...)
+
+		// ディレクトリを示すために末尾にスラッシュを追加
+		return finalURL.String() + "/"
 
 	case "http", "https":
 		// HTTP/S の場合はパスをディレクトリ階層までとし、末尾にスラッシュを付与します
