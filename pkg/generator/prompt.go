@@ -25,15 +25,18 @@ func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage) (string, int3
 	parts := make([]string, 0, 3)
 	seed := int32(0)
 
-	// 1. キャラクターDNAの注入
+	// SpeakerIDが存在する場合、まず名前からシードを決定
+	if page.SpeakerID != "" {
+		seed = GetSeedFromName(page.SpeakerID)
+	}
+
+	// 1. 登録済みキャラクターDNAの注入
 	if dna, ok := pb.dnaMap[page.SpeakerID]; ok {
 		if dna.VisualCue != "" {
 			parts = append(parts, dna.VisualCue)
 		}
+		// 登録済みのシードで上書き（手動指定の可能性があるため）
 		seed = dna.Seed
-	} else if page.SpeakerID != "" {
-		// 未登録キャラクターでも名前からシードを固定
-		seed = GetSeedFromName(page.SpeakerID)
 	}
 
 	// 2. アクション/ビジュアルアンカーの追加
@@ -46,5 +49,13 @@ func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage) (string, int3
 		parts = append(parts, pb.defaultSuffix)
 	}
 
-	return strings.Join(parts, ", "), seed
+	// 空の要素をフィルタリング
+	filteredParts := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p != "" {
+			filteredParts = append(filteredParts, p)
+		}
+	}
+
+	return strings.Join(filteredParts, ", "), seed
 }
