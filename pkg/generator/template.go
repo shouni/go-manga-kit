@@ -3,6 +3,8 @@ package generator
 import (
 	"fmt"
 	"strings"
+
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // マンガの基本構造を定義するテンプレート定数
@@ -35,15 +37,22 @@ func BuildPanelHeader(current, total int, isBigPanel bool) string {
 }
 
 // BuildCharacterIdentitySection はキャラクターのマスター情報を定義するセクションを生成します。
-func BuildCharacterIdentitySection(dnas []CharacterDNA) string {
-	if len(dnas) == 0 {
+func BuildCharacterIdentitySection(chars []domain.Character) string {
+	if len(chars) == 0 {
 		return ""
 	}
 
 	var sb strings.Builder
-	sb.WriteString("### CHARACTER DNA (MASTER IDENTITY) ###\n")
-	for _, dna := range dnas {
-		sb.WriteString(fmt.Sprintf("- [%s]: FEATURES: %s\n", dna.Name, dna.VisualCue))
+	sb.WriteString("### CHARACTER MASTER DEFINITIONS (STRICT IDENTITY) ###\n")
+	for _, char := range chars {
+		// VisualCues (スライス) をカンマ区切りで結合する
+		cues := "None"
+		if len(char.VisualCues) > 0 {
+			cues = strings.Join(char.VisualCues, ", ")
+		}
+
+		// AIが「この名前が出てきたらこの特徴を使う」と認識しやすい形式にするのだ
+		sb.WriteString(fmt.Sprintf("- SUBJECT [%s]: VISUAL_FEATURES: {%s}\n", char.Name, cues))
 	}
 	sb.WriteString("\n")
 	return sb.String()

@@ -1,53 +1,79 @@
 package builder
 
 import (
-	"github.com/shouni/go-manga-kit/pkg/director"
-	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/parser"
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/patrickmn/go-cache"
+	imageKit "github.com/shouni/gemini-image-kit/pkg/adapters"
+	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
+	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-manga-kit/pkg/pipeline"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
-	"github.com/shouni/go-text-format/pkg/md2html"
+	"google.golang.org/genai"
 )
 
-// MangaKit はライブラリの全機能を統合したエントリーポイントなのだ。
-type MangaKit struct {
-	Pipeline  *pipeline.Pipeline
-	Publisher *publisher.WebtoonPublisher
-	Layout    *director.LayoutManager
-	Style     *director.StyleManager
-}
-
-// BuildDefaultPipeline は、標準的な設定でパイプラインを構築するのだ。
-// scriptURL は、台本内の相対パス画像を解決するためのベースURLなのだよ。
-func BuildDefaultPipeline(adapter pipeline.ImageGenerator, scriptURL string, styleSuffix string) (*pipeline.Pipeline, error) {
-	// 1. パーサーの初期化
-	// parser.NewParser(scriptURL) とすることで、引数不足を解消したのだ！
-	p := parser.NewParser(scriptURL)
-
-	// 2. プロンプトビルダーの初期化
-	b := generator.NewPromptBuilder(make(generator.DNAMap), styleSuffix)
-
-	// 3. パイプラインの構築
-	return pipeline.NewPipeline(p, b, adapter), nil
-}
-
-// NewMangaKit は、すべてのコンポーネントを統合して提供する便利な関数なのだ。
-func NewMangaKit(adapter pipeline.ImageGenerator, conv md2html.Converter, scriptURL string, styleSuffix string) (*MangaKit, error) {
-	// BuildDefaultPipeline に scriptURL を渡すように修正したのだ
-	pipe, err := BuildDefaultPipeline(adapter, scriptURL, styleSuffix)
+// InitializeAIClient は gemini クライアントを初期化します。
+func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeModel, error) {
+	const defaultGeminiTemperature = float32(0.2)
+	clientConfig := gemini.Config{
+		APIKey:      apiKey,
+		Temperature: genai.Ptr(defaultGeminiTemperature),
+	}
+	aiClient, err := gemini.NewClient(ctx, clientConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
+	}
+	return aiClient, nil
+}
+
+// InitializeImageCore は各アダプターで共有する画像処理コアを生成します。
+func InitializeImageCore(clientInterface httpkit.ClientInterface) imageKit.ImageGeneratorCore {
+	// 参照画像のダウンロード結果を保持するキャッシュ
+	imgCache := cache.New(30*time.Minute, 1*time.Hour)
+	cacheTTL := 1 * time.Hour
+
+	return imageKit.NewGeminiImageCore(
+		clientInterface,
+		imgCache,
+		cacheTTL,
+	)
+}
+
+// InitializeImageAdapter は、個別パネル用アダプターの初期化。
+func InitializeImageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel, promptSuffix string) (pipeline.ImageAdapter, error) {
+	imageAdapter, err := imageKit.NewGeminiImageAdapter(
+		core,
+		aiClient,
+		imageModel,
+		promptSuffix,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("画像アダプターの初期化に失敗しました: %w", err)
 	}
 
-	pub, err := publisher.NewWebtoonPublisher(conv)
-	if err != nil {
-		return nil, err
-	}
-
-	return &MangaKit{
-		Pipeline:  pipe,
-		Publisher: pub,
-		Layout:    director.NewLayoutManager(),
-		Style:     director.NewStyleManager(),
-	}, nil
+	return imageAdapter, nil
 }
+
+// InitializeMangaPageAdapter は、マンガのページ画像を生成するアダプターの初期化。
+// pipeline.MangaPageAdapter インターフェースに適合させて返すのだ。
+func InitializeMangaPageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel string) pipeline.MangaPageAdapter {
+	// pipeline.MangaPageAdapter インターフェースを実装しているアダプターを返すのだ
+	return imageKit.NewGeminiMangaPageAdapter(
+		core,
+		aiClient,
+		imageModel,
+	)
+}
+
+//// NewPromptBuilder は、キャラクター情報と画風サフィックスを元にプロンプトビルダーを生成するのだ！
+//// 戻り値は pipeline パッケージで定義されたインターフェース（pipeline.PromptBuilder）として返すのだ。
+//func NewPromptBuilder(chars []domain.Character, promptSuffix string) pipeline.PromptBuilder {
+//	// 1. スライス形式のキャラクター情報を、IDや名前で引きやすい CharactersMap に変換するのだ。
+//	// これにより、generator パッケージ側で O(1) でキャラクターを検索できるようになるのだ！
+//	charMap := domain.BuildCharactersMap(chars)
+//
+//	// 2. generator パッケージのコンストラクタを呼び出すのだ。
+//	// 先ほど記憶した func NewPromptBuilder(chars domain.CharactersMap, suffix string) *PromptBuilder に完全準拠なのだ。
+//	return generator.NewPromptBuilder(charMap, promptSuffix)
+//}

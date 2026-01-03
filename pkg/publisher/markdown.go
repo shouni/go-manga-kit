@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // MarkdownPublisher は、生成結果を構造化された Markdown 形式で出力する役割を担います。
