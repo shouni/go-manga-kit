@@ -10,5 +10,5 @@ var (
 	PanelRegex = regexp.MustCompile(`^##\s+Panel`)
 
 	// FieldRegex は "- key: value" 形式のフィールド行をキャプチャします。
-	FieldRegex = regexp.MustCompile(`^\s*-\s*([a-zA-Z_]+):\s*(.+)`)
+	FieldRegex = regexp.MustCompile(`^\s*-\s*([a-zA-Z0-9_-]+):\s*(.+)`)
 )

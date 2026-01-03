@@ -7,20 +7,28 @@ import (
 	"github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
-// Parser はMarkdown形式の台本を解析する構造体なのだ
+// Markdown解析で使用されるフィールドキーの定数定義
+const (
+	fieldKeySpeaker = "speaker"
+	fieldKeyText    = "text"
+	fieldKeyAction  = "action"
+	fieldKeyLayout  = "layout"
+)
+
+// Parser はMarkdown形式の台本を解析し、構造化されたデータに変換する構造体です。
 type Parser struct {
 	baseURL string // GCS等のアセット参照用ベースURL
 }
 
-// NewParser は新しい Parser インスタンスを生成するのだ
-// scriptURL が指定されている場合、そのディレクトリをベースURLとしてアセットを解決するのだ
+// NewParser は新しい Parser インスタンスを生成します。
+// scriptURL が指定されている場合、そのディレクトリをベースURLとしてアセットのパスを解決します。
 func NewParser(scriptURL string) *Parser {
 	return &Parser{
 		baseURL: resolveBaseURL(scriptURL),
 	}
 }
 
-// Parse はMarkdownテキストを MangaResponse 構造体に変換するのだ
+// Parse はMarkdownテキストを解析し、domain.MangaResponse 構造体に変換します。
 func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
@@ -32,13 +40,13 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 			continue
 		}
 
-		// 1. タイトル行 (# Title)
+		// 1. タイトル行 (# Title) の解析
 		if m := TitleRegex.FindStringSubmatch(trimmedLine); m != nil {
 			manga.Title = strings.TrimSpace(m[1])
 			continue
 		}
 
-		// 2. パネル区切り (## Panel)
+		// 2. パネル区切り (## Panel) の解析とアセットパスの解決
 		if PanelRegex.MatchString(trimmedLine) {
 			if currentPage != nil {
 				manga.Pages = append(manga.Pages, *currentPage)
@@ -54,36 +62,37 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 			continue
 		}
 
-		// 3. フィールド行 (- key: value)
+		// 3. フィールド行 (- key: value) の解析
 		if currentPage != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
 				switch key {
-				case "speaker":
+				case fieldKeySpeaker:
 					currentPage.SpeakerID = strings.ToLower(val)
-				case "text":
+				case fieldKeyText:
 					currentPage.Dialogue = val
-				case "action":
+				case fieldKeyAction:
 					currentPage.VisualAnchor = val
-				case "layout":
-					// 将来的にレイアウト指定もパースできるように拡張可能なのだ
+				case fieldKeyLayout:
+					// 将来的な拡張（レイアウト指定等）のために予約
 				}
 			}
 		}
 	}
 
+	// 最後のパネルをスライスに追加
 	if currentPage != nil {
 		manga.Pages = append(manga.Pages, *currentPage)
 	}
 
 	if len(manga.Pages) == 0 {
-		return nil, fmt.Errorf("有効なパネルが見つかりませんでしたなのだ")
+		return nil, fmt.Errorf("有効なパネル情報が見つかりませんでした")
 	}
 
 	return manga, nil
 }
 
-// resolveFullPath は相対パスをbaseURLと結合してフルURLにするのだ
+// resolveFullPath は相対パスをbaseURLと結合し、完全なURLを生成します。
 func (p *Parser) resolveFullPath(refPath string) string {
 	if refPath == "" || strings.HasPrefix(refPath, "http") {
 		return refPath
@@ -91,7 +100,7 @@ func (p *Parser) resolveFullPath(refPath string) string {
 	return p.baseURL + refPath
 }
 
-// extractReferencePath は "## Panel: path/to/ref.png" からパス部分だけを抜き出すのだ
+// extractReferencePath は行から ":" 以降の参照パスを抽出します。
 func extractReferencePath(line string) string {
 	_, after, found := strings.Cut(line, ":")
 	if !found {
