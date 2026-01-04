@@ -31,7 +31,7 @@ func addAppFlags(rootCmd *cobra.Command) {
 
 	// --- 画像生成 (Nano Banana) 固有設定 ---
 	rootCmd.PersistentFlags().IntVarP(&opts.PanelLimit, "panel-limit", "p", config.DefaultPanelLimit, "生成する漫画パネルの最大数を指定するのだ。")
-	rootCmd.Flags().StringVarP(&opts.CharacterConfig, "char-config", "c", "examples/characters.json", "キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。")
+	rootCmd.Flags().StringVarP(&opts.CharacterConfig, "char-config", "c", "internal/config/characters.json", "キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。")
 	//	generateCmd.Flags().StringVarP(&opts.Layout, "layout", "l", "4-panel", "漫画のレイアウト形式（4コマ、自由形式など）なのだ。")
 }
 
@@ -56,5 +56,6 @@ func Execute() {
 		scriptCmd,
 		imageCmd,
 		storyCmd,
+		designCmd,
 	)
 }
