@@ -15,16 +15,16 @@ import (
 
 // GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
 type GroupPipeline struct {
-	manga      Pipeline
-	basePrompt string
-	interval   time.Duration
+	mangaPipeline Pipeline
+	basePrompt    string
+	interval      time.Duration
 }
 
-func NewGroupPipeline(manga Pipeline, basePrompt string, interval time.Duration) *GroupPipeline {
+func NewGroupPipeline(mangaPipeline Pipeline, basePrompt string, interval time.Duration) *GroupPipeline {
 	return &GroupPipeline{
-		manga:      manga,
-		basePrompt: basePrompt,
-		interval:   interval,
+		mangaPipeline: mangaPipeline,
+		basePrompt:    basePrompt,
+		interval:      interval,
 	}
 }
 
@@ -50,7 +50,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			}
 
 			// 1. キャラクター解決
-			char := gp.resolveAndGetCharacter(page, gp.manga.Characters)
+			char := gp.resolveAndGetCharacter(page, gp.mangaPipeline.Characters)
 
 			// 2. プロンプト構築
 			prompt, negPrompt := gp.buildPrompt(page.VisualAnchor, char.VisualCues)
@@ -63,7 +63,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			}
 
 			// 4. アダプター呼び出し
-			resp, err := gp.manga.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+			resp, err := gp.mangaPipeline.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         prompt,
 				NegativePrompt: negPrompt,
 				Seed:           seedPtr,
