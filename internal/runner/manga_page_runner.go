@@ -8,11 +8,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/shouni/go-manga-kit/pkg/adapters"
 	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/pipeline"
 
-	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
 )
 
 var (
@@ -23,12 +23,12 @@ var (
 
 // MangaPageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
 type MangaPageRunner struct {
-	pipeline   *adapters.PagePipeline
+	pipeline   *pipeline.PagePipeline
 	characters map[string]domain.Character
 	baseURL    string
 }
 
-func NewMangaPageRunner(adapter imagekit.GeminiMangaPageAdapter, characters map[string]domain.Character, styleSuffix string, scriptURL string) *MangaPageRunner {
+func NewMangaPageRunner(adapter imagekit.ImageGenerator, characters map[string]domain.Character, styleSuffix string, scriptURL string) *MangaPageRunner {
 	baseURL := ""
 	u, err := url.Parse(scriptURL)
 	if err == nil && u.Scheme == "gs" {
@@ -36,7 +36,7 @@ func NewMangaPageRunner(adapter imagekit.GeminiMangaPageAdapter, characters map[
 	}
 
 	return &MangaPageRunner{
-		pipeline:   adapters.NewPagePipeline(adapter, styleSuffix),
+		pipeline:   pipeline.NewPagePipeline(adapter, styleSuffix),
 		characters: characters,
 		baseURL:    baseURL,
 	}

@@ -1,4 +1,4 @@
-package adapters
+package pipeline
 
 import (
 	"context"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
@@ -15,12 +15,12 @@ import (
 
 // GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
 type GroupPipeline struct {
-	adapter    imagekit.ImageAdapter
+	adapter    imagekit.ImageGenerator
 	basePrompt string
-	interval   time.Duration // config.DefaultRateLimit の代わりに外部から注入するのだ
+	interval   time.Duration
 }
 
-func NewGroupPipeline(adapter imagekit.ImageAdapter, basePrompt string, interval time.Duration) *GroupPipeline {
+func NewGroupPipeline(adapter imagekit.ImageGenerator, basePrompt string, interval time.Duration) *GroupPipeline {
 	return &GroupPipeline{
 		adapter:    adapter,
 		basePrompt: basePrompt,

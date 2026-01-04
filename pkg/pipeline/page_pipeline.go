@@ -1,4 +1,4 @@
-package adapters
+package pipeline
 
 import (
 	"context"
@@ -7,18 +7,18 @@ import (
 	"fmt"
 	"strings"
 
-	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // PagePipeline は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
 type PagePipeline struct {
-	adapter     imagekit.GeminiMangaPageAdapter
+	adapter     imagekit.ImageGenerator
 	styleSuffix string
 }
 
-func NewPagePipeline(adapter imagekit.GeminiMangaPageAdapter, styleSuffix string) *PagePipeline {
+func NewPagePipeline(adapter imagekit.ImageGenerator, styleSuffix string) *PagePipeline {
 	return &PagePipeline{
 		adapter:     adapter,
 		styleSuffix: styleSuffix,
