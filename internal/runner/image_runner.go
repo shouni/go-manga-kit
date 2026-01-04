@@ -10,7 +10,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/pipeline"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
+	"github.com/shouni/gemini-image-kit/pkg/generator"
 )
 
 // ImageRunner は、漫画の台本データを基に画像を生成するためのインターフェース。
@@ -27,7 +27,7 @@ type MangaImageRunner struct {
 }
 
 // NewMangaImageRunner は、依存関係を注入して Runner を初期化するのだ。
-func NewMangaImageRunner(adapter imagekit.ImageGenerator, chars map[string]mngdom.Character, limit int, basePrompt string) *MangaImageRunner {
+func NewMangaImageRunner(imgGen generator.ImageGenerator, chars map[string]mngdom.Character, limit int, basePrompt string) *MangaImageRunner {
 	// IDを小文字に統一して検索しやすくするのだ
 	normalizedChars := make(map[string]mngdom.Character)
 	for k, v := range chars {
@@ -35,7 +35,7 @@ func NewMangaImageRunner(adapter imagekit.ImageGenerator, chars map[string]mngdo
 	}
 
 	// pkg/adapters に切り出した汎用パイプラインを構築するのだ
-	pipeline := pipeline.NewGroupPipeline(adapter, basePrompt, config.DefaultRateLimit)
+	pipeline := pipeline.NewGroupPipeline(imgGen, basePrompt, config.DefaultRateLimit)
 
 	return &MangaImageRunner{
 		pipeline:   pipeline,
