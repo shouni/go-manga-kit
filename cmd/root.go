@@ -47,7 +47,7 @@ func preRunAppE(cmd *cobra.Command, args []string) error {
 // main.go から呼び出されて、cobra のコマンドライン解析を開始するのだよ。
 func Execute() {
 	clibase.Execute(
-		"ap-manga-go",
+		"go-manga-kit",
 		addAppFlags,
 		preRunAppE,
 		generateCmd,
