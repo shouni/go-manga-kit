@@ -20,9 +20,8 @@ type ImageRunner interface {
 
 // MangaImageRunner は、アプリケーション層の実行管理を担う実体なのだ。
 type MangaImageRunner struct {
-	pipeline   *mangakit.GroupPipeline     // 汎用化された生成パイプライン
-	characters map[string]mngdom.Character // 利用可能なキャラクター設定
-	limit      int                         // 生成パネル数の制限（テスト用）
+	pipeline *mangakit.GroupPipeline // 汎用化された生成パイプライン
+	limit    int                     // 生成パネル数の制限（テスト用）
 }
 
 // NewMangaImageRunner は、依存関係を注入して Runner を初期化します

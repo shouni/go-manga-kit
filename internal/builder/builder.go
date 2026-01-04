@@ -23,7 +23,7 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 }
 
 // BuildMangaPageRunner は 8パネル一括のページ生成を担当する Runner を構築します。
-func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.MangaPageRunner, error) {
+func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (runner.PageRunner, error) {
 	// 2. Runner の生成
 	return runner.NewMangaPageRunner(
 		appCtx.MangaPipeline,

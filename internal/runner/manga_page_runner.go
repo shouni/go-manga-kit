@@ -20,6 +20,12 @@ var (
 	fieldRegex = regexp.MustCompile(`^\s*-\s*([a-zA-Z_]+):\s*(.+)`)
 )
 
+// PageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
+type PageRunner interface {
+	Run(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error)
+	RunMarkdown(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error)
+}
+
 // MangaPageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
 type MangaPageRunner struct {
 	pipeline *mangakit.PagePipeline
