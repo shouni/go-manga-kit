@@ -19,7 +19,7 @@
 * **📖 Script-to-Manga Pipeline**: 「伝説の漫画編集者プロンプト」がドキュメントを解析。セリフ、構図指示、SHA256ハッシュ化された `speaker_id` を含む構造化データを自動生成。
 * **📐 Dynamic Layout Director**: ページ生成時に「主役パネル（Big Panel）」を動的に決定。生成のたびに異なる演出を楽しめるのだ。
 * **🎭 Multi-Stage Workflow**: キャラクターデザイン（DNA固定）→ 台本生成（JSON）→ 個別画像生成 → 統合ページ錬成の段階的プロセスにより、AIとの共同制作を実現。
-* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御により、APIクォータを尊重しつつ安定した作画を継続するのだ。
+  **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きインメモリキャッシュにより、APIクォータを尊重しつつ安定した作画を継続するのだ。
 
 ---
 
@@ -79,7 +79,7 @@
 # ずんだもん、めたんの二面図を生成してSeedを確認
 bin/mangakit design --chars zundamon,metan
 
-# 📌 抽出された Seed 値: 12345
+# 📌 抽出された Seed 値: <your_generated_seed>
 # この値を characters.json の seed 欄に設定して、DNAを固定するのだ！
 
 ```
