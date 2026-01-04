@@ -13,28 +13,28 @@ import (
 
 // PagePipeline は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
 type PagePipeline struct {
-	manga       Pipeline
-	styleSuffix string
+	mangaPipeline Pipeline
+	styleSuffix   string
 }
 
-func NewPagePipeline(manga Pipeline, styleSuffix string) *PagePipeline {
+func NewPagePipeline(mangaPipeline Pipeline, styleSuffix string) *PagePipeline {
 	return &PagePipeline{
-		manga:       manga,
-		styleSuffix: styleSuffix}
+		mangaPipeline: mangaPipeline,
+		styleSuffix:   styleSuffix}
 }
 
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
 func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
 	// 1. 参照URLの収集
-	refURLs := pp.collectReferences(manga.Pages, pp.manga.Characters)
+	refURLs := pp.collectReferences(manga.Pages, pp.mangaPipeline.Characters)
 
 	// 2. 巨大な統合プロンプトの構築
-	fullPrompt := pp.buildUnifiedPrompt(manga, pp.manga.Characters, refURLs)
+	fullPrompt := pp.buildUnifiedPrompt(manga, pp.mangaPipeline.Characters, refURLs)
 
 	// 3. シード値の決定（最初のパネルのキャラを優先）
 	var defaultSeed *int64
 	if len(manga.Pages) > 0 {
-		char := pp.findCharacter(manga.Pages[0].SpeakerID, pp.manga.Characters)
+		char := pp.findCharacter(manga.Pages[0].SpeakerID, pp.mangaPipeline.Characters)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -49,7 +49,7 @@ func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.Manga
 		ReferenceURLs:  refURLs,
 	}
 
-	return pp.manga.ImgGen.GenerateMangaPage(ctx, req)
+	return pp.mangaPipeline.ImgGen.GenerateMangaPage(ctx, req)
 }
 
 // findCharacter は SpeakerID（名前またはハッシュ化ID）からキャラを特定するのだ
