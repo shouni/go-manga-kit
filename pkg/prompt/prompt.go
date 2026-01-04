@@ -26,12 +26,6 @@ func NewPromptBuilder(chars domain.CharactersMap, suffix string) *PromptBuilder 
 func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) string {
 	var sb strings.Builder
 
-	// 0. Reference URLの逆引きマップ（どのURLが何番目か）を準備
-	urlToIndex := make(map[string]int)
-	for i, url := range refURLs {
-		urlToIndex[url] = i + 1
-	}
-
 	// 1. マンガ全体構造の定義
 	sb.WriteString(MangaStructureHeader)
 	sb.WriteString(fmt.Sprintf("\n- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
@@ -48,6 +42,7 @@ func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.M
 	sb.WriteString(BuildCharacterIdentitySection(pb.characterMap))
 
 	// 4. ランダムな大ゴマの決定
+	// ページの演出に多様性を持たせるため、ランダムに1つのパネルを大ゴマとして指定する。
 	numPanels := len(pages)
 	bigPanelIndex := -1
 	if numPanels > 0 {
@@ -87,8 +82,8 @@ func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID str
 		}
 		seed = char.Seed
 	} else {
-		// 登録がない、またはSpeakerIDが空の場合は名前からシードを生成するのだ
-		// domainに定義した GetSeedFromName を使うのが正解なのだ
+		// マップに登録がない、またはspeakerIDが空の場合、
+		// speakerIDから決定論的なシード値を生成する。
 		seed = domain.GetSeedFromName(speakerID, pb.characterMap)
 	}
 
