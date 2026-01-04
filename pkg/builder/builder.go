@@ -9,7 +9,7 @@ import (
 	imageKit "github.com/shouni/gemini-image-kit/pkg/adapters"
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-manga-kit/pkg/pipeline"
+	"github.com/shouni/go-manga-kit/pkg/adapters"
 	"google.golang.org/genai"
 )
 
@@ -41,7 +41,7 @@ func InitializeImageCore(clientInterface httpkit.ClientInterface) imageKit.Image
 }
 
 // InitializeImageAdapter は、個別パネル用アダプターの初期化。
-func InitializeImageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel, promptSuffix string) (pipeline.ImageAdapter, error) {
+func InitializeImageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel, promptSuffix string) (adapters.ImageAdapter, error) {
 	imageAdapter, err := imageKit.NewGeminiImageAdapter(
 		core,
 		aiClient,
@@ -56,8 +56,8 @@ func InitializeImageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.Ge
 }
 
 // InitializeMangaPageAdapter は、マンガのページ画像を生成するアダプターの初期化。
-// pipeline.MangaPageAdapter インターフェースに適合させて返すのだ。
-func InitializeMangaPageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel string) pipeline.MangaPageAdapter {
+// adapters.MangaPageAdapter インターフェースに適合させて返すのだ。
+func InitializeMangaPageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel string) adapters.MangaPageAdapter {
 	// pipeline.MangaPageAdapter インターフェースを実装しているアダプターを返すのだ
 	return imageKit.NewGeminiMangaPageAdapter(
 		core,

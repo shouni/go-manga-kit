@@ -1,4 +1,4 @@
-package pipeline
+package adapters
 
 import (
 	"context"
