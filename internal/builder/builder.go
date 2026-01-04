@@ -34,8 +34,6 @@ func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.Mang
 	}
 
 	// 2. Runner の生成
-	// ポインタへの変換は不要になったので、chars をそのまま渡せるのだ。
-	// 第3引数は、Runner内でPagePipelineに渡されるスタイル指定なのだ。
 	return runner.NewMangaPageRunner(
 		*manga,
 		appCtx.Config.ImagePromptSuffix,
@@ -81,7 +79,7 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 func initializeMangaPipeline(appCtx *AppContext) (*mngkit.Pipeline, error) {
 	pl, err := mngkit.NewPipeline(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiImageModel, appCtx.Options.ScriptFile)
 	if err != nil {
-		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
+		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
 	}
 
 	return pl, nil

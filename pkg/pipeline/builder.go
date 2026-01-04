@@ -18,8 +18,8 @@ type Pipeline struct {
 	Characters map[string]domain.Character
 }
 
-func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, JsonPath string) (*Pipeline, error) {
-	characters, err := loadCharacters(JsonPath)
+func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, jsonPath string) (*Pipeline, error) {
+	characters, err := loadCharacters(jsonPath)
 	if err != nil {
 		return nil, fmt.Errorf("loadCharacters failed: %w", err)
 	}
@@ -66,7 +66,7 @@ func initializeImageGenerator(httpClient httpkit.ClientInterface, aiClient gemin
 	return imgGen, nil
 }
 
-// loadCharacters は指定されたファイルパスからJSONを読み込み、キャラクターマップを返すのだ。
+// loadCharacters は指定されたファイルパスからJSONを読み込み、キャラクターマップを返します。
 func loadCharacters(path string) (map[string]domain.Character, error) {
 	// 1. ファイルの読み込み
 	data, err := os.ReadFile(path)

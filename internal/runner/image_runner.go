@@ -14,7 +14,7 @@ import (
 
 // ImageRunner は、漫画の台本データを基に画像を生成するためのインターフェース。
 type ImageRunner interface {
-	// Run は台本の全ページに対して画像生成を実行し、結果のリストを返すのだ。
+	// Run は台本の全ページに対して画像生成を実行し、結果のリストを返します
 	Run(ctx context.Context, manga mngdom.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
 
@@ -25,11 +25,11 @@ type MangaImageRunner struct {
 	limit      int                         // 生成パネル数の制限（テスト用）
 }
 
-// NewMangaImageRunner は、依存関係を注入して Runner を初期化するのだ。
+// NewMangaImageRunner は、依存関係を注入して Runner を初期化します
 // func NewMangaImageRunner(imgGen generator.ImageGenerator, chars map[string]mngdom.Character, limit int, basePrompt string) *MangaImageRunner {
 func NewMangaImageRunner(manga mngkit.Pipeline, limit int, basePrompt string) *MangaImageRunner {
 
-	// pkg/adapters に切り出した汎用パイプラインを構築するのだ
+	// pkg/pipeline にある汎用パイプラインを構築します
 	groupPipeline := pipeline.NewGroupPipeline(manga, basePrompt, config.DefaultRateLimit)
 
 	return &MangaImageRunner{
@@ -38,7 +38,7 @@ func NewMangaImageRunner(manga mngkit.Pipeline, limit int, basePrompt string) *M
 	}
 }
 
-// Run は、設定された制限やログ出力を管理しながら、パイプラインを実行するのだ！
+// Run は、設定された制限やログ出力を管理しながら、パイプラインを実行します
 func (ir *MangaImageRunner) Run(ctx context.Context, manga mngdom.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	pages := manga.Pages
 
