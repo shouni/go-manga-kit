@@ -6,6 +6,7 @@ import (
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-manga-kit/internal/runner"
+	"github.com/shouni/go-manga-kit/pkg/parser"
 	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
@@ -29,6 +30,7 @@ func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (runner.PageR
 		appCtx.MangaPipeline,
 		appCtx.Config.ImagePromptSuffix,
 		appCtx.Options.ScriptFile,
+		parser.NewParser(appCtx.Options.ScriptFile),
 	), nil
 }
 

@@ -7,10 +7,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/parser"
-
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // PagePipeline は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
@@ -26,18 +24,18 @@ func NewPagePipeline(manga Pipeline, styleSuffix string) *PagePipeline {
 }
 
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
-func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, markdownContent, scriptURL string) (*imagedom.ImageResponse, error) {
-	markdownParser := parser.NewParser(scriptURL)
-	manga, err := markdownParser.Parse(markdownContent)
-	if err != nil {
-		return nil, fmt.Errorf("Markdownのパースに失敗しました: %w", err)
-	}
+func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+	//markdownParser := parser.NewParser(scriptURL)
+	//manga, err := markdownParser.Parse(markdownContent)
+	//if err != nil {
+	//	return nil, fmt.Errorf("Markdownのパースに失敗しました: %w", err)
+	//}
 
 	// 1. 参照URLの収集
 	refURLs := pp.collectReferences(manga.Pages, pp.manga.Characters)
 
 	// 2. 巨大な統合プロンプトの構築
-	fullPrompt := pp.buildUnifiedPrompt(*manga, pp.manga.Characters, refURLs)
+	fullPrompt := pp.buildUnifiedPrompt(manga, pp.manga.Characters, refURLs)
 
 	// 3. シード値の決定（最初のパネルのキャラを優先）
 	var defaultSeed *int64
