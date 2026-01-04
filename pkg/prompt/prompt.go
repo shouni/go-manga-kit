@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"fmt"
+	"math/rand/v2" // 最新の Go 1.22+ 推奨なのだ
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -21,75 +22,87 @@ func NewPromptBuilder(chars domain.CharactersMap, suffix string) *PromptBuilder 
 	}
 }
 
-// BuildFullPagePrompt は、全パネルの情報を統合し、1枚のマンガページを生成するためのプロンプトを構築します。
-func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, chars []domain.Character) string {
+// BuildFullPagePrompt は、全パネル情報と参照URLを統合してプロンプトを構築します。
+func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) string {
 	var sb strings.Builder
 
-	// 1. 全体構造の定義（MangaStructureHeaderなどは外部定数を想定）
-	sb.WriteString("### MANGA PAGE STRUCTURE ###\n")
-	sb.WriteString(fmt.Sprintf("- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
+	// 0. Reference URLの逆引きマップ（どのURLが何番目か）を準備
+	urlToIndex := make(map[string]int)
+	for i, url := range refURLs {
+		urlToIndex[url] = i + 1
+	}
+
+	// 1. マンガ全体構造の定義
+	sb.WriteString(MangaStructureHeader)
+	sb.WriteString(fmt.Sprintf("\n- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
 
 	// 2. タイトルと共通スタイルの適用
 	sb.WriteString(fmt.Sprintf("\n### TITLE: %s ###\n", mangaTitle))
+	sb.WriteString(RenderingStyle)
 	if pb.defaultSuffix != "" {
-		sb.WriteString(fmt.Sprintf("- GLOBAL_STYLE: %s\n", pb.defaultSuffix))
+		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pb.defaultSuffix))
 	}
 	sb.WriteString("\n")
 
 	// 3. 登場キャラクターの定義セクション
-	sb.WriteString("### CHARACTER IDENTITIES ###\n")
-	for _, char := range chars {
-		cues := strings.Join(char.VisualCues, ", ")
-		sb.WriteString(fmt.Sprintf("- %s: %s\n", char.Name, cues))
-	}
-	sb.WriteString("\n")
+	sb.WriteString(BuildCharacterIdentitySection(pb.characterMap))
 
-	// 4. 各パネルの具体的な内容を結合
+	// 4. ランダムな大ゴマの決定
+	numPanels := len(pages)
+	bigPanelIndex := -1
+	if numPanels > 0 {
+		bigPanelIndex = rand.IntN(numPanels)
+	}
+
+	// 5. 各パネルの指示
 	for i, page := range pages {
-		isBig := i == 0 // 最初のコマを大ゴマとする
-		panelType := "NORMAL"
-		if isBig {
-			panelType = "LARGE/ESTABLISHING"
+		panelNum := i + 1
+		isBig := (i == bigPanelIndex)
+
+		sb.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
+		// もし refURLs が渡されており、このパネルに対応する参照画像がある場合
+		if i < len(refURLs) {
+			sb.WriteString(fmt.Sprintf("- REFERENCE: Use input_file_%d for visual guidance on posing and layout.\n", panelNum))
 		}
-		sb.WriteString(fmt.Sprintf("#### PANEL %d [%s] ####\n", i+1, panelType))
-		sb.WriteString(fmt.Sprintf("VISUAL: %s\n", page.VisualAnchor))
-		sb.WriteString(fmt.Sprintf("DIALOGUE: %s\n", page.Dialogue))
+
+		sb.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", page.VisualAnchor))
+		if page.Dialogue != "" {
+			sb.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", page.SpeakerID, page.Dialogue))
+		}
 		sb.WriteString("\n")
 	}
 
 	return sb.String()
 }
 
-// BuildUnifiedPrompt は、特定のパネル情報とキャラクター情報を統合した単体プロンプトを生成します。
-// SpeakerIDをキーにキャラクター設定を引き当て、シード値と合成されたプロンプトを返却するのだ。
+// BuildUnifiedPrompt は、単体パネル用のプロンプトとシード値を生成します。
 func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, int64) {
 	var parts []string
 	var seed int64
 
 	// 1. キャラクター設定の注入
 	if char, ok := pb.characterMap[speakerID]; ok {
-		// スライス形式の VisualCues を結合して追加するのだ
 		if len(char.VisualCues) > 0 {
 			parts = append(parts, char.VisualCues...)
 		}
-		// キャラクター固有のシードを採用
 		seed = char.Seed
-	} else if speakerID != "" {
-		// 登録がない場合は名前から決定論的なシードを生成するのだ
-		seed = int64(domain.GetSeedFromName(speakerID))
+	} else {
+		// 登録がない、またはSpeakerIDが空の場合は名前からシードを生成するのだ
+		// domainに定義した GetSeedFromName を使うのが正解なのだ
+		seed = domain.GetSeedFromName(speakerID, pb.characterMap)
 	}
 
-	// 2. アクション/ビジュアルアンカー（そのコマ固有の指示）の追加
+	// 2. アクション/ビジュアルアンカーの追加
 	if page.VisualAnchor != "" {
 		parts = append(parts, page.VisualAnchor)
 	}
 
-	// 3. デフォルトサフィックス（画風）の結合
+	// 3. デフォルトサフィックスの結合
 	if pb.defaultSuffix != "" {
 		parts = append(parts, pb.defaultSuffix)
 	}
 
-	// 空文字を除去してカンマ区切りで結合
+	// 4. カンマ区切りでクリーンに結合
 	var cleanParts []string
 	for _, p := range parts {
 		if s := strings.TrimSpace(p); s != "" {
