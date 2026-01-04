@@ -7,7 +7,7 @@ import (
 	"github.com/shouni/go-manga-kit/internal/config"
 	mngdom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/pipeline"
-	mangaPipeline "github.com/shouni/go-manga-kit/pkg/pipeline"
+	mangakit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
@@ -20,16 +20,16 @@ type ImageRunner interface {
 
 // MangaImageRunner は、アプリケーション層の実行管理を担う実体なのだ。
 type MangaImageRunner struct {
-	pipeline   *mangaPipeline.GroupPipeline // 汎用化された生成パイプライン
-	characters map[string]mngdom.Character  // 利用可能なキャラクター設定
-	limit      int                          // 生成パネル数の制限（テスト用）
+	pipeline   *mangakit.GroupPipeline     // 汎用化された生成パイプライン
+	characters map[string]mngdom.Character // 利用可能なキャラクター設定
+	limit      int                         // 生成パネル数の制限（テスト用）
 }
 
 // NewMangaImageRunner は、依存関係を注入して Runner を初期化します
-func NewMangaImageRunner(manga mangaPipeline.Pipeline, basePrompt string, limit int) *MangaImageRunner {
+func NewMangaImageRunner(mangaPipeline mangakit.Pipeline, basePrompt string, limit int) *MangaImageRunner {
 
 	// pkg/pipeline にある汎用パイプラインを構築します
-	groupPipeline := pipeline.NewGroupPipeline(manga, basePrompt, config.DefaultRateLimit)
+	groupPipeline := pipeline.NewGroupPipeline(mangaPipeline, basePrompt, config.DefaultRateLimit)
 
 	return &MangaImageRunner{
 		pipeline: groupPipeline,

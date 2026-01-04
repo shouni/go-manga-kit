@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	mangaPipeline "github.com/shouni/go-manga-kit/pkg/pipeline"
+	mangakit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
@@ -22,11 +22,11 @@ var (
 
 // MangaPageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
 type MangaPageRunner struct {
-	pipeline *mangaPipeline.PagePipeline
+	pipeline *mangakit.PagePipeline
 	baseURL  string
 }
 
-func NewMangaPageRunner(manga mangaPipeline.Pipeline, styleSuffix string, scriptURL string) *MangaPageRunner {
+func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, scriptURL string) *MangaPageRunner {
 	baseURL := ""
 	u, err := url.Parse(scriptURL)
 	if err == nil && u.Scheme == "gs" {
@@ -34,7 +34,7 @@ func NewMangaPageRunner(manga mangaPipeline.Pipeline, styleSuffix string, script
 	}
 
 	return &MangaPageRunner{
-		pipeline: mangaPipeline.NewPagePipeline(manga, styleSuffix), // manga全体を渡す
+		pipeline: mangakit.NewPagePipeline(mangaPipeline, styleSuffix), // manga全体を渡す
 		baseURL:  baseURL,
 	}
 }
