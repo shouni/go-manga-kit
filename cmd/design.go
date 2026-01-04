@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -37,7 +38,10 @@ var designCmd = &cobra.Command{
 			return err
 		}
 
-		charIDs, _ := cmd.Flags().GetStringSlice("chars")
+		charIDs, err := cmd.Flags().GetStringSlice("chars")
+		if err != nil {
+			return fmt.Errorf("--chars フラグの解析に失敗しました: %w", err)
+		}
 		if len(charIDs) == 0 {
 			return fmt.Errorf("--chars で最低1人のキャラクターIDを指定してほしいのだ")
 		}
@@ -102,7 +106,8 @@ var designCmd = &cobra.Command{
 		}
 
 		// 生成されたデータをローカルファイルに保存するのだ
-		outputPath := "output/" + outputName // 保存先ディレクトリ
+		outputDir := "output"
+		outputPath := filepath.Join(outputDir, outputName) // 保存先ディレクトリ
 		if err := os.MkdirAll("output", 0755); err != nil {
 			return fmt.Errorf("出力ディレクトリの作成に失敗したのだ: %w", err)
 		}

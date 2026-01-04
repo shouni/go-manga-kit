@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -124,5 +125,6 @@ func (gp *GroupPipeline) resolveAndGetCharacter(page domain.MangaPage, character
 	}
 
 	// 最終手段
+	slog.Warn("Could not resolve character from page info, falling back to 'Unknown'", "speakerID", page.SpeakerID, "visualAnchor", page.VisualAnchor)
 	return domain.Character{Name: "Unknown"}
 }
