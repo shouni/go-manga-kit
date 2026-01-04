@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/internal/config"
@@ -15,6 +16,8 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
+
+var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 
 // ScriptRunner は、生成された漫画の台本や画像データを永続化するためのインターフェースなのだ。
 type ScriptRunner interface {
@@ -95,15 +98,20 @@ func (sr *MangaScriptRunner) readInputContent(ctx context.Context) ([]byte, erro
 
 // parseResponse は、AIが返したテキストからMarkdownのコードブロック等を除去してJSONとしてパースするのだ。
 func (sr *MangaScriptRunner) parseResponse(raw string) (domain.MangaResponse, error) {
-	// 余計な空白や、AIが付けがちなMarkdownタグ (```json ... ```) を取り除く処理なのだ
-	rawJSON := strings.TrimSpace(raw)
-	rawJSON = strings.TrimPrefix(rawJSON, "```json")
-	rawJSON = strings.TrimSuffix(rawJSON, "```")
-	rawJSON = strings.TrimSpace(rawJSON)
+	raw = strings.TrimSpace(raw)
+	var rawJSON string
+
+	matches := jsonBlockRegex.FindStringSubmatch(raw)
+	if len(matches) > 1 {
+		rawJSON = matches[1]
+	} else {
+		// 正規表現にマッチしない場合、全体がJSONであると仮定するフォールバック
+		rawJSON = raw
+	}
 
 	var manga domain.MangaResponse
 	if err := json.Unmarshal([]byte(rawJSON), &manga); err != nil {
-		return domain.MangaResponse{}, fmt.Errorf("JSONのパースに失敗したのだ: %w", err)
+		return domain.MangaResponse{}, fmt.Errorf("JSONのパースに失敗しました: %w", err)
 	}
 	return manga, nil
 }
