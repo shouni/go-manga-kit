@@ -22,16 +22,24 @@ type PagePipeline struct {
 func NewPagePipeline(mangaPipeline Pipeline, styleSuffix string) *PagePipeline {
 	return &PagePipeline{
 		mangaPipeline: mangaPipeline,
-		styleSuffix:   styleSuffix}
+		styleSuffix:   styleSuffix,
+	}
 }
 
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
 func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+	// 共通のスタイルサフィックス（anime styleなど）を注入して生成するのだ
+	pb := prompt.NewPromptBuilder(pp.mangaPipeline.Characters, pp.styleSuffix)
+
 	// 1. 参照URLの収集
 	refURLs := pp.collectReferences(manga.Pages, pp.mangaPipeline.Characters)
 
 	// 2. 巨大な統合プロンプトの構築
-	fullPrompt := pp.buildUnifiedPrompt(manga, pp.mangaPipeline.Characters, refURLs)
+	fullPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
+
+	// TODO::プロンプトがうまくいったら削除
+	//// 2. 巨大な統合プロンプトの構築
+	//fullPrompt := pp.buildUnifiedPrompt(manga, pp.mangaPipeline.Characters, refURLs)
 
 	// 3. シード値の決定（最初のパネルのキャラを優先）
 	var defaultSeed *int64
@@ -73,6 +81,7 @@ func (pp *PagePipeline) findCharacter(speakerID string, characters map[string]do
 	return nil
 }
 
+// TODO:あとで削除
 // buildUnifiedPrompt は AIに対してマンガのレイアウトとDNAを設定
 func (pp *PagePipeline) buildUnifiedPrompt(manga domain.MangaResponse, characters domain.CharactersMap, refURLs []string) string {
 	var sb strings.Builder

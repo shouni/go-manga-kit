@@ -8,6 +8,12 @@ import (
 )
 
 const (
+	// CinematicTags クオリティ向上のための共通タグ
+	CinematicTags = "cinematic composition, high resolution, sharp focus, 8k"
+
+	// MangaNegativePrompt Negative Prompt の定義
+	MangaNegativePrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
+
 	// MangaStructureHeader はマンガの全体構造を定義します。
 	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
 - STRUCTURE: A professional Japanese manga spread with clear frame borders.

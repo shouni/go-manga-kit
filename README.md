@@ -38,8 +38,8 @@ go-manga-kit/
 ├── pkg/             # 再利用可能なライブラリ群
 │   ├── domain/      # ドメインモデル (Manga, Character)
 │   ├── parser/      # Markdown台本のパース・正規表現ロジック
-│   ├── generator/   # プロンプトテンプレートと構築
 │   ├── pipeline/    # 生成戦略 (Group, Pageごとの個別パイプライン)
+│   ├── prompt/      # プロンプトテンプレートと構築
 │   └── publisher/   # 成果物の保存・変換 (HTML, Assets)
 ├── output/          # 生成結果の出力先 (Images, HTML, MD)
 └── main.go          # エントリーポイント

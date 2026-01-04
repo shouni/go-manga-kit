@@ -25,10 +25,10 @@ type MangaImageRunner struct {
 }
 
 // NewMangaImageRunner は、依存関係を注入して Runner を初期化します
-func NewMangaImageRunner(mangaPipeline mangakit.Pipeline, basePrompt string, limit int) *MangaImageRunner {
+func NewMangaImageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, limit int) *MangaImageRunner {
 
 	// pkg/pipeline にある汎用パイプラインを構築します
-	groupPipeline := pipeline.NewGroupPipeline(mangaPipeline, basePrompt, config.DefaultRateLimit)
+	groupPipeline := pipeline.NewGroupPipeline(mangaPipeline, styleSuffix, config.DefaultRateLimit)
 
 	return &MangaImageRunner{
 		pipeline: groupPipeline,
