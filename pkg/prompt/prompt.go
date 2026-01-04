@@ -31,7 +31,8 @@ func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.M
 	sb.WriteString(fmt.Sprintf("\n- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
 
 	// 2. タイトルと共通スタイルの適用
-	sb.WriteString(fmt.Sprintf("\n### TITLE: %s ###\n", mangaTitle))
+	// Note: 漫画タイトルは個別の画像生成プロンプトには不要なため、この処理は無効化しています。
+	//	sb.WriteString(fmt.Sprintf("\n### TITLE: %s ###\n", mangaTitle))
 	sb.WriteString(RenderingStyle)
 	if pb.defaultSuffix != "" {
 		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pb.defaultSuffix))

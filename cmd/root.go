@@ -24,7 +24,9 @@ func addAppFlags(rootCmd *cobra.Command) {
 	rootCmd.PersistentFlags().StringVarP(&opts.OutputImageDir, "output-image-dir", "i", config.DefaultLocalImageDir, "生成された画像を保存するディレクトリ（ローカル or gs://...）なのだ。")
 
 	// --- AIモデル・挙動設定 ---
-	rootCmd.PersistentFlags().StringVar(&opts.ImageModel, "image-model", config.DefaultImageModel, "使用する Gemini モデル名なのだ。")
+	rootCmd.PersistentFlags().StringVarP(&opts.Mode, "mode", "m", "dialogue", "プロンプト生成モードなのだ。")
+	rootCmd.PersistentFlags().StringVar(&opts.AIModel, "model", config.DefaultModel, "使用する Gemini モデル名なのだ。")
+	rootCmd.PersistentFlags().StringVar(&opts.ImageModel, "image-model", config.DefaultImageModel, "画像生成に使用する Gemini モデル名なのだ。")
 	rootCmd.PersistentFlags().DurationVar(&opts.HTTPTimeout, "http-timeout", config.DefaultHTTPTimeout, "Webリクエストのタイムアウトなのだ。")
 
 	// --- 画像生成 (Nano Banana) 固有設定 ---
@@ -50,6 +52,8 @@ func Execute() {
 		"go-manga-kit",
 		addAppFlags,
 		preRunAppE,
+		generateCmd,
+		scriptCmd,
 		imageCmd,
 		storyCmd,
 	)
