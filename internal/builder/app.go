@@ -11,13 +11,13 @@ import (
 )
 
 // AppContext は、アプリケーション実行に必要な共通コンテキストを保持する
-// これを各 Build 関数に渡すことで、依存関係の整理を楽にするのだ！
+// これを各Build関数に渡すことで、依存関係の注入を簡素化します。
 type AppContext struct {
-	Config        *config.Config          // Config は環境変数から読み込まれたグローバルな設定（APIキー、プロジェクトIDなど）
-	Options       config.GenerateOptions  // Options はコマンドラインから渡された実行時の設定（モード、URL、モデル名など）
-	Reader        remoteio.InputReader    // Reader 外部データやスクリプトの読み込みに使用する、入力元（Reader）の設定
-	Writer        remoteio.OutputWriter   // Writer 生成された内容を保存したり、外部へエクスポートしたりするための出力先を定義
-	MangaPipeline pipeline.Pipeline       // MangaPipeline 画像生成とキャラクター管理を含む、マンガ生成パイプラインの制御を担当する
+	Config        *config.Config          // Configは、環境変数から読み込まれたグローバルな設定です（APIキー、プロジェクトIDなど）。
+	Options       config.GenerateOptions  // Optionsは、コマンドラインから渡された実行時の設定です（モード、URL、モデル名など）。
+	Reader        remoteio.InputReader    // Readerは、外部データやスクリプトの読み込みに使用する入力元です。
+	Writer        remoteio.OutputWriter   // Writerは、生成された内容を保存するための出力先です。
+	MangaPipeline pipeline.Pipeline       // MangaPipelineは、画像生成とキャラクター管理を含むマンガ生成パイプラインです。
 	aiClient      gemini.GenerativeModel  // aiClient はGeminiの通信に使う共通クライアント
 	httpClient    httpkit.ClientInterface // httpClient は外部APIとの通信に使う共通クライアント
 }
