@@ -5,10 +5,8 @@ import (
 	"fmt"
 
 	"github.com/shouni/go-manga-kit/internal/runner"
-	"github.com/shouni/go-manga-kit/pkg/domain"
 	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
-	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-text-format/pkg/builder"
 	"google.golang.org/genai"
@@ -16,19 +14,13 @@ import (
 
 // BuildImageRunner は個別パネル画像生成を担当する Runner を構築します。
 func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunner, error) {
-	imgGen, err := InitializeImageGenerator(appCtx)
-	if err != nil {
-		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
-	}
-
-	chars, err := domain.LoadCharacters(appCtx.Options.CharacterConfig)
+	manga, err := initializeMangaPipeline(appCtx)
 	if err != nil {
 		return nil, fmt.Errorf("キャラクター情報の取得に失敗しました: %w", err)
 	}
 
 	return runner.NewMangaImageRunner(
-		imgGen,
-		chars,
+		*manga,
 		appCtx.Options.PanelLimit,
 		appCtx.Config.ImagePromptSuffix,
 	), nil
@@ -36,12 +28,7 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 
 // BuildMangaPageRunner は 8パネル一括のページ生成を担当する Runner を構築します。
 func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.MangaPageRunner, error) {
-	imgGen, err := InitializeImageGenerator(appCtx)
-	if err != nil {
-		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
-	}
-
-	chars, err := domain.LoadCharacters(appCtx.Options.CharacterConfig)
+	manga, err := initializeMangaPipeline(appCtx)
 	if err != nil {
 		return nil, fmt.Errorf("キャラクター情報の取得に失敗しました: %w", err)
 	}
@@ -50,8 +37,7 @@ func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.Mang
 	// ポインタへの変換は不要になったので、chars をそのまま渡せるのだ。
 	// 第3引数は、Runner内でPagePipelineに渡されるスタイル指定なのだ。
 	return runner.NewMangaPageRunner(
-		imgGen,
-		chars,
+		*manga,
 		appCtx.Config.ImagePromptSuffix,
 		appCtx.Options.ScriptFile,
 	), nil
@@ -91,12 +77,12 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 	return aiClient, nil
 }
 
-// InitializeImageGenerator は ImageGeneratorを初期化します。
-func InitializeImageGenerator(appCtx *AppContext) (generator.ImageGenerator, error) {
-	imgGen, err := mngkit.InitializeImageGenerator(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiImageModel)
+// initializeMangaPipeline は MangaPipelineを初期化します。
+func initializeMangaPipeline(appCtx *AppContext) (*mngkit.Pipeline, error) {
+	pl, err := mngkit.NewPipeline(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiImageModel, appCtx.Options.ScriptFile)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
 	}
 
-	return imgGen, nil
+	return pl, nil
 }

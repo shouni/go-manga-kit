@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sync"
 )
 
@@ -27,20 +26,8 @@ var (
 	loadErr     error
 )
 
-// LoadCharacters は指定されたファイルパスからJSONを読み込み、キャラクターマップを返すのだ。
-func LoadCharacters(path string) (map[string]Character, error) {
-	// 1. ファイルの読み込み
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("キャラクターファイルの読み込みに失敗したのだ: %w", err)
-	}
-
-	// 2. バイト列からのパース処理（getCharacters）を再利用するのだ
-	return getCharacters(data)
-}
-
-// getCharacters はJSONバイト列からキャラクターマップをパースして返すのだ。
-func getCharacters(charactersJSON []byte) (map[string]Character, error) {
+// GetCharacters はJSONバイト列からキャラクターマップをパースして返すのだ。
+func GetCharacters(charactersJSON []byte) (map[string]Character, error) {
 	// シングルトンでの読み込み（cachedCharsへの格納）
 	once.Do(func() {
 		if err := json.Unmarshal(charactersJSON, &cachedChars); err != nil {
