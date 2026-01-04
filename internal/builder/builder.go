@@ -50,29 +50,30 @@ func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.Mang
 	// 共通の Core コンポーネントを作成
 	imgCore := buildSharedImageCore(appCtx)
 
+	// Adapterの生成
 	pageAdapter := imagekit.NewGeminiMangaPageAdapter(
 		imgCore,
 		appCtx.aiClient,
-		appCtx.Config.GeminiImageModel,
+		appCtx.Config.GeminiModel, // 使用するモデル名
 	)
+	// TODO:: 参照パッケージ側の修正を確認
+	//if err != nil {
+	//	return nil, fmt.Errorf("Adapterの初期化に失敗したのだ: %w", err)
+	//}
 
-	// 1. キャラクター情報の取得
+	// 1. キャラクター情報の取得 (pkg/domain/character.go の LoadCharacters を使用)
+	// この戻り値は map[string]domain.Character なのだ！
 	chars, err := domain.LoadCharacters(appCtx.Options.CharacterConfig)
 	if err != nil {
-		return nil, fmt.Errorf("キャラクター情報の取得に失敗しました: %w", err)
+		return nil, fmt.Errorf("キャラクター情報の取得に失敗したのだ: %w", err)
 	}
 
-	// 2. map[string]domain.Character を map[string]*domain.Character に変換
-	charPtrs := make(map[string]*domain.Character)
-	for id, char := range chars {
-		localChar := char
-		charPtrs[id] = &localChar
-	}
-
-	// 3. Runner の生成
+	// 2. Runner の生成
+	// ポインタへの変換は不要になったので、chars をそのまま渡せるのだ。
+	// 第3引数は、Runner内でPagePipelineに渡されるスタイル指定なのだ。
 	return runner.NewMangaPageRunner(
-		pageAdapter,
-		charPtrs, // ポインタのマップを渡すのだ
+		*pageAdapter,
+		chars,
 		appCtx.Config.ImagePromptSuffix,
 		appCtx.Options.ScriptFile,
 	), nil
