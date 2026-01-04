@@ -20,7 +20,7 @@ type MangaPageRunner struct {
 	markdownParser *parser.Parser
 }
 
-// NewMangaPageRunner MangaPageRunnerを初期化。マンガ生成パイプライン、共通スタイル、入力ソースURLを設定する
+// NewMangaPageRunner マンガ生成パイプライン、共通スタイルサフィックス、Markdownパーサーを依存性として設定します。
 func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, markdownParser *parser.Parser) *MangaPageRunner {
 	return &MangaPageRunner{
 		pipeline:       mangakit.NewPagePipeline(mangaPipeline, styleSuffix), // mangaPipeline全体を渡す
@@ -32,10 +32,10 @@ func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, mar
 func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {
 	manga, err := r.markdownParser.Parse(markdownContent)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse markdown content: %w", err)
+		return nil, fmt.Errorf("Markdownコンテンツのパースに失敗しました: %w", err)
 	}
 	if manga == nil {
-		return nil, fmt.Errorf("parsed manga is nil without an error")
+		return nil, fmt.Errorf("エラーなしでマンガのパース結果が nil になりました。")
 	}
 	return r.pipeline.ExecuteMangaPage(ctx, *manga)
 }
