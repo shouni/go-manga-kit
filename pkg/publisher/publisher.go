@@ -58,7 +58,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga mngdom.MangaResponse
 	}
 
 	// 1. 画像の保存
-	savedPaths, err := p.SaveImages(ctx, images, opts.OutputImageDir)
+	savedPaths, err := p.saveImages(ctx, images, opts.OutputImageDir)
 	if err != nil {
 		return fmt.Errorf("failed to save images: %w", err)
 	}
@@ -71,7 +71,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga mngdom.MangaResponse
 	}
 
 	// 3. Markdownテキストの構築
-	content := p.BuildMarkdown(manga, relativePaths)
+	content := p.buildMarkdown(manga, relativePaths)
 
 	// 4. Markdownファイルの書き出し
 	if err := p.writer.Write(ctx, opts.OutputFile, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
@@ -95,8 +95,37 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga mngdom.MangaResponse
 	return nil
 }
 
+// SaveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
+func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
+	var paths []string
+	isGCS := remoteio.IsGCSURI(baseDir)
+
+	for i, img := range images {
+		if img == nil || len(img.Data) == 0 {
+			continue
+		}
+		name := fmt.Sprintf("panel_%d.png", i+1)
+		var fullPath string
+		var err error
+		if isGCS {
+			fullPath, err = url.JoinPath(baseDir, name)
+			if err != nil {
+				return nil, fmt.Errorf("GCSパスの生成に失敗しました base: %s, name: %s: %w", baseDir, name, err)
+			}
+		} else {
+			fullPath = filepath.Join(baseDir, name)
+		}
+
+		if err := p.writer.Write(ctx, fullPath, bytes.NewReader(img.Data), "image/png"); err != nil {
+			return nil, fmt.Errorf("画像の書き込みに失敗しました %s: %w", fullPath, err)
+		}
+		paths = append(paths, fullPath)
+	}
+	return paths, nil
+}
+
 // BuildMarkdown returns the Markdown content for the specified manga.
-func (p *MangaPublisher) BuildMarkdown(manga mngdom.MangaResponse, imagePaths []string) string {
+func (p *MangaPublisher) buildMarkdown(manga mngdom.MangaResponse, imagePaths []string) string {
 	const placeholder = "placeholder.png"
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
@@ -139,33 +168,4 @@ func (p *MangaPublisher) getDialogueStyle(idx int) string {
 		return fmt.Sprintf("- tail: %s\n- bottom: %s\n- left: %s\n", evenPanelTail, evenPanelBottom, evenPanelLeft)
 	}
 	return fmt.Sprintf("- tail: %s\n- top: %s\n- right: %s\n", oddPanelTail, oddPanelTop, oddPanelRight)
-}
-
-// SaveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
-func (p *MangaPublisher) SaveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
-	var paths []string
-	isGCS := remoteio.IsGCSURI(baseDir)
-
-	for i, img := range images {
-		if img == nil || len(img.Data) == 0 {
-			continue
-		}
-		name := fmt.Sprintf("panel_%d.png", i+1)
-		var fullPath string
-		var err error
-		if isGCS {
-			fullPath, err = url.JoinPath(baseDir, name)
-			if err != nil {
-				return nil, fmt.Errorf("GCSパスの生成に失敗しました base: %s, name: %s: %w", baseDir, name, err)
-			}
-		} else {
-			fullPath = filepath.Join(baseDir, name)
-		}
-
-		if err := p.writer.Write(ctx, fullPath, bytes.NewReader(img.Data), "image/png"); err != nil {
-			return nil, fmt.Errorf("画像の書き込みに失敗しました %s: %w", fullPath, err)
-		}
-		paths = append(paths, fullPath)
-	}
-	return paths, nil
 }
