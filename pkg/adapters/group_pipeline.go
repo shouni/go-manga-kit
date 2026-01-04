@@ -3,63 +3,118 @@ package adapters
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
+	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-
-	// imgkit "github.com/shouni/gemini-image-kit/pkg/adapters"
-	imgdomain "github.com/shouni/gemini-image-kit/pkg/domain"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 )
 
-// PanelGroupPipeline は、複数のパネルを「群」として順次生成を管理するパイプラインなのだ。
-type PanelGroupPipeline struct {
-	builder PromptBuilder
-	adapter ImageAdapter
+// GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
+type GroupPipeline struct {
+	adapter    imagekit.ImageAdapter
+	basePrompt string
+	interval   time.Duration // config.DefaultRateLimit の代わりに外部から注入するのだ
 }
 
-// NewPanelGroupPipeline は新しいパネル群生成パイプラインを作成するのだ。
-func NewPanelGroupPipeline(b PromptBuilder, a ImageAdapter) *PanelGroupPipeline {
-	return &PanelGroupPipeline{
-		builder: b,
-		adapter: a,
+func NewGroupPipeline(adapter imagekit.ImageAdapter, basePrompt string, interval time.Duration) *GroupPipeline {
+	return &GroupPipeline{
+		adapter:    adapter,
+		basePrompt: basePrompt,
+		interval:   interval,
 	}
 }
 
-// Execute は、パース済みの MangaResponse を受け取り、各パネルの画像を生成するのだ！
-func (pl *PanelGroupPipeline) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imgdomain.ImageResponse, error) {
-	if manga == nil {
-		return nil, fmt.Errorf("panel_group_pipeline: manga data is nil なのだ")
+// Execute は、並列処理を用いてパネル群を生成する。
+// ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
+func (gp *GroupPipeline) Execute(ctx context.Context, pages []domain.MangaPage, characters map[string]domain.Character) ([]*imagedom.ImageResponse, error) {
+	images := make([]*imagedom.ImageResponse, len(pages))
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	// レートリミットの設定。intervalが0なら制限なしとして動くのだ。
+	var limiter *rate.Limiter
+	if gp.interval > 0 {
+		limiter = rate.NewLimiter(rate.Every(gp.interval), 2)
 	}
 
-	results := make([]*imgdomain.ImageResponse, 0, len(manga.Pages))
+	for i, page := range pages {
+		i, page := i, page
+		eg.Go(func() error {
+			if limiter != nil {
+				if err := limiter.Wait(egCtx); err != nil {
+					return err
+				}
+			}
 
-	for _, page := range manga.Pages {
-		// 1. プロンプトとシードの構築
-		// BuildUnifiedPrompt は (string, int64) を返す想定なのだ。
-		prompt, seedValue := pl.builder.BuildUnifiedPrompt(page)
+			// 1. キャラクター解決
+			char := gp.resolveAndGetCharacter(page, characters)
 
-		// シード値の処理 (0の場合はnilとして扱うなどのロジック)
-		var seedPtr *int64
-		if seedValue != 0 {
-			s := seedValue
-			seedPtr = &s
-		}
+			// 2. プロンプト構築
+			prompt, negPrompt := gp.buildPrompt(page.VisualAnchor, char.VisualCues)
 
-		// 2. リクエストの構築
-		req := imgdomain.ImageGenerationRequest{
-			Prompt:       prompt,
-			AspectRatio:  "16:9",
-			Seed:         seedPtr, // ポインタとして渡すのだ！
-			ReferenceURL: page.ReferenceURL,
-		}
+			// 3. シード値の処理 (int64 -> *int64)
+			var seedPtr *int64
+			if char.Seed > 0 {
+				s := char.Seed
+				seedPtr = &s
+			}
 
-		// 3. 画像生成の実行
-		resp, err := pl.adapter.GenerateMangaPanel(ctx, req)
-		if err != nil {
-			return nil, fmt.Errorf("panel_group_pipeline: ページ %d の生成に失敗: %w", page.Page, err)
-		}
+			// 4. アダプター呼び出し
+			resp, err := gp.adapter.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+				Prompt:         prompt,
+				NegativePrompt: negPrompt,
+				Seed:           seedPtr,
+				ReferenceURL:   char.ReferenceURL,
+				AspectRatio:    "16:9",
+			})
+			if err != nil {
+				return fmt.Errorf("page %d (char: %s) generation failed: %w", i+1, char.Name, err)
+			}
 
-		results = append(results, resp)
+			images[i] = resp
+			return nil
+		})
 	}
 
-	return results, nil
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+
+	return images, nil
+}
+
+// 以下、内部ロジック（Runnerから移管したもの）
+
+func (gp *GroupPipeline) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
+	id := strings.ToLower(page.SpeakerID)
+	if id == "" {
+		anchor := strings.ToLower(page.VisualAnchor)
+		if strings.Contains(anchor, "metan") {
+			id = "metan"
+		}
+		if strings.Contains(anchor, "zundamon") {
+			id = "zundamon"
+		}
+	}
+
+	if c, ok := characters[id]; ok {
+		return c
+	}
+	if zunda, ok := characters["zundamon"]; ok {
+		return zunda
+	}
+	for _, v := range characters {
+		return v
+	}
+	return domain.Character{Name: "Unknown"}
+}
+
+func (gp *GroupPipeline) buildPrompt(anchor string, cues []string) (string, string) {
+	positive := fmt.Sprintf("%s, %s, %s, cinematic composition, high resolution, no speech bubbles",
+		gp.basePrompt, strings.Join(cues, ", "), anchor)
+	negative := "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
+	return positive, negative
 }
