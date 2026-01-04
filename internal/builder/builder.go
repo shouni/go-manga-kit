@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/shouni/go-manga-kit/internal/prompt"
 	"github.com/shouni/go-manga-kit/internal/runner"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
@@ -14,39 +13,8 @@ import (
 	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-text-format/pkg/builder"
-	"github.com/shouni/go-web-exact/v2/pkg/extract"
 	"google.golang.org/genai"
 )
-
-// BuildScriptRunner は台本テキスト生成の Runner を構築します。
-func BuildScriptRunner(ctx context.Context, appCtx *AppContext) (runner.ScriptRunner, error) {
-	extractor, err := extract.NewExtractor(appCtx.httpClient)
-	if err != nil {
-		return nil, fmt.Errorf("エクストラクタの初期化に失敗しました: %w", err)
-	}
-
-	reader, err := appCtx.RemoteIOFactory.NewInputReader()
-	if err != nil {
-		return nil, fmt.Errorf("入力リーダの初期化に失敗しました: %w", err)
-	}
-
-	templateStr, err := prompt.GetPromptByMode(appCtx.Options.Mode)
-	if err != nil {
-		return nil, err
-	}
-	promptBuilder, err := prompt.NewBuilder(templateStr)
-	if err != nil {
-		return nil, fmt.Errorf("プロンプトビルダーの作成に失敗しました: %w", err)
-	}
-
-	return runner.NewMangaScriptRunner(
-		*appCtx.Config,
-		extractor,
-		promptBuilder,
-		appCtx.aiClient,
-		reader,
-	), nil
-}
 
 // BuildImageRunner は個別パネル画像生成を担当する Runner を構築します。
 func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunner, error) {
