@@ -1,4 +1,4 @@
-package generator
+package prompt
 
 import (
 	"fmt"
@@ -7,23 +7,22 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
-// マンガの基本構造を定義するテンプレート定数
 const (
-	// MangaStructureHeader はマンガとしての全体構造を強制する指示です。
+	// MangaStructureHeader はマンガの全体構造を定義します。
 	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
 - STRUCTURE: A professional Japanese manga spread with clear frame borders.
 - READING ORDER: Right-to-Left, Top-to-Bottom.
 - GUTTERS: Ultra-thin, crisp hairline dividers. NO OVERLAPPING. Each panel is a separate scene.`
 
-	// RenderingStyle は描画の品質を一貫させるための指示です。
+	// RenderingStyle は共通の画風を定義します。
 	RenderingStyle = `### GLOBAL VISUAL STYLE ###
 - RENDERING: Sharp clean lineart, vibrant colors, no blurring, high contrast, cinematic manga lighting.`
 )
 
-// BuildPanelHeader は個別のコマに対するヘッダー指示を生成します。
+// BuildPanelHeader は各コマの属性（サイズや順序）を生成します。
 func BuildPanelHeader(current, total int, isBigPanel bool) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("\n===========================================\n"))
+	sb.WriteString("\n===========================================\n")
 	sb.WriteString(fmt.Sprintf("### [INDEPENDENT PANEL %d OF %d] ###\n", current, total))
 
 	if isBigPanel {
@@ -36,8 +35,8 @@ func BuildPanelHeader(current, total int, isBigPanel bool) string {
 	return sb.String()
 }
 
-// BuildCharacterIdentitySection はキャラクターのマスター情報を定義するセクションを生成します。
-func BuildCharacterIdentitySection(chars []domain.Character) string {
+// BuildCharacterIdentitySection は全登場キャラの視覚的特徴をマスター定義として出力します。
+func BuildCharacterIdentitySection(chars domain.CharactersMap) string {
 	if len(chars) == 0 {
 		return ""
 	}
@@ -45,13 +44,11 @@ func BuildCharacterIdentitySection(chars []domain.Character) string {
 	var sb strings.Builder
 	sb.WriteString("### CHARACTER MASTER DEFINITIONS (STRICT IDENTITY) ###\n")
 	for _, char := range chars {
-		// VisualCues (スライス) をカンマ区切りで結合する
 		cues := "None"
 		if len(char.VisualCues) > 0 {
 			cues = strings.Join(char.VisualCues, ", ")
 		}
-
-		// AIが「この名前が出てきたらこの特徴を使う」と認識しやすい形式にするのだ
+		// SUBJECT [名前] の形式でAIにアイデンティティを固定させるのだ
 		sb.WriteString(fmt.Sprintf("- SUBJECT [%s]: VISUAL_FEATURES: {%s}\n", char.Name, cues))
 	}
 	sb.WriteString("\n")
