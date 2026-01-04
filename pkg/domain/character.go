@@ -18,6 +18,7 @@ type Character struct {
 	Seed         int64    `json:"seed"`          // DB保存等のために広い型を維持
 }
 
+// CharactersMap はIDや名前をキーとしたキャラクターの検索用マップなのだ。
 type CharactersMap map[string]Character
 
 var (
@@ -34,11 +35,11 @@ func LoadCharacters(path string) (map[string]Character, error) {
 		return nil, fmt.Errorf("キャラクターファイルの読み込みに失敗したのだ: %w", err)
 	}
 
-	// 2. バイト列からのパース処理（GetCharacters）を再利用するのだ
+	// 2. バイト列からのパース処理（getCharacters）を再利用するのだ
 	return getCharacters(data)
 }
 
-// GetCharacters はJSONバイト列からキャラクターマップをパースして返すのだ。
+// getCharacters はJSONバイト列からキャラクターマップをパースして返すのだ。
 func getCharacters(charactersJSON []byte) (map[string]Character, error) {
 	// シングルトンでの読み込み（cachedCharsへの格納）
 	once.Do(func() {
@@ -70,11 +71,12 @@ func copyCharactersMap(src map[string]Character) map[string]Character {
 	return copied
 }
 
+// String はキャラクターの情報を文字列で返すのだ。
 func (c Character) String() string {
 	return fmt.Sprintf("%s (%s)", c.Name, c.ID)
 }
 
-// BuildCharactersMap はスライス形式の DNA データを検索効率の良いマップ形式に変換するのだ
+// BuildCharactersMap はスライス形式のデータを検索効率の良いマップ形式に変換するのだ。
 func BuildCharactersMap(chars []Character) CharactersMap {
 	m := make(CharactersMap)
 	for _, c := range chars {
@@ -96,7 +98,7 @@ func GetSeedFromName(name string) int32 {
 	return seed & 0x7FFFFFFF
 }
 
-// NewCharacter は名前と特徴からDNA構造体を生成します。
+// NewCharacter は名前と特徴からキャラクター構造体を生成します。
 func NewCharacter(id, name, visualCue string, seed int32) Character {
 	if seed == 0 {
 		seed = GetSeedFromName(name)

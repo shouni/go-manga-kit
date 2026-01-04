@@ -3,24 +3,21 @@ package adapters
 import (
 	"context"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
-
-	imgkit "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
-type Parser interface {
-	Parse(input string) (*domain.MangaResponse, error)
-}
-
-type PromptBuilder interface {
-	BuildUnifiedPrompt(page domain.MangaPage) (string, int64)
-	BuildFullPagePrompt(title string, panels []string, chars []domain.Character) string
-}
-
+// ImageAdapter は個別パネル（1枚）の生成を担うのだ
 type ImageAdapter interface {
-	GenerateMangaPanel(ctx context.Context, req imgkit.ImageGenerationRequest) (*imgkit.ImageResponse, error)
+	GenerateMangaPanel(ctx context.Context, req imagedom.ImageGenerationRequest) (*imagedom.ImageResponse, error)
 }
 
+// MangaPageAdapter は複数パネルが統合されたページ生成を担うのだ
 type MangaPageAdapter interface {
-	GenerateMangaPage(ctx context.Context, req imgkit.ImagePageRequest) (*imgkit.ImageResponse, error)
+	GenerateMangaPage(ctx context.Context, req imagedom.ImagePageRequest) (*imagedom.ImageResponse, error)
+}
+
+// PromptBuilder はプロンプト構築のロジックを抽象化するのだ
+type PromptBuilder interface {
+	BuildUnifiedPrompt(page interface{}) (string, int64)
+	BuildFullPagePrompt(title string, panels []string, characters interface{}) string
 }
