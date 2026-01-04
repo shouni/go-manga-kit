@@ -12,7 +12,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/pipeline"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
+	"github.com/shouni/gemini-image-kit/pkg/generator"
 )
 
 var (
@@ -28,7 +28,7 @@ type MangaPageRunner struct {
 	baseURL    string
 }
 
-func NewMangaPageRunner(adapter imagekit.ImageGenerator, characters map[string]domain.Character, styleSuffix string, scriptURL string) *MangaPageRunner {
+func NewMangaPageRunner(imgGen generator.ImageGenerator, characters map[string]domain.Character, styleSuffix string, scriptURL string) *MangaPageRunner {
 	baseURL := ""
 	u, err := url.Parse(scriptURL)
 	if err == nil && u.Scheme == "gs" {
@@ -36,7 +36,7 @@ func NewMangaPageRunner(adapter imagekit.ImageGenerator, characters map[string]d
 	}
 
 	return &MangaPageRunner{
-		pipeline:   pipeline.NewPagePipeline(adapter, styleSuffix),
+		pipeline:   pipeline.NewPagePipeline(imgGen, styleSuffix),
 		characters: characters,
 		baseURL:    baseURL,
 	}
