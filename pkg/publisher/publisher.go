@@ -43,6 +43,7 @@ type MangaPublisher struct {
 	htmlRunner md2htmlrunner.Runner
 }
 
+// NewMangaPublisher creates and returns a new instance of MangaPublisher with the specified writer and HTML runner.
 func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer:     writer,
@@ -94,13 +95,15 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga mngdom.MangaResponse
 	return nil
 }
 
+// BuildMarkdown returns the Markdown content for the specified manga.
 func (p *MangaPublisher) BuildMarkdown(manga mngdom.MangaResponse, imagePaths []string) string {
+	const placeholder = "placeholder.png"
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
 	h := sha256.New()
 
 	for i, page := range manga.Pages {
-		img := "placeholder.png"
+		img := placeholder
 		if i < len(imagePaths) {
 			img = imagePaths[i]
 		}
@@ -130,6 +133,7 @@ func (p *MangaPublisher) BuildMarkdown(manga mngdom.MangaResponse, imagePaths []
 	return sb.String()
 }
 
+// getDialogueStyle returns the style for the specified panel's dialogue.'
 func (p *MangaPublisher) getDialogueStyle(idx int) string {
 	if idx%2 == 0 {
 		return fmt.Sprintf("- tail: %s\n- bottom: %s\n- left: %s\n", evenPanelTail, evenPanelBottom, evenPanelLeft)
@@ -137,6 +141,7 @@ func (p *MangaPublisher) getDialogueStyle(idx int) string {
 	return fmt.Sprintf("- tail: %s\n- top: %s\n- right: %s\n", oddPanelTail, oddPanelTop, oddPanelRight)
 }
 
+// SaveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
 func (p *MangaPublisher) SaveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
 	var paths []string
 	isGCS := remoteio.IsGCSURI(baseDir)
@@ -147,8 +152,12 @@ func (p *MangaPublisher) SaveImages(ctx context.Context, images []*imagedom.Imag
 		}
 		name := fmt.Sprintf("panel_%d.png", i+1)
 		var fullPath string
+		var err error
 		if isGCS {
-			fullPath, _ = url.JoinPath(baseDir, name)
+			fullPath, err = url.JoinPath(baseDir, name)
+			if err != nil {
+				return nil, fmt.Errorf("GCSパスの生成に失敗しました base: %s, name: %s: %w", baseDir, name, err)
+			}
 		} else {
 			fullPath = filepath.Join(baseDir, name)
 		}
