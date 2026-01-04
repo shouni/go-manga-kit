@@ -50,7 +50,8 @@ func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.Mang
 	// 共通の Core コンポーネントを作成
 	imgCore := buildSharedImageCore(appCtx)
 
-	// Adapterの生成
+	// ページ作成用アダプターの初期化
+	// TODO:: 参照パッケージ側の修正を確認 interface化
 	pageAdapter := imagekit.NewGeminiMangaPageAdapter(
 		imgCore,
 		appCtx.aiClient,
