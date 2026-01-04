@@ -36,13 +36,3 @@ func InitializeImageGenerator(httpClient httpkit.ClientInterface, aiClient gemin
 
 	return imgGen, nil
 }
-
-//// InitializeImageAdapter は、個別パネル生成（GroupPipeline用）のアダプターを初期化するのだ。
-//func InitializeImageAdapter(core imageKit.ImageGeneratorCore, aiClient gemini.GenerativeModel, imageModel, promptSuffix string) (adapters.ImageAdapter, error) {
-//	return imageKit.NewGeminiImageAdapter(
-//		core,
-//		aiClient,
-//		imageModel,
-//		promptSuffix,
-//	)
-//}
