@@ -154,7 +154,7 @@ func (p *MangaPublisher) SaveImages(ctx context.Context, images []*imagedom.Imag
 		}
 
 		if err := p.writer.Write(ctx, fullPath, bytes.NewReader(img.Data), "image/png"); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("画像の書き込みに失敗しました %s: %w", fullPath, err)
 		}
 		paths = append(paths, fullPath)
 	}
