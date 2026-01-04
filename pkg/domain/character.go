@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -25,11 +26,24 @@ var (
 	loadErr     error
 )
 
-// GetCharacters は埋め込まれたJSONからキャラクターマップを返すのだ。
-func GetCharacters(charactersJSON []byte) (map[string]Character, error) {
+// LoadCharacters は指定されたファイルパスからJSONを読み込み、キャラクターマップを返すのだ。
+func LoadCharacters(path string) (map[string]Character, error) {
+	// 1. ファイルの読み込み
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("キャラクターファイルの読み込みに失敗したのだ: %w", err)
+	}
+
+	// 2. バイト列からのパース処理（GetCharacters）を再利用するのだ
+	return getCharacters(data)
+}
+
+// GetCharacters はJSONバイト列からキャラクターマップをパースして返すのだ。
+func getCharacters(charactersJSON []byte) (map[string]Character, error) {
+	// シングルトンでの読み込み（cachedCharsへの格納）
 	once.Do(func() {
 		if err := json.Unmarshal(charactersJSON, &cachedChars); err != nil {
-			loadErr = fmt.Errorf("キャラクター設定の読み込みに失敗したのだ: %w", err)
+			loadErr = fmt.Errorf("キャラクター設定のデコードに失敗したのだ: %w", err)
 		}
 	})
 
@@ -37,18 +51,23 @@ func GetCharacters(charactersJSON []byte) (map[string]Character, error) {
 		return nil, loadErr
 	}
 
-	// 内部キャッシュが呼び出し元によって変更されるのを防ぐため、マップの防御的コピーを返します。
-	copiedChars := make(map[string]Character, len(cachedChars))
-	for k, v := range cachedChars {
+	// 内部キャッシュが呼び出し元によって変更されるのを防ぐため、ディープコピーを返すのだ。
+	return copyCharactersMap(cachedChars), nil
+}
+
+// copyCharactersMap はマップの防御的コピーを行う内部ヘルパーなのだ。
+func copyCharactersMap(src map[string]Character) map[string]Character {
+	copied := make(map[string]Character, len(src))
+	for k, v := range src {
 		charCopy := v
+		// VisualCuesスライスも新しく割り当ててコピーするのだ
 		if v.VisualCues != nil {
 			charCopy.VisualCues = make([]string, len(v.VisualCues))
 			copy(charCopy.VisualCues, v.VisualCues)
 		}
-		copiedChars[k] = charCopy
+		copied[k] = charCopy
 	}
-
-	return copiedChars, nil
+	return copied
 }
 
 func (c Character) String() string {
