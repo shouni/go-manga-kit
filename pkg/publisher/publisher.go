@@ -35,6 +35,9 @@ const (
 	defaultNarrationName = "narration"
 )
 
+const defaultImageDirName = "images"
+const placeholder = "placeholder.png"
+
 var tagRegex = regexp.MustCompile(`\[[^\]]+\]`)
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
@@ -54,7 +57,7 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 // Publish は画像の保存、Markdownの構築、HTML変換を一括して実行します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga mngdom.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
 	if opts.ImageDirName == "" {
-		opts.ImageDirName = "images"
+		opts.ImageDirName = defaultImageDirName
 	}
 
 	// 1. 画像の保存
@@ -126,7 +129,6 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 
 // BuildMarkdown returns the Markdown content for the specified manga.
 func (p *MangaPublisher) buildMarkdown(manga mngdom.MangaResponse, imagePaths []string) string {
-	const placeholder = "placeholder.png"
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
 	h := sha256.New()
