@@ -8,6 +8,7 @@ import (
 	"github.com/shouni/go-manga-kit/internal/runner"
 	"github.com/shouni/go-manga-kit/pkg/parser"
 	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
+	"github.com/shouni/go-manga-kit/pkg/publisher"
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-text-format/pkg/builder"
@@ -40,17 +41,18 @@ func BuildPublisherRunner(ctx context.Context, appCtx *AppContext) (runner.Publi
 		EnableHardWraps: true,
 		Mode:            "webtoon",
 	}
-	appBuilder, err := builder.NewBuilder(config)
+	md2htmlBuilder, err := builder.NewBuilder(config)
 	if err != nil {
-		return nil, fmt.Errorf("アプリケーションビルダーの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("MarkdownToHtmlビルダーの初期化に失敗しました: %w", err)
 	}
 
-	md2htmlRunner, err := appBuilder.BuildRunner()
+	md2htmlRunner, err := md2htmlBuilder.BuildRunner()
 	if err != nil {
 		return nil, fmt.Errorf("MarkdownToHtmlRunnerの初期化に失敗しました: %w", err)
 	}
+	pub := publisher.NewMangaPublisher(appCtx.Writer, md2htmlRunner)
 
-	return runner.NewDefaultPublisherRunner(opts, appCtx.Writer, md2htmlRunner), nil
+	return runner.NewDefaultPublisherRunner(opts, pub), nil
 }
 
 // InitializeAIClient は gemini クライアントを初期化します。
