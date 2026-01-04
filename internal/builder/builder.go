@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-manga-kit/internal/runner"
 	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
@@ -14,28 +15,18 @@ import (
 
 // BuildImageRunner は個別パネル画像生成を担当する Runner を構築します。
 func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunner, error) {
-	manga, err := initializeMangaPipeline(appCtx)
-	if err != nil {
-		return nil, fmt.Errorf("キャラクター情報の取得に失敗しました: %w", err)
-	}
-
 	return runner.NewMangaImageRunner(
-		*manga,
-		appCtx.Options.PanelLimit,
+		appCtx.MangaPipeline,
 		appCtx.Config.ImagePromptSuffix,
+		appCtx.Options.PanelLimit,
 	), nil
 }
 
 // BuildMangaPageRunner は 8パネル一括のページ生成を担当する Runner を構築します。
 func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.MangaPageRunner, error) {
-	manga, err := initializeMangaPipeline(appCtx)
-	if err != nil {
-		return nil, fmt.Errorf("キャラクター情報の取得に失敗しました: %w", err)
-	}
-
 	// 2. Runner の生成
 	return runner.NewMangaPageRunner(
-		*manga,
+		appCtx.MangaPipeline,
 		appCtx.Config.ImagePromptSuffix,
 		appCtx.Options.ScriptFile,
 	), nil
@@ -75,9 +66,9 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 	return aiClient, nil
 }
 
-// initializeMangaPipeline は MangaPipelineを初期化します。
-func initializeMangaPipeline(appCtx *AppContext) (*mngkit.Pipeline, error) {
-	pl, err := mngkit.NewPipeline(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiImageModel, appCtx.Options.ScriptFile)
+// InitializeMangaPipeline は MangaPipelineを初期化します。
+func InitializeMangaPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, scriptFile string) (*mngkit.Pipeline, error) {
+	pl, err := mngkit.NewPipeline(httpClient, aiClient, model, scriptFile)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
 	}

@@ -122,7 +122,13 @@ func setupAppContext(ctx context.Context, cfg *config.Config) (*builder.AppConte
 		return nil, err
 	}
 
-	appCtx := builder.NewAppContext(cfg, httpClient, aiClient, reader, writer)
+	// Pipelineを一度だけ初期化
+	mangaPipeline, err := builder.InitializeMangaPipeline(httpClient, aiClient, cfg.GeminiModel, cfg.Options.ScriptFile)
+	if err != nil {
+		return nil, err
+	}
+
+	appCtx := builder.NewAppContext(cfg, httpClient, aiClient, reader, writer, *mangaPipeline)
 	return &appCtx, nil
 }
 
