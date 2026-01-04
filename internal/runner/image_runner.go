@@ -53,7 +53,7 @@ func (ir *MangaImageRunner) Run(ctx context.Context, manga mngdom.MangaResponse)
 	)
 
 	// 2. 汎用パイプラインへの処理委譲
-	images, err := ir.pipeline.Execute(ctx, pages)
+	images, err := ir.pipeline.ExecutePanelGroup(ctx, pages)
 	if err != nil {
 		slog.Error("画像生成パイプラインの実行中にエラーが発生したのだ", "error", err)
 		return nil, err

@@ -123,7 +123,7 @@ func setupAppContext(ctx context.Context, cfg *config.Config) (*builder.AppConte
 	}
 
 	// Pipelineを一度だけ初期化
-	mangaPipeline, err := builder.InitializeMangaPipeline(httpClient, aiClient, cfg.GeminiModel, cfg.Options.ScriptFile)
+	mangaPipeline, err := builder.InitializeMangaPipeline(httpClient, aiClient, cfg.GeminiImageModel, cfg.Options.CharacterConfig)
 	if err != nil {
 		return nil, err
 	}

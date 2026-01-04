@@ -40,7 +40,7 @@ func NewMangaPageRunner(manga mngkit.Pipeline, styleSuffix string, scriptURL str
 }
 
 func (r *MangaPageRunner) Run(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
-	return r.pipeline.Execute(ctx, manga)
+	return r.pipeline.ExecuteMangaPage(ctx, manga)
 }
 
 func (r *MangaPageRunner) RunMarkdown(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {

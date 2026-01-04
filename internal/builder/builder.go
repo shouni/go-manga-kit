@@ -67,8 +67,8 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 }
 
 // InitializeMangaPipeline は MangaPipelineを初期化します。
-func InitializeMangaPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, scriptFile string) (*mngkit.Pipeline, error) {
-	pl, err := mngkit.NewPipeline(httpClient, aiClient, model, scriptFile)
+func InitializeMangaPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (*mngkit.Pipeline, error) {
+	pl, err := mngkit.NewPipeline(httpClient, aiClient, model, characterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
 	}

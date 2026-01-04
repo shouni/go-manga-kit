@@ -28,9 +28,9 @@ func NewGroupPipeline(manga Pipeline, basePrompt string, interval time.Duration)
 	}
 }
 
-// Execute は、並列処理を用いてパネル群を生成する。
+// ExecutePanelGroup は、並列処理を用いてパネル群を生成する。
 // ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
-func (gp *GroupPipeline) Execute(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
+func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 

@@ -24,8 +24,8 @@ func NewPagePipeline(manga Pipeline, styleSuffix string) *PagePipeline {
 		styleSuffix: styleSuffix}
 }
 
-// Execute は構造化された台本を基に、1枚の統合漫画画像を生成するのだ！
-func (pp *PagePipeline) Execute(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+// ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
+func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
 	// 1. 参照URLの収集
 	refURLs := pp.collectReferences(manga.Pages, pp.manga.Characters)
 

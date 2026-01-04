@@ -18,8 +18,8 @@ type Pipeline struct {
 	Characters map[string]domain.Character
 }
 
-func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, jsonPath string) (*Pipeline, error) {
-	characters, err := loadCharacters(jsonPath)
+func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (*Pipeline, error) {
+	characters, err := loadCharacters(characterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("loadCharacters failed: %w", err)
 	}
