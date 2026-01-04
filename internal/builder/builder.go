@@ -14,7 +14,7 @@ import (
 	"google.golang.org/genai"
 )
 
-// BuildImageRunner は個別パネル画像生成を担当する Runner を構築します。
+// BuildImageRunner は個別パネル画像生成を担当する MangaImageRunner を構築します。
 func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunner, error) {
 	return runner.NewMangaImageRunner(
 		appCtx.MangaPipeline,
@@ -23,13 +23,12 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 	), nil
 }
 
-// BuildMangaPageRunner は 8パネル一括のページ生成を担当する Runner を構築します。
+// BuildMangaPageRunner は8パネル一括のページ生成を担当する MangaPageRunner を構築します。
 func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (runner.PageRunner, error) {
 	// 2. Runner の生成
 	return runner.NewMangaPageRunner(
 		appCtx.MangaPipeline,
 		appCtx.Config.ImagePromptSuffix,
-		appCtx.Options.ScriptFile,
 		parser.NewParser(appCtx.Options.ScriptFile),
 	), nil
 }
