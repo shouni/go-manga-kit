@@ -125,7 +125,7 @@ func setupAppContext(ctx context.Context, cfg *config.Config) (*builder.AppConte
 	// Pipelineを一度だけ初期化
 	mangaPipeline, err := builder.InitializeMangaPipeline(httpClient, aiClient, cfg.GeminiImageModel, cfg.Options.CharacterConfig)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("manga pipelineの初期化に失敗しました: %w", err)
 	}
 
 	appCtx := builder.NewAppContext(cfg, httpClient, aiClient, reader, writer, *mangaPipeline)
