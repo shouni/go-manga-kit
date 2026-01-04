@@ -15,11 +15,11 @@
 
 ## ✨ 主な特徴 (Features)
 
-* **📖 Script-to-Manga Pipeline**: 「伝説の漫画編集者プロンプト」がドキュメントを解析。セリフ、構図指示、SHA1ハッシュ化された `speaker_id` を含む構造化データを自動生成。
-* **🧬 Character DNA System**: キャラクターの視覚的特徴（Visual Cues）と参照URLをプロンプトへ動的に注入。全パネルで外見の一貫性を保持するのだ。
-* **📐 Dynamic Layout Director**: ページ生成時にランダムで「主役パネル（Big Panel）」を決定。生成のたびに異なる演出を楽しめるのだ。
-* **🎭 Multi-Stage Workflow**: 台本生成（JSON）→ 個別画像生成 → 統合ページ錬成の段階的プロセスにより、AIとの共同制作（Human-in-the-loop）を実現。
-* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きインメモリキャッシュにより、APIクォータを尊重しつつ安定した作画を継続するのだ。
+* **🧬 Character DNA System**: `design` コマンドで抽出したSeed値と参照URLをプロンプトへ動的に注入。全パネルで外見の一貫性を保持するのだ。
+* **📖 Script-to-Manga Pipeline**: 「伝説の漫画編集者プロンプト」がドキュメントを解析。セリフ、構図指示、SHA256ハッシュ化された `speaker_id` を含む構造化データを自動生成。
+* **📐 Dynamic Layout Director**: ページ生成時に「主役パネル（Big Panel）」を動的に決定。生成のたびに異なる演出を楽しめるのだ。
+* **🎭 Multi-Stage Workflow**: キャラクターデザイン（DNA固定）→ 台本生成（JSON）→ 個別画像生成 → 統合ページ錬成の段階的プロセスにより、AIとの共同制作を実現。
+* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御により、APIクォータを尊重しつつ安定した作画を継続するのだ。
 
 ---
 
@@ -32,64 +32,59 @@
 | **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
 | **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
 | **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
+| **Drawing Engine** | `gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
 
 ---
 
 ## 🛠 ワークフローとサブコマンド
 
-本ツールは、制作プロセスに応じて4つのサブコマンドを使い分けられるのだ。
+本ツールは、制作プロセスに応じて5つのサブコマンドを使い分けられるのだ。
 
 | コマンド | 役割 | 出力 |
 | --- | --- | --- |
+| **`design`** | **DNA抽出**。設定画を生成し、固定用のSeed値を特定するのだ。 | **Design Image, Seed** |
 | **`generate`** | **一括生成**。解析からパブリッシュまでを一気通貫で行うのだ。 | HTML, Images, MD |
-| **`script`** | **台本生成**。AIによる構成案のみを出力。人間が調整したい時に使うのだ。 | **JSON** |
-| **`image`** | **個別作画**。JSONを読み込み、パネルごとの画像とHTMLを生成するのだ。 | Images, HTML, MD |
-| **`story`** | **最終錬成**。Markdown台本から「8コマ完成済み漫画ページ」を生成するのだ。 | **Final Image (PNG)** |
+| **`script`** | **台本生成**。AIによる構成案（JSON）のみを出力するのだ。 | **JSON** |
+| **`image`** | **パネル作画**。JSONから各コマの画像とHTMLを生成するのだ。 | Images, HTML, MD |
+| **`story`** | **最終錬成**。Markdownから「統合済み漫画ページ」を生成するのだ。 | **Final Image (PNG)** |
 
 ---
-
-### 🎨 主要なフラグ (Major Flags)
-
-| フラグ | ショートカット | 説明 | デフォルト値 | 必須 |
-| --- | --- | --- | --- | --- |
-| `--script-url` | **`-u`** | ソースとなるWebページのURL。コンテンツを自動抽出するのだ。 | **なし** | ✅ (※) |
-| `--script-file` | **`-f`** | ローカルのテキストファイル、または `script` コマンドで出力したJSONパス。 | **なし** | ✅ (※) |
-| `--output-file` | **`-o`** | 生成されるMarkdown/HTML、または台本JSONの保存先パスなのだ。 | `output/manga_plot.md` | ❌ |
-| `--output-image-dir` | **`-i`** | 生成された画像を保存するディレクトリ（ローカルまたは `gs://...`）。 | `output/images` | ❌ |
-| `--mode` | **`-m`** | キャラクター構成を指定 (`'duet'`, `'dialogue'` など)。 | `dialogue` | ❌ |
-| `--model` | なし | テキスト生成（台本構成）に使用する Gemini モデル名なのだ。 | `gemini-3-flash-preview` | ❌ |
-| `--image-model` | なし | 画像生成に使用する Gemini モデル名なのだ。 | `gemini-3-pro-image-preview` | ❌ |
-| `--char-config` | **`-c`** | **キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。** | `examples/characters.json` | ❌ |
-| `--panel-limit` | **`-p`** | 生成する漫画パネルの最大数。開発時のコスト節約に便利なのだ。 | `10` | ❌ |
-| `--http-timeout` | なし | Webリクエスト（スクレイピング等）のタイムアウト時間なのだ。 | `30s` | ❌ |
-
-**(※) 注意:** `--script-url` または `--script-file` のいずれか一方は必ず指定する必要があるのだ！
-
----
-
 
 ## 💻 実行例 (Usage)
 
-### 1. 最高の1枚を一気に作る (Standard)
+### 1. キャラクターのDNAを固定する (Setup DNA)
+
+本編を作る前に、まずキャラクターのデザインを固定してSeed値を取得するのだ！
 
 ```bash
-./mangakit generate --script-url "https://example.com/tech-blog" -m duet
+# ずんだもん、めたんの二面図を生成してSeedを確認
+bin/mangakit design --chars zundamon,metan
+
+# 📌 抽出された Seed 値: 12345
+# この値を characters.json の seed 欄に設定して、DNAを固定するのだ！
 
 ```
 
-### 2. 人間とAIの共作フロー (Advanced)
+### 2. 最高の1枚を一気に作る (Standard)
+
+```bash
+bin/mangakit generate --script-url "https://example.com/tech-blog" -m duet
+
+```
+
+### 3. 人間とAIの共作フロー (Advanced)
 
 ```bash
 # 1. 台本JSONの生成
-./mangakit script -u "https://example.com/tech-blog" -o "output/my_script.json"
+bin/mangakit script -u "https://example.com/tech-blog" -o "output/script.json"
 
-# (ここで JSON を編集可能)
+# (ここで JSON のセリフや構図を編集可能)
 
-# 2. JSONからプロット情報（Markdown）と個別画像を生成
-./mangakit image -f "output/my_script.json" -o "output/manga_plot.md"
+# 2. JSONから個別パネル画像（GroupPipeline）を生成
+bin/mangakit image -f "output/script.json" -o "output/manga_plot.md"
 
-# 3. 編集済みMarkdownから「完成済み1ページ漫画」を錬成
-./mangakit story -f "output/manga_plot.md" -o "output/final_manga_page.png"
+# 3. 編集済みMarkdownから「完成済み1ページ漫画（PagePipeline）」を錬成
+bin/mangakit story -f "output/manga_plot.md" -o "output/final_page.png"
 
 ```
 
