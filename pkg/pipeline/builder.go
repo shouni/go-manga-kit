@@ -18,10 +18,10 @@ type Pipeline struct {
 	Characters map[string]domain.Character
 }
 
-func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (*Pipeline, error) {
+func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (Pipeline, error) {
 	characters, err := loadCharacters(characterConfig)
 	if err != nil {
-		return nil, fmt.Errorf("loadCharacters failed: %w", err)
+		return Pipeline{}, fmt.Errorf("loadCharacters failed: %w", err)
 	}
 	normalizedChars := make(map[string]domain.Character)
 	for k, v := range characters {
@@ -30,10 +30,10 @@ func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeM
 
 	imgGen, err := initializeImageGenerator(httpClient, aiClient, model)
 	if err != nil {
-		return nil, fmt.Errorf("InitializeImageGenerator failed: %w", err)
+		return Pipeline{}, fmt.Errorf("InitializeImageGenerator failed: %w", err)
 	}
 
-	return &Pipeline{
+	return Pipeline{
 		ImgGen:     imgGen,
 		Characters: normalizedChars,
 	}, nil
