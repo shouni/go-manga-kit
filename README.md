@@ -15,21 +15,21 @@
 
 ## ✨ 主な特徴 (Features)
 
-* **📖 Script-to-Manga Pipeline**: Markdown形式の台本を解析し、AIが理解可能な詳細な描写指示（Visual Anchor）へ自動変換。
-* **🧬 Character DNA System**: `characters.json` で定義された視覚的特徴（Visual Cues）を各プロンプトに動的に注入し、全パネルを通して一貫性を維持。
-* **📐 Unified Prompt Engine**: 90年代レトロメカアニメスタイルなど、高度なスタイルサフィックスを用いた一貫性のある画風制御。
-* **🎭 Multi-Mode Execution**: 単一パネルの生成から、全ページを統合したWebtoonレイアウトの生成まで柔軟に対応。
-* **🌐 Hybrid Publisher**: 生成されたコンテンツをMarkdown、HTML、画像としてローカルまたはGoogle Cloud Storageへ透過的に保存。
+* **📖 Script-to-Manga Pipeline**: Markdown形式の台本を解析し、AIが理解可能な詳細な描写指示（Visual Anchor）へ自動変換します。
+* **🧬 Character DNA System**: `characters.json` で定義された視覚的特徴（Visual Cues）を各プロンプトに動的に注入し、全パネルを通してキャラクターの整合性を維持します。
+* **📐 Unified Prompt Engine**: 高度なスタイルサフィックスを用いた、一貫性のある画風制御ロジックを搭載しています。
+* **🎭 Multi-Mode Execution**: 単一パネルの生成から、全ページを統合したWebtoonレイアウトの生成まで柔軟に対応します。
+* **🌐 Hybrid Publisher**: 生成されたコンテンツをMarkdown、HTML、画像としてローカルまたはGoogle Cloud Storageへ透過的に保存します。
 
 ---
 
 ## 📂 プロジェクト構造 (Project Layout)
 
 ```text
-.
+go-manga-kit/
 ├── bin/             # コンパイル済みバイナリ
 ├── cmd/             # CLIサブコマンド定義 (image, story, root)
-├── examples/        # 設定・台本サンプル (characters.json, manga_script.json)
+├── examples/        # 設定・台本サンプル (characters.json, manga_script.md)
 ├── internal/
 │   ├── builder/     # DIコンテナ・アプリの初期化・組み立て
 │   ├── config/      # 環境変数・設定管理
@@ -52,7 +52,7 @@
 
 ### 1. セットアップ
 
-まずはバイナリをビルドするのだ。
+バイナリをビルドします。
 
 ```bash
 go build -o bin/mangakit main.go
@@ -61,7 +61,7 @@ go build -o bin/mangakit main.go
 
 ### 2. キャラクター定義の準備 (`examples/characters.json`)
 
-キャラクターの見た目をJSONで定義するのだ。
+キャラクターの見た目をJSONで定義します。
 
 ```json
 {
@@ -83,11 +83,12 @@ go build -o bin/mangakit main.go
 ### 3. コマンドの実行
 
 **画像生成モード:**
-Markdownスクリプトを読み込み、指定したページの画像を生成するのだ。
+Markdown形式の台本（スクリプト）を読み込み、指定したページの画像を生成します。
 
 ```bash
 # 特定のページ(1ページ目)を生成
-./bin/mangakit image -p 1 -c examples/characters.json
+# -s でMarkdown台本、-c でキャラクター定義を指定します
+./bin/mangakit image -p 1 -c examples/characters.json -s examples/manga_script.md
 
 ```
 
