@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 const (
