@@ -93,7 +93,7 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 
 // InitializeImageGenerator は ImageGeneratorを初期化します。
 func InitializeImageGenerator(appCtx *AppContext) (generator.ImageGenerator, error) {
-	imgGen, err := mngkit.InitializeImageGenerator(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiModel)
+	imgGen, err := mngkit.InitializeImageGenerator(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiImageModel)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
 	}
