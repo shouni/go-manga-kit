@@ -7,7 +7,7 @@ import (
 	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
+	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
@@ -15,14 +15,14 @@ import (
 
 // GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
 type GroupPipeline struct {
-	adapter    imagekit.ImageGenerator
+	imgGen     generator.ImageGenerator
 	basePrompt string
 	interval   time.Duration
 }
 
-func NewGroupPipeline(adapter imagekit.ImageGenerator, basePrompt string, interval time.Duration) *GroupPipeline {
+func NewGroupPipeline(imgGen generator.ImageGenerator, basePrompt string, interval time.Duration) *GroupPipeline {
 	return &GroupPipeline{
-		adapter:    adapter,
+		imgGen:     imgGen,
 		basePrompt: basePrompt,
 		interval:   interval,
 	}
@@ -63,7 +63,7 @@ func (gp *GroupPipeline) Execute(ctx context.Context, pages []domain.MangaPage, 
 			}
 
 			// 4. アダプター呼び出し
-			resp, err := gp.adapter.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+			resp, err := gp.imgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         prompt,
 				NegativePrompt: negPrompt,
 				Seed:           seedPtr,
