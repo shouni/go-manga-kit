@@ -8,7 +8,7 @@ import (
 
 // デフォルト値の定義なのだ
 const (
-	DefaultModel             = "gemini-3-flash-preview"
+	//	DefaultModel             = "gemini-3-flash-preview"
 	DefaultImageModel        = "gemini-3-pro-image-preview"
 	DefaultHTTPTimeout       = 30 * time.Second
 	DefaultPanelLimit        = 10
@@ -33,10 +33,10 @@ type Config struct {
 // LoadConfig は環境変数から設定を読み込み、構造体を返すのだ！
 func LoadConfig() *Config {
 	cfg := &Config{
-		ProjectID:         envutil.GetEnv("PROJECT_ID", ""),
-		LocationID:        envutil.GetEnv("REGION", ""),
-		GeminiAPIKey:      envutil.GetEnv("GEMINI_API_KEY", ""),
-		GeminiModel:       envutil.GetEnv("GEMINI_MODEL", DefaultModel),
+		ProjectID:    envutil.GetEnv("PROJECT_ID", ""),
+		LocationID:   envutil.GetEnv("REGION", ""),
+		GeminiAPIKey: envutil.GetEnv("GEMINI_API_KEY", ""),
+		//		GeminiModel:       envutil.GetEnv("GEMINI_MODEL", DefaultModel),
 		GeminiImageModel:  envutil.GetEnv("IMAGE_GEMINI_MODEL", DefaultImageModel),
 		ImagePromptSuffix: envutil.GetEnv("IMAGE_PROMPT_SUFFIX", DefaultImagePromptSuffix),
 	}

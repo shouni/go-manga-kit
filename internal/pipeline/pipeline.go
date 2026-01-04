@@ -12,77 +12,11 @@ import (
 	"github.com/shouni/go-manga-kit/internal/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
-	//	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-remote-io/pkg/gcsfactory"
 )
-
-// Execute は依存関係を初期化し、漫画生成パイプラインを3つのフェーズで実行するのだ。
-func Execute(ctx context.Context, cfg *config.Config) error {
-	// 設定のロードと依存関係の準備
-	appCtx, err := setupAppContext(ctx, cfg)
-	if err != nil {
-		return err
-	}
-
-	// --- Phase 1: Script Phase (台本取得 & 生成) ---
-	manga, err := runScriptStep(ctx, appCtx)
-	if err != nil {
-		return err
-	}
-
-	// --- Phase 2: Image Phase (イメージ作成) ---
-	images, err := runImageStep(ctx, appCtx, manga)
-	if err != nil {
-		return err
-	}
-
-	// --- Phase 3: Publish Phase (公開/保存) ---
-	err = runPublishStep(ctx, appCtx, manga, images)
-	if err != nil {
-		return err
-	}
-
-	slog.Info("全てのフェーズが正常に完了したのだ！")
-	return nil
-}
-
-// ExecuteScriptOnly は台本の生成（Phase 1）のみを行い、結果をJSONファイルとして保存するのだ。
-func ExecuteScriptOnly(ctx context.Context, cfg *config.Config) error {
-	appCtx, err := setupAppContext(ctx, cfg)
-	if err != nil {
-		return err
-	}
-
-	// --- Phase 1: Script Phase (台本取得 & 生成) ---
-	manga, err := runScriptStep(ctx, appCtx)
-	if err != nil {
-		return err
-	}
-
-	// JSONとしてファイル保存
-	outputPath := cfg.Options.OutputFile
-	// 保存処理 (簡易的に json.Marshal を使うのだ)
-	data, err := json.MarshalIndent(manga, "", "  ")
-	if err != nil {
-		return fmt.Errorf("JSONの整形に失敗したのだ: %w", err)
-	}
-
-	// Writerを取得して書き込むのだ
-	writer, err := appCtx.RemoteIOFactory.NewOutputWriter()
-	if err != nil {
-		return fmt.Errorf("出力ライターの初期化に失敗したのだ: %w", err)
-	}
-	err = writer.Write(ctx, outputPath, bytes.NewReader(data), "application/json")
-	if err != nil {
-		return fmt.Errorf("JSONの保存に失敗したのだ: %w", err)
-	}
-
-	slog.Info("台本JSONの出力が完了したのだ！", "path", outputPath)
-	return nil
-}
 
 // ExecuteImageOnly は、指定されたJSONファイル（台本）を読み込み、
 // 画像生成と公開処理（Phase 2 & 3）を実行するのだ。
@@ -195,21 +129,6 @@ func setupAppContext(ctx context.Context, cfg *config.Config) (*builder.AppConte
 
 	appCtx := builder.NewAppContext(cfg, aiClient, httpClient, gcsFactory)
 	return &appCtx, nil
-}
-
-// runScriptStep は ScriptRunner を使って台本(JSON)を生成するのだ
-func runScriptStep(ctx context.Context, appCtx *builder.AppContext) (domain.MangaResponse, error) {
-	slog.Info("Phase 1: 台本生成を開始するのだ...")
-	scriptRunner, err := builder.BuildScriptRunner(ctx, appCtx)
-	if err != nil {
-		return domain.MangaResponse{}, fmt.Errorf("ScriptRunnerの構築に失敗したのだ: %w", err)
-	}
-
-	manga, err := scriptRunner.Run(ctx)
-	if err != nil {
-		return domain.MangaResponse{}, fmt.Errorf("台本生成に失敗したのだ: %w", err)
-	}
-	return manga, nil
 }
 
 // runImageStep は MangaImageRunner を使ってパネル画像を並列生成するのだ
