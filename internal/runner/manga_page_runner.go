@@ -31,6 +31,7 @@ type MangaPageRunner struct {
 	baseURL  string
 }
 
+// NewMangaPageRunner initializes a MangaPageRunner with a manga pipeline, style suffix, and script URL.
 func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, scriptURL string) *MangaPageRunner {
 	baseURL := ""
 	u, err := url.Parse(scriptURL)
@@ -44,6 +45,7 @@ func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, scr
 	}
 }
 
+// Run processes the provided Markdown content and generates a manga page image using the configured pipeline.
 func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {
 	manga, err := r.parseMarkdown(markdownContent)
 	if err != nil {
@@ -52,10 +54,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*ima
 	return r.generateMangaPage(ctx, *manga)
 }
 
-func (r *MangaPageRunner) generateMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
-	return r.pipeline.ExecuteMangaPage(ctx, manga)
-}
-
+// parseMarkdown parses the provided Markdown content and returns a MangaResponse object.
 func (r *MangaPageRunner) parseMarkdown(input string) (*domain.MangaResponse, error) {
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
@@ -106,4 +105,11 @@ func (r *MangaPageRunner) parseMarkdown(input string) (*domain.MangaResponse, er
 		manga.Pages = append(manga.Pages, *currentPage)
 	}
 	return manga, nil
+}
+
+// generateMangaPage generates a single unified manga page image based on the provided MangaResponse data.
+// It utilizes the configured pipeline to process the manga content and combines layouts, visual anchors, and dialogue.
+// Returns the generated ImageResponse or an error if the operation fails.
+func (r *MangaPageRunner) generateMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+	return r.pipeline.ExecuteMangaPage(ctx, manga)
 }
