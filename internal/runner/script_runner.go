@@ -85,6 +85,9 @@ func (sr *MangaScriptRunner) readInputContent(ctx context.Context) ([]byte, erro
 	// URLが指定されている場合は、Webスクレイピングを実行するのだ
 	if sr.cfg.Options.ScriptURL != "" {
 		text, _, err := sr.extractor.FetchAndExtractText(ctx, sr.cfg.Options.ScriptURL)
+		if err != nil {
+			return nil, fmt.Errorf("URLからのテキスト抽出に失敗しました: %w", err)
+		}
 		return []byte(text), err
 	}
 	// ファイルパスが指定されている場合は、リーダーを使って開くのだ（GCS等も対応！）

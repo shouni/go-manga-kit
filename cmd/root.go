@@ -26,7 +26,7 @@ func addAppFlags(rootCmd *cobra.Command) {
 	// --- AIモデル・挙動設定 ---
 	rootCmd.PersistentFlags().StringVarP(&opts.Mode, "mode", "m", "dialogue", "プロンプト生成モードなのだ。")
 	rootCmd.PersistentFlags().StringVar(&opts.AIModel, "model", config.DefaultModel, "使用する Gemini モデル名なのだ。")
-	rootCmd.PersistentFlags().StringVar(&opts.ImageModel, "image-model", config.DefaultImageModel, "使用する Gemini モデル名なのだ。")
+	rootCmd.PersistentFlags().StringVar(&opts.ImageModel, "image-model", config.DefaultImageModel, "画像生成に使用する Gemini モデル名なのだ。")
 	rootCmd.PersistentFlags().DurationVar(&opts.HTTPTimeout, "http-timeout", config.DefaultHTTPTimeout, "Webリクエストのタイムアウトなのだ。")
 
 	// --- 画像生成 (Nano Banana) 固有設定 ---
