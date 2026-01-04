@@ -56,5 +56,6 @@ func Execute() {
 		scriptCmd,
 		imageCmd,
 		storyCmd,
+		designCmd,
 	)
 }

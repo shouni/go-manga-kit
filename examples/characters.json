@@ -1,25 +1,37 @@
 {
+  "zundamon_metan": {
+    "id": "zundamon_metan",
+    "name": "Zundamon and Metan",
+    "seed": 1000,
+    "reference_url": "https://storage.googleapis.com/action-perfect-get-on-go/apm/character/design_works/zundamon_metan.jpeg",
+    "visual_cues": [
+      "two girls standing side by side",
+      "girl 1 (Zundamon): vibrant emerald green hair, soybean earmuffs",
+      "girl 2 (Metan): vibrant lavender hair, massive twin-tails with spiral curls",
+      "consistent with the reference image styles"
+    ]
+  },
   "zundamon": {
     "id": "zundamon",
-    "name": "ずんだもん",
+    "name": "Zundamon",
     "seed": 10001,
     "reference_url": "https://storage.googleapis.com/action-perfect-get-on-go/apm/character/design_works/zundamon.jpeg",
     "visual_cues": [
       "vibrant emerald green hair",
       "soybean earmuffs",
-      "strictly following the outfit and design from reference image"
+      "strictly following the design from reference"
     ]
   },
   "metan": {
     "id": "metan",
-    "name": "めたん",
+    "name": "Metan",
     "seed": 20001,
     "reference_url": "https://storage.googleapis.com/action-perfect-get-on-go/apm/character/design_works/metan.jpeg",
     "visual_cues": [
       "vibrant lavender hair",
       "massive twin-tails with spiral curls",
       "sharp red eyes",
-      "strictly following the outfit and design from reference image"
+      "strictly following the design from reference"
     ]
   }
 }
