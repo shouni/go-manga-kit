@@ -6,31 +6,31 @@ import (
 	"strings"
 	"time"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/domain"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
 
 // GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
 type GroupPipeline struct {
-	imgGen     generator.ImageGenerator
+	manga      Pipeline
 	basePrompt string
 	interval   time.Duration
 }
 
-func NewGroupPipeline(imgGen generator.ImageGenerator, basePrompt string, interval time.Duration) *GroupPipeline {
+func NewGroupPipeline(manga Pipeline, basePrompt string, interval time.Duration) *GroupPipeline {
 	return &GroupPipeline{
-		imgGen:     imgGen,
+		manga:      manga,
 		basePrompt: basePrompt,
 		interval:   interval,
 	}
 }
 
-// Execute は、並列処理を用いてパネル群を生成する。
+// ExecutePanelGroup は、並列処理を用いてパネル群を生成する。
 // ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
-func (gp *GroupPipeline) Execute(ctx context.Context, pages []domain.MangaPage, characters map[string]domain.Character) ([]*imagedom.ImageResponse, error) {
+func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 
@@ -50,7 +50,7 @@ func (gp *GroupPipeline) Execute(ctx context.Context, pages []domain.MangaPage, 
 			}
 
 			// 1. キャラクター解決
-			char := gp.resolveAndGetCharacter(page, characters)
+			char := gp.resolveAndGetCharacter(page, gp.manga.Characters)
 
 			// 2. プロンプト構築
 			prompt, negPrompt := gp.buildPrompt(page.VisualAnchor, char.VisualCues)
@@ -63,7 +63,7 @@ func (gp *GroupPipeline) Execute(ctx context.Context, pages []domain.MangaPage, 
 			}
 
 			// 4. アダプター呼び出し
-			resp, err := gp.imgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+			resp, err := gp.manga.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         prompt,
 				NegativePrompt: negPrompt,
 				Seed:           seedPtr,

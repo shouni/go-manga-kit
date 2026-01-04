@@ -9,10 +9,9 @@ import (
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/pipeline"
+	mangakit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/gemini-image-kit/pkg/generator"
 )
 
 var (
@@ -23,12 +22,11 @@ var (
 
 // MangaPageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
 type MangaPageRunner struct {
-	pipeline   *pipeline.PagePipeline
-	characters map[string]domain.Character
-	baseURL    string
+	pipeline *mangakit.PagePipeline
+	baseURL  string
 }
 
-func NewMangaPageRunner(imgGen generator.ImageGenerator, characters map[string]domain.Character, styleSuffix string, scriptURL string) *MangaPageRunner {
+func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, scriptURL string) *MangaPageRunner {
 	baseURL := ""
 	u, err := url.Parse(scriptURL)
 	if err == nil && u.Scheme == "gs" {
@@ -36,14 +34,13 @@ func NewMangaPageRunner(imgGen generator.ImageGenerator, characters map[string]d
 	}
 
 	return &MangaPageRunner{
-		pipeline:   pipeline.NewPagePipeline(imgGen, styleSuffix),
-		characters: characters,
-		baseURL:    baseURL,
+		pipeline: mangakit.NewPagePipeline(mangaPipeline, styleSuffix), // manga全体を渡す
+		baseURL:  baseURL,
 	}
 }
 
 func (r *MangaPageRunner) Run(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
-	return r.pipeline.Execute(ctx, manga, r.characters)
+	return r.pipeline.ExecuteMangaPage(ctx, manga)
 }
 
 func (r *MangaPageRunner) RunMarkdown(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {

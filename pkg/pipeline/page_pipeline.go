@@ -8,35 +8,34 @@ import (
 	"strings"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/gemini-image-kit/pkg/generator"
+
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // PagePipeline は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
 type PagePipeline struct {
-	imgGen      generator.ImageGenerator
+	manga       Pipeline
 	styleSuffix string
 }
 
-func NewPagePipeline(adapter generator.ImageGenerator, styleSuffix string) *PagePipeline {
+func NewPagePipeline(manga Pipeline, styleSuffix string) *PagePipeline {
 	return &PagePipeline{
-		imgGen:      adapter,
-		styleSuffix: styleSuffix,
-	}
+		manga:       manga,
+		styleSuffix: styleSuffix}
 }
 
-// Execute は構造化された台本を基に、1枚の統合漫画画像を生成するのだ！
-func (pp *PagePipeline) Execute(ctx context.Context, manga domain.MangaResponse, characters map[string]domain.Character) (*imagedom.ImageResponse, error) {
+// ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
+func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
 	// 1. 参照URLの収集
-	refURLs := pp.collectReferences(manga.Pages, characters)
+	refURLs := pp.collectReferences(manga.Pages, pp.manga.Characters)
 
 	// 2. 巨大な統合プロンプトの構築
-	fullPrompt := pp.buildUnifiedPrompt(manga, characters, refURLs)
+	fullPrompt := pp.buildUnifiedPrompt(manga, pp.manga.Characters, refURLs)
 
 	// 3. シード値の決定（最初のパネルのキャラを優先）
 	var defaultSeed *int64
 	if len(manga.Pages) > 0 {
-		char := pp.findCharacter(manga.Pages[0].SpeakerID, characters)
+		char := pp.findCharacter(manga.Pages[0].SpeakerID, pp.manga.Characters)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -51,7 +50,7 @@ func (pp *PagePipeline) Execute(ctx context.Context, manga domain.MangaResponse,
 		ReferenceURLs:  refURLs,
 	}
 
-	return pp.imgGen.GenerateMangaPage(ctx, req)
+	return pp.manga.ImgGen.GenerateMangaPage(ctx, req)
 }
 
 // findCharacter は SpeakerID（名前またはハッシュ化ID）からキャラを特定するのだ
