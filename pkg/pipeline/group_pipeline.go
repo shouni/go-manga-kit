@@ -57,15 +57,12 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			char := gp.resolveAndGetCharacter(page, gp.mangaPipeline.Characters)
 
 			// 2. プロンプト構築
-			pmp, negPrompt, seed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
-			//			prompt, negPrompt := gp.buildPrompt(page.VisualAnchor, char.VisualCues)
+			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
 
-			// 3. シード値の処理 (int64 -> *int64)
+			// 3. シード値の処理
+			// char.Seed 自体が設定されているか、あるいは決定論的に生成された finalSeed を使うのだ
 			var seedPtr *int64
-			if char.Seed > 0 {
-				s := seed
-				seedPtr = &s
-			}
+			seedPtr = &finalSeed
 
 			// 4. アダプター呼び出し
 			resp, err := gp.mangaPipeline.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
@@ -91,36 +88,41 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 	return images, nil
 }
 
-// 以下、内部ロジック（Runnerから移管したもの）
-
+// resolveAndGetCharacter determines and retrieves the appropriate character for a given manga page based on speaker ID or visual cues.
 func (gp *GroupPipeline) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
-	id := strings.ToLower(page.SpeakerID)
+	// 1. IDの正規化
+	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
+
+	// 2. SpeakerIDが空なら、VisualAnchor（描写指示）からキャラ名を推測する
 	if id == "" {
 		anchor := strings.ToLower(page.VisualAnchor)
-		if strings.Contains(anchor, "metan") {
+		// 優先順位：2人組 -> 特定キャラ の順でチェック
+		if strings.Contains(anchor, "zundamon") && strings.Contains(anchor, "metan") {
+			id = "zundamon_metan"
+		} else if strings.Contains(anchor, "metan") {
 			id = "metan"
-		}
-		if strings.Contains(anchor, "zundamon") {
+		} else if strings.Contains(anchor, "zundamon") {
 			id = "zundamon"
 		}
 	}
 
+	// 3. 確定したIDで検索
 	if c, ok := characters[id]; ok {
 		return c
 	}
+
+	// 4. 見つからない場合のフォールバック（ここは慎重に！）
+	// IDが指定されていたのに見つからない場合、勝手に「ずんだもん」にするよりは、
+	// 名前だけ入れた空のCharacterを返して BuildUnifiedPrompt 側の GetSeedFromName に任せるのが安全なのだ。
+	if id != "" {
+		return domain.Character{ID: id, Name: id}
+	}
+
+	// 5. 本当に何も情報がない場合のみ、デフォルトキャラを返す
 	if zunda, ok := characters["zundamon"]; ok {
 		return zunda
 	}
-	for _, v := range characters {
-		return v
-	}
+
+	// 最終手段
 	return domain.Character{Name: "Unknown"}
 }
-
-//// TODO::あとで消す
-//func (gp *GroupPipeline) buildPrompt(anchor string, cues []string) (string, string) {
-//	positive := fmt.Sprintf("%s, %s, %s, cinematic composition, high resolution, no speech bubbles",
-//		gp.basePrompt, strings.Join(cues, ", "), anchor)
-//	negative := "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
-//	return positive, negative
-//}

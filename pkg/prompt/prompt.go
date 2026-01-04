@@ -73,40 +73,46 @@ func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.M
 
 // BuildUnifiedPrompt は、単体パネル用のプロンプトとシード値を生成します。
 func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
-	var parts []string
-	var seed int64
-
 	// 1. キャラクター設定の注入
+	var visualParts []string
+	var targetSeed int64
+
 	if char, ok := pb.characterMap[speakerID]; ok {
+		// 登録済みキャラなら、そのDNA（VisualCuesとSeed）を完全に継承するのだ！
 		if len(char.VisualCues) > 0 {
-			parts = append(parts, char.VisualCues...)
+			visualParts = append(visualParts, char.VisualCues...)
 		}
-		seed = char.Seed
+		targetSeed = char.Seed
 	} else {
-		// マップに登録がない、またはspeakerIDが空の場合、
-		// speakerIDから決定論的なシード値を生成する。
-		seed = domain.GetSeedFromName(speakerID, pb.characterMap)
+		// 登録がない場合は、名前から「いつもの値」を決定論的に生成するのだ。
+		// ※ speakerIDが空でも GetSeedFromName がよしなにやってくれる想定なのだ。
+		targetSeed = domain.GetSeedFromName(speakerID, pb.characterMap)
+
+		// 登録がないキャラでも、名前くらいはヒントとして入れておくとAIが助かるのだ。
+		if speakerID != "" {
+			visualParts = append(visualParts, speakerID)
+		}
 	}
 
 	// 2. アクション/ビジュアルアンカーの追加
 	if page.VisualAnchor != "" {
-		parts = append(parts, page.VisualAnchor)
+		visualParts = append(visualParts, page.VisualAnchor)
 	}
 
-	parts = append(parts, CinematicTags)
+	visualParts = append(visualParts, CinematicTags)
 
 	// 3. デフォルトサフィックスの結合
 	if pb.defaultSuffix != "" {
-		parts = append(parts, pb.defaultSuffix)
+		visualParts = append(visualParts, pb.defaultSuffix)
 	}
 
 	// 4. カンマ区切りでクリーンに結合
 	var cleanParts []string
-	for _, p := range parts {
+	for _, p := range visualParts {
 		if s := strings.TrimSpace(p); s != "" {
 			cleanParts = append(cleanParts, s)
 		}
 	}
 
-	return strings.Join(cleanParts, ", "), MangaNegativePrompt, seed
+	return strings.Join(cleanParts, ", "), MangaNegativePrompt, targetSeed
 }
