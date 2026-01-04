@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/shouni/go-manga-kit/internal/runner"
 	"github.com/shouni/go-manga-kit/pkg/domain"
+	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
 
-	"github.com/patrickmn/go-cache"
-	imagekit "github.com/shouni/gemini-image-kit/pkg/adapters"
+	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-text-format/pkg/builder"
 	"google.golang.org/genai"
@@ -18,18 +17,9 @@ import (
 
 // BuildImageRunner は個別パネル画像生成を担当する Runner を構築します。
 func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunner, error) {
-	// 共通の Core コンポーネントを作成
-	imgCore := buildSharedImageCore(appCtx)
-
-	// 個別パネル用アダプターの初期化
-	imageAdapter, err := imagekit.NewGeminiImageAdapter(
-		imgCore,
-		appCtx.aiClient,
-		appCtx.Config.GeminiImageModel,
-		appCtx.Config.ImagePromptSuffix,
-	)
+	imgGen, err := InitializeImageGenerator(appCtx)
 	if err != nil {
-		return nil, fmt.Errorf("画像アダプターの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
 	}
 
 	chars, err := domain.LoadCharacters(appCtx.Options.CharacterConfig)
@@ -38,7 +28,7 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 	}
 
 	return runner.NewMangaImageRunner(
-		imageAdapter,
+		imgGen,
 		chars,
 		appCtx.Options.PanelLimit,
 		appCtx.Config.ImagePromptSuffix,
@@ -47,48 +37,25 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 
 // BuildMangaPageRunner は 8パネル一括のページ生成を担当する Runner を構築します。
 func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.MangaPageRunner, error) {
-	// 共通の Core コンポーネントを作成
-	imgCore := buildSharedImageCore(appCtx)
+	imgGen, err := InitializeImageGenerator(appCtx)
+	if err != nil {
+		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
+	}
 
-	pageAdapter := imagekit.NewGeminiMangaPageAdapter(
-		imgCore,
-		appCtx.aiClient,
-		appCtx.Config.GeminiImageModel,
-	)
-
-	// 1. キャラクター情報の取得
 	chars, err := domain.LoadCharacters(appCtx.Options.CharacterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("キャラクター情報の取得に失敗しました: %w", err)
 	}
 
-	// 2. map[string]domain.Character を map[string]*domain.Character に変換
-	charPtrs := make(map[string]*domain.Character)
-	for id, char := range chars {
-		localChar := char
-		charPtrs[id] = &localChar
-	}
-
-	// 3. Runner の生成
+	// 2. Runner の生成
+	// ポインタへの変換は不要になったので、chars をそのまま渡せるのだ。
+	// 第3引数は、Runner内でPagePipelineに渡されるスタイル指定なのだ。
 	return runner.NewMangaPageRunner(
-		pageAdapter,
-		charPtrs, // ポインタのマップを渡すのだ
+		imgGen,
+		chars,
 		appCtx.Config.ImagePromptSuffix,
 		appCtx.Options.ScriptFile,
 	), nil
-}
-
-// buildSharedImageCore は各アダプターで共有する画像処理コアを生成します。
-func buildSharedImageCore(appCtx *AppContext) *imagekit.GeminiImageCore {
-	// 参照画像のダウンロード結果を保持するキャッシュ
-	imgCache := cache.New(30*time.Minute, 1*time.Hour)
-	cacheTTL := 1 * time.Hour
-
-	return imagekit.NewGeminiImageCore(
-		appCtx.httpClient,
-		imgCache,
-		cacheTTL,
-	)
 }
 
 // BuildPublisherRunner はコンテンツ保存と変換を行う Runner を構築します。
@@ -130,4 +97,14 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
 	}
 	return aiClient, nil
+}
+
+// InitializeImageGenerator は ImageGeneratorを初期化します。
+func InitializeImageGenerator(appCtx *AppContext) (generator.ImageGenerator, error) {
+	imgGen, err := mngkit.InitializeImageGenerator(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiModel)
+	if err != nil {
+		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
+	}
+
+	return imgGen, nil
 }
