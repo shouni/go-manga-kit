@@ -71,7 +71,7 @@ func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.M
 }
 
 // BuildUnifiedPrompt は、単体パネル用のプロンプトとシード値を生成します。
-func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, int64) {
+func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	var parts []string
 	var seed int64
 
@@ -92,6 +92,8 @@ func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID str
 		parts = append(parts, page.VisualAnchor)
 	}
 
+	parts = append(parts, CinematicTags)
+
 	// 3. デフォルトサフィックスの結合
 	if pb.defaultSuffix != "" {
 		parts = append(parts, pb.defaultSuffix)
@@ -105,5 +107,5 @@ func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID str
 		}
 	}
 
-	return strings.Join(cleanParts, ", "), seed
+	return strings.Join(cleanParts, ", "), MangaNegativePrompt, seed
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/prompt"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
@@ -16,14 +17,14 @@ import (
 // GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
 type GroupPipeline struct {
 	mangaPipeline Pipeline
-	basePrompt    string
+	styleSuffix   string
 	interval      time.Duration
 }
 
-func NewGroupPipeline(mangaPipeline Pipeline, basePrompt string, interval time.Duration) *GroupPipeline {
+func NewGroupPipeline(mangaPipeline Pipeline, styleSuffix string, interval time.Duration) *GroupPipeline {
 	return &GroupPipeline{
 		mangaPipeline: mangaPipeline,
-		basePrompt:    basePrompt,
+		styleSuffix:   styleSuffix,
 		interval:      interval,
 	}
 }
@@ -31,6 +32,9 @@ func NewGroupPipeline(mangaPipeline Pipeline, basePrompt string, interval time.D
 // ExecutePanelGroup は、並列処理を用いてパネル群を生成する。
 // ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
 func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
+
+	pb := prompt.NewPromptBuilder(gp.mangaPipeline.Characters, gp.styleSuffix)
+
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 
@@ -53,18 +57,19 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			char := gp.resolveAndGetCharacter(page, gp.mangaPipeline.Characters)
 
 			// 2. プロンプト構築
-			prompt, negPrompt := gp.buildPrompt(page.VisualAnchor, char.VisualCues)
+			pmp, negPrompt, seed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
+			//			prompt, negPrompt := gp.buildPrompt(page.VisualAnchor, char.VisualCues)
 
 			// 3. シード値の処理 (int64 -> *int64)
 			var seedPtr *int64
 			if char.Seed > 0 {
-				s := char.Seed
+				s := seed
 				seedPtr = &s
 			}
 
 			// 4. アダプター呼び出し
 			resp, err := gp.mangaPipeline.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
-				Prompt:         prompt,
+				Prompt:         pmp,
 				NegativePrompt: negPrompt,
 				Seed:           seedPtr,
 				ReferenceURL:   char.ReferenceURL,
@@ -112,9 +117,10 @@ func (gp *GroupPipeline) resolveAndGetCharacter(page domain.MangaPage, character
 	return domain.Character{Name: "Unknown"}
 }
 
-func (gp *GroupPipeline) buildPrompt(anchor string, cues []string) (string, string) {
-	positive := fmt.Sprintf("%s, %s, %s, cinematic composition, high resolution, no speech bubbles",
-		gp.basePrompt, strings.Join(cues, ", "), anchor)
-	negative := "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
-	return positive, negative
-}
+//// TODO::あとで消す
+//func (gp *GroupPipeline) buildPrompt(anchor string, cues []string) (string, string) {
+//	positive := fmt.Sprintf("%s, %s, %s, cinematic composition, high resolution, no speech bubbles",
+//		gp.basePrompt, strings.Join(cues, ", "), anchor)
+//	negative := "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
+//	return positive, negative
+//}
