@@ -83,7 +83,7 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 	slog.Info("1枚の漫画ページとして一括生成を開始するのだ...")
 
 	// 生成実行（Markdownをパースして統合プロンプトでAIに投げる
-	resp, err := pageRunner.RunMarkdown(ctx, markdownContent)
+	resp, err := pageRunner.Run(ctx, markdownContent)
 	if err != nil {
 		return fmt.Errorf("漫画ページの一括生成に失敗したのだ: %w", err)
 	}
