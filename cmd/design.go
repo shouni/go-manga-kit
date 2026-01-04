@@ -41,10 +41,15 @@ var designCmd = &cobra.Command{
 		if len(charIDs) == 0 {
 			return fmt.Errorf("--chars で最低1人のキャラクターIDを指定してほしいのだ")
 		}
-
-		aiClient, _ := builder.InitializeAIClient(ctx, os.Getenv("GEMINI_API_KEY"))
+		aiClient, err := builder.InitializeAIClient(ctx, os.Getenv("GEMINI_API_KEY"))
+		if err != nil {
+			return fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
+		}
 		httpClient := httpkit.New(config.DefaultHTTPTimeout)
 		imgPipe, err := pipeline.NewPipeline(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
+		if err != nil {
+			return fmt.Errorf("パイプラインの初期化に失敗しました: %w", err)
+		}
 
 		var refs []string
 		var descriptions []string
