@@ -34,7 +34,7 @@ func NewMangaPageRunner(manga mngkit.Pipeline, styleSuffix string, scriptURL str
 	}
 
 	return &MangaPageRunner{
-		pipeline: mngkit.NewPagePipeline(manga.ImgGen, styleSuffix),
+		pipeline: mngkit.NewPagePipeline(manga, styleSuffix), // manga全体を渡す
 		baseURL:  baseURL,
 	}
 }
