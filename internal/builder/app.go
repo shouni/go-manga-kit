@@ -5,7 +5,7 @@ import (
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-remote-io/pkg/gcsfactory"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // AppContext は、アプリケーション実行に必要な共通コンテキストを保持するのだ。
@@ -17,28 +17,33 @@ type AppContext struct {
 	// options はコマンドラインから渡された実行時の設定（モード、URL、モデル名など）なのだ
 	Options config.GenerateOptions
 
+	// Reader 外部データやスクリプトの読み込みに使用する、入力元（Reader）の設定
+	Reader remoteio.InputReader
+
+	// Writer 生成された内容を保存したり、外部へエクスポートしたりするための出力先を定義
+	Writer remoteio.OutputWriter
+
 	// aiClient はGeminiの通信に使う共通クライアントなのだ
 	aiClient gemini.GenerativeModel
 
 	// httpClient は外部APIとの通信に使う共通クライアントなのだ
 	httpClient httpkit.ClientInterface
-
-	// remoteIOFactory は入力（Source）や出力（GCS/Local）を透過的に扱うためのファクトリなのだ
-	RemoteIOFactory gcsfactory.Factory
 }
 
 // NewAppContext は AppContext の新しいインスタンスを生成するのだ
 func NewAppContext(
 	cfg *config.Config,
-	aiClient gemini.GenerativeModel,
 	httpClient httpkit.ClientInterface,
-	rioFactory gcsfactory.Factory,
+	aiClient gemini.GenerativeModel,
+	reader remoteio.InputReader,
+	writer remoteio.OutputWriter,
 ) AppContext {
 	return AppContext{
-		Config:          cfg,
-		Options:         cfg.Options,
-		aiClient:        aiClient,
-		httpClient:      httpClient,
-		RemoteIOFactory: rioFactory,
+		Config:     cfg,
+		Options:    cfg.Options,
+		aiClient:   aiClient,
+		httpClient: httpClient,
+		Reader:     reader,
+		Writer:     writer,
 	}
 }

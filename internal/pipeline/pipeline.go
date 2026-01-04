@@ -27,11 +27,7 @@ func ExecuteImageOnly(ctx context.Context, cfg *config.Config) error {
 	}
 
 	// JSONファイルの読み込み
-	reader, err := appCtx.RemoteIOFactory.NewInputReader()
-	if err != nil {
-		return err
-	}
-	rc, err := reader.Open(ctx, cfg.Options.ScriptFile)
+	rc, err := appCtx.Reader.Open(ctx, cfg.Options.ScriptFile)
 	if err != nil {
 		return fmt.Errorf("JSONファイル '%s' の読み込みに失敗しました: %w", cfg.Options.ScriptFile, err)
 	}
@@ -66,12 +62,7 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 		return err
 	}
 
-	// 保存されている台本ファイル (Markdown) を読み込むのだ
-	reader, err := appCtx.RemoteIOFactory.NewInputReader()
-	if err != nil {
-		return err
-	}
-	rc, err := reader.Open(ctx, cfg.Options.ScriptFile)
+	rc, err := appCtx.Reader.Open(ctx, cfg.Options.ScriptFile)
 	if err != nil {
 		return fmt.Errorf("台本ファイルの読み込みに失敗したのだ: %w", err)
 	}
@@ -97,14 +88,8 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("漫画ページの一括生成に失敗したのだ: %w", err)
 	}
 
-	// 最終成果物を保存するのだ、ここは単一の画像レスポンスなので、専用の保存処理を行うのだ
-	writer, err := appCtx.RemoteIOFactory.NewOutputWriter()
-	if err != nil {
-		return err
-	}
-
 	outputPath := cfg.Options.OutputFile
-	err = writer.Write(ctx, outputPath, bytes.NewReader(resp.Data), resp.MimeType)
+	err = appCtx.Writer.Write(ctx, outputPath, bytes.NewReader(resp.Data), resp.MimeType)
 	if err != nil {
 		return fmt.Errorf("最終ページの保存に失敗したのだ: %w", err)
 	}
@@ -118,16 +103,26 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 // 初期化中にエラーが発生した場合は、AppContext のポインタとエラーを返すのだ。
 func setupAppContext(ctx context.Context, cfg *config.Config) (*builder.AppContext, error) {
 	httpClient := httpkit.New(config.DefaultHTTPTimeout)
-	gcsFactory, err := gcsfactory.NewGCSClientFactory(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GCS client factory: %w", err)
-	}
 	aiClient, err := builder.InitializeAIClient(ctx, cfg.GeminiAPIKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ai client: %w", err)
 	}
 
-	appCtx := builder.NewAppContext(cfg, aiClient, httpClient, gcsFactory)
+	gcsFactory, err := gcsfactory.NewGCSClientFactory(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create GCS client factory: %w", err)
+	}
+
+	reader, err := gcsFactory.NewInputReader()
+	if err != nil {
+		return nil, err
+	}
+	writer, err := gcsFactory.NewOutputWriter()
+	if err != nil {
+		return nil, err
+	}
+
+	appCtx := builder.NewAppContext(cfg, httpClient, aiClient, reader, writer)
 	return &appCtx, nil
 }
 

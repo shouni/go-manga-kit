@@ -3,7 +3,6 @@ package builder
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/shouni/go-manga-kit/internal/runner"
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -61,13 +60,6 @@ func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (*runner.Mang
 // BuildPublisherRunner はコンテンツ保存と変換を行う Runner を構築します。
 func BuildPublisherRunner(ctx context.Context, appCtx *AppContext) (runner.PublisherRunner, error) {
 	opts := appCtx.Options
-
-	gcsClient := appCtx.RemoteIOFactory
-	writer, err := gcsClient.NewOutputWriter()
-	if err != nil {
-		slog.WarnContext(ctx, "OutputWriterの取得に失敗しました。保存機能が制限される可能性があります", "error", err)
-	}
-
 	config := builder.BuilderConfig{
 		EnableHardWraps: true,
 		Mode:            "webtoon",
@@ -82,7 +74,7 @@ func BuildPublisherRunner(ctx context.Context, appCtx *AppContext) (runner.Publi
 		return nil, fmt.Errorf("MarkdownToHtmlRunnerの初期化に失敗しました: %w", err)
 	}
 
-	return runner.NewDefaultPublisherRunner(opts, writer, md2htmlRunner), nil
+	return runner.NewDefaultPublisherRunner(opts, appCtx.Writer, md2htmlRunner), nil
 }
 
 // InitializeAIClient は gemini クライアントを初期化します。
@@ -101,7 +93,7 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 
 // InitializeImageGenerator は ImageGeneratorを初期化します。
 func InitializeImageGenerator(appCtx *AppContext) (generator.ImageGenerator, error) {
-	imgGen, err := mngkit.InitializeImageGenerator(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiModel)
+	imgGen, err := mngkit.InitializeImageGenerator(appCtx.httpClient, appCtx.aiClient, appCtx.Config.GeminiImageModel)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
 	}

@@ -8,19 +8,19 @@ import (
 	"strings"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
+	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // PagePipeline は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
 type PagePipeline struct {
-	adapter     imagekit.ImageGenerator
+	imgGen      generator.ImageGenerator
 	styleSuffix string
 }
 
-func NewPagePipeline(adapter imagekit.ImageGenerator, styleSuffix string) *PagePipeline {
+func NewPagePipeline(adapter generator.ImageGenerator, styleSuffix string) *PagePipeline {
 	return &PagePipeline{
-		adapter:     adapter,
+		imgGen:      adapter,
 		styleSuffix: styleSuffix,
 	}
 }
@@ -51,7 +51,7 @@ func (pp *PagePipeline) Execute(ctx context.Context, manga domain.MangaResponse,
 		ReferenceURLs:  refURLs,
 	}
 
-	return pp.adapter.GenerateMangaPage(ctx, req)
+	return pp.imgGen.GenerateMangaPage(ctx, req)
 }
 
 // findCharacter は SpeakerID（名前またはハッシュ化ID）からキャラを特定するのだ
