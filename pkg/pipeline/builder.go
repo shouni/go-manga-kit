@@ -51,7 +51,7 @@ func initializeImageGenerator(httpClient httpkit.ClientInterface, aiClient gemin
 		cacheTTL,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("GeminiImageCoreの初期化に失敗したのだ: %w", err)
+		return nil, fmt.Errorf("GeminiImageCoreの初期化に失敗しました: %w", err)
 	}
 
 	imgGen, err := generator.NewGeminiGenerator(
@@ -60,7 +60,7 @@ func initializeImageGenerator(httpClient httpkit.ClientInterface, aiClient gemin
 		model,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗したのだ: %w", err)
+		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
 	}
 
 	return imgGen, nil
@@ -71,7 +71,7 @@ func loadCharacters(path string) (map[string]domain.Character, error) {
 	// 1. ファイルの読み込み
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("キャラクターファイルの読み込みに失敗したのだ: %w", err)
+		return nil, fmt.Errorf("キャラクター設定ファイルの読み込みに失敗しました: %w", err)
 	}
 
 	// 2. バイト列からのパース処理（getCharacters）を再利用するのだ

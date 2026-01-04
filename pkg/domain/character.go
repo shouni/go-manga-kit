@@ -24,7 +24,7 @@ func GetCharacters(charactersJSON []byte) (map[string]Character, error) {
 	return chars, nil
 }
 
-// String はキャラクターの情報を文字列で返すのだ。
+// String はキャラクターの情報を文字列で返します。
 func (c Character) String() string {
 	return fmt.Sprintf("%s (%s)", c.Name, c.ID)
 }
