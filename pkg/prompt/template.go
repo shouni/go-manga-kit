@@ -1,4 +1,4 @@
-package generator
+package prompt
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 const (
 	// MangaStructureHeader はマンガとしての全体構造を強制する指示です。
 	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
-- STRUCTURE: A professional Japanese manga spread with clear frame borders.
+- STRUCTURE: A p≈with clear frame borders.
 - READING ORDER: Right-to-Left, Top-to-Bottom.
 - GUTTERS: Ultra-thin, crisp hairline dividers. NO OVERLAPPING. Each panel is a separate scene.`
 
