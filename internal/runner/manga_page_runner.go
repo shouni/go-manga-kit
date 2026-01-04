@@ -22,8 +22,7 @@ var (
 
 // PageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
 type PageRunner interface {
-	Run(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error)
-	RunMarkdown(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error)
+	Run(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error)
 }
 
 // MangaPageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
@@ -45,19 +44,19 @@ func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, scr
 	}
 }
 
-func (r *MangaPageRunner) Run(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
-	return r.pipeline.ExecuteMangaPage(ctx, manga)
-}
-
-func (r *MangaPageRunner) RunMarkdown(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {
-	manga, err := r.ParseMarkdown(markdownContent)
+func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {
+	manga, err := r.parseMarkdown(markdownContent)
 	if err != nil {
 		return nil, fmt.Errorf("Markdownのパースに失敗したのだ: %w", err)
 	}
-	return r.Run(ctx, *manga)
+	return r.generateMangaPage(ctx, *manga)
 }
 
-func (r *MangaPageRunner) ParseMarkdown(input string) (*domain.MangaResponse, error) {
+func (r *MangaPageRunner) generateMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+	return r.pipeline.ExecuteMangaPage(ctx, manga)
+}
+
+func (r *MangaPageRunner) parseMarkdown(input string) (*domain.MangaResponse, error) {
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
 	var currentPage *domain.MangaPage
