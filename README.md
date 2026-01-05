@@ -132,6 +132,14 @@ go-manga-kit/
 
 ---
 
+### 🤝 依存関係 (Dependencies)
+
+* [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - 高度な画像生成エンジン
+* [shouni/go-remote-io](https://github.com/shouni/go-remote-io) - ストレージ抽象化
+* [shouni/go-text-format](https://github.com/shouni/go-text-format) - Webtoon変換コア
+
+---
+
 ### 📜 ライセンス (License)
 
 このプロジェクトは [MIT License](https://opensource.org/licenses/MIT) の下で公開されています。
