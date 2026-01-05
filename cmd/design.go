@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -110,10 +111,17 @@ var designCmd = &cobra.Command{
 			return fmt.Errorf("画像の生成に失敗したのだ: %w", err)
 		}
 
-		// MIMEタイプから拡張子を決定するのだ！
-		extension := ".png" // デフォルト
-		if resp.MimeType == "image/jpeg" || resp.MimeType == "image/jpg" {
-			extension = ".jpeg"
+		// MIMEタイプから拡張子を決定
+		var extension string
+		extensions, err := mime.ExtensionsByType(resp.MimeType)
+		if err != nil || len(extensions) == 0 {
+			slog.Warn(
+				"Could not determine file extension from MIME type, defaulting to .png",
+				slog.String("mime_type", resp.MimeType),
+			)
+			extension = ".png" // フォールバック
+		} else {
+			extension = extensions[0] // 最も一般的な拡張子を取得 (例: ".jpeg")
 		}
 
 		// 拡張子を動的に付与してファイル名を決定
