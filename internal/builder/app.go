@@ -17,7 +17,7 @@ type AppContext struct {
 	Options        config.GenerateOptions   // Options: コマンドラインから渡された実行時の設定です（モード、URL、モデル名など）。
 	Reader         remoteio.InputReader     // Reader: 外部データやスクリプトの読み込みに使用する入力元です。
 	Writer         remoteio.OutputWriter    // Writer: 生成された内容を保存するための出力先です。
-	MangaGenerator generator.MangaGenerator // MangaGenerator: 画像生成とキャラクター管理を含むマンガ生成パイプラインです。
+	MangaGenerator generator.MangaGenerator // MangaGenerator: 画像生成とキャラクター管理を含むマンガ生成のコア機能です。
 	aiClient       gemini.GenerativeModel   // aiClient: Geminiの通信に使う共通クライアント
 	httpClient     httpkit.ClientInterface  // httpClient: 外部APIとの通信に使う共通クライアント
 }
