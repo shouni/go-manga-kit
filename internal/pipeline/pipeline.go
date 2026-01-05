@@ -148,11 +148,13 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("漫画ページの生成に失敗したのだ: %w", err)
 	}
 
+	// 出力パスのベース名と拡張子を事前に計算しておくのだ
+	outputFile := cfg.Options.OutputFile
+	ext := filepath.Ext(outputFile)
+	base := strings.TrimSuffix(outputFile, ext)
+
 	// 複数のページを順番に保存していくのだ
 	for i, resp := range resps {
-		// 出力パスを分割するのだ（例: output.png -> output_1.png）
-		ext := filepath.Ext(cfg.Options.OutputFile)
-		base := strings.TrimSuffix(cfg.Options.OutputFile, ext)
 		pagePath := fmt.Sprintf("%s_%d%s", base, i+1, ext)
 
 		err = appCtx.Writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType)
@@ -162,7 +164,7 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 		slog.Info("ページを保存したのだ", "path", pagePath)
 	}
 
-	slog.Info("全ての物語の集大成が完成したのだ！", "total_pages", len(resps))
+	slog.Info("全ての物語の集成が完成したのだ！", "total_pages", len(resps))
 	return nil
 }
 
