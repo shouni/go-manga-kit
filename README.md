@@ -61,7 +61,7 @@
 | `--mode` | **`-m`** | キャラクター構成を指定 (`'duet'`, `'dialogue'` など)。 | `dialogue` | ❌ |
 | `--model` | なし | テキスト生成（台本構成）に使用する Gemini モデル名なのだ。 | `gemini-3-flash-preview` | ❌ |
 | `--image-model` | なし | 画像生成に使用する Gemini モデル名なのだ。 | `gemini-3-pro-image-preview` | ❌ |
-| `--char-config` | **`-c`** | **キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。** | `examples/characters.json` | ❌ |
+| `--char-config` | **`-c`** | **キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。** | `internal/config/characters.json` | ❌ |
 | `--panel-limit` | **`-p`** | 生成する漫画パネルの最大数。開発時のコスト節約に便利なのだ。 | `10` | ❌ |
 | `--http-timeout` | なし | Webリクエスト（スクレイピング等）のタイムアウト時間なのだ。 | `30s` | ❌ |
 
