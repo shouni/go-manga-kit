@@ -36,21 +36,24 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 		return allResponses, nil
 	}
 
+	totalPages := (len(manga.Pages) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
+
 	for i := 0; i < len(manga.Pages); i += MaxPanelsPerPage {
 		end := i + MaxPanelsPerPage
 		if end > len(manga.Pages) {
 			end = len(manga.Pages)
 		}
 
+		currentPage := (i / MaxPanelsPerPage) + 1
 		subManga := domain.MangaResponse{
-			Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, (i/MaxPanelsPerPage)+1, (len(manga.Pages)+MaxPanelsPerPage-1)/MaxPanelsPerPage),
+			Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, currentPage, totalPages),
 			Description: manga.Description,
 			Pages:       manga.Pages[i:end],
 		}
 
 		res, err := pg.ExecuteMangaPage(ctx, subManga)
 		if err != nil {
-			return nil, fmt.Errorf("failed page %d: %w", i/MaxPanelsPerPage, err)
+			return nil, fmt.Errorf("failed page %d: %w", currentPage-1, err)
 		}
 		allResponses = append(allResponses, res)
 	}

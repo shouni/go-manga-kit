@@ -9,7 +9,7 @@ require (
 	github.com/shouni/go-cli-base v1.0.5
 	github.com/shouni/go-http-kit v1.1.2
 	github.com/shouni/go-remote-io v1.1.0
-	github.com/shouni/go-text-format v1.1.1
+	github.com/shouni/go-text-format v1.1.2
 	github.com/shouni/go-utils v1.0.14
 	github.com/shouni/go-web-exact/v2 v2.0.13
 	github.com/spf13/cobra v1.10.1
