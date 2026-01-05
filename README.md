@@ -5,21 +5,21 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 概要 (About) - 技術を「物語」へ。高精細8コマ漫画生成パイプライン
+## 🚀 概要 (About) - 技術を「連載」へ。自動ページ分割対応・解説漫画生成パイプライン
 
 **Go Manga Kit** は、非構造化された技術ドキュメントやWeb記事を解析し、AIによる「精密なネーム構成」と「キャラクターDNAの一貫性を維持した一括作画」を介して、認知的負荷の低い**解説漫画ページ**へと変換するハイエンド・ツールキットなのだ！
 
-[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画エンジンとして活用し、単なる画像の羅列ではなく、1枚の3:4キャンバスに複数のワイドパネルを整列させる「マルチパネル・グリッド・システム」を搭載。日本式の読み順（右から左、上から下）に最適化された、本格的な漫画体験を提供するのだ。
+[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画エンジンとして活用。独自の**オート・チャンク・システム**により、長大な記事でも6パネルごとに自動でページを分割。AIの描画限界を超えた、読み応えのある本格的な連載漫画体験を提供するのだ。
 
 ---
 
 ## ✨ 主な特徴 (Features)
 
-* **🧬 Character DNA System**: `design` コマンドで抽出したSeed値と参照URLをプロンプトへ動的に注入。全パネルで外見の一貫性を保持するのだ。
-* **📖 Script-to-Manga Pipeline**: 「伝説の漫画編集者プロンプト」がドキュメントを解析。セリフ、構図指示、SHA256ハッシュ化された `speaker_id` を含む構造化データを自動生成。
-* **📐 Dynamic Layout Director**: ページ生成時に「主役パネル（Big Panel）」を動的に決定。生成のたびに異なる演出を楽しめるのだ。
-* **🎭 Multi-Stage Workflow**: キャラクターデザイン（DNA固定）→ 台本生成（JSON）→ 個別画像生成 → 統合ページ錬成の段階的プロセスにより、AIとの共同制作を実現。
-* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きインメモリキャッシュにより、APIクォータを尊重しつつ安定した作画を継続するのだ。
+* **🧬 Character DNA System**: `design` コマンドで抽出したSeed値と参照URLをプロンプトへ動的に注入。全ページ・全パネルで外見の一貫性を保持するのだ。
+* **📑 Auto-Chunk Pagination**: 1ページあたり**最大6パネル**で自動スライス。どんなに長いソーステキストでも、AIが破綻することなく美しい複数枚の漫画として出力されるのだ。
+* **📖 Script-to-Manga Pipeline**: 「伝説の漫画編集者プロンプト」がドキュメントを解析。セリフ、構図指示、SHA256ハッシュ化された `speaker_id` を含む構造化JSONを自動生成。
+* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定。生成のたびに異なる演出とレイアウトを楽しめるのだ。
+* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きキャッシュにより、APIクォータを尊重しつつ安定した作画を継続するのだ。
 
 ---
 
@@ -43,10 +43,10 @@
 | コマンド | 役割 | 出力 |
 | --- | --- | --- |
 | **`design`** | **DNA抽出**。設定画を生成し、固定用のSeed値を特定するのだ。 | **Design Image, Seed** |
-| **`generate`** | **一括生成**。解析からパブリッシュまでを一気通貫で行うのだ。 | HTML, Images, MD |
+| **`generate`** | **一括生成**。解析から全ページのパブリッシュまで一気通貫で行うのだ。 | HTML, Images, MD |
 | **`script`** | **台本生成**。AIによる構成案（JSON）のみを出力するのだ。 | **JSON** |
-| **`image`** | **パネル作画**。JSONから各コマの画像とHTMLを生成するのだ。 | Images, HTML, MD |
-| **`story`** | **最終錬成**。Markdownから「統合済み漫画ページ」を生成するのだ。 | **Final Image (PNG)** |
+| **`image`** | **パネル作画**。各コマの個別画像とHTMLを生成するのだ。 | Images, HTML, MD |
+| **`story`** | **最終錬成**。Markdown/JSONから**複数枚の統合漫画画像**を生成するのだ。 | **Final Images (PNGs)** |
 
 ---
 
@@ -56,14 +56,13 @@
 | --- | --- | --- | --- | --- |
 | `--script-url` | **`-u`** | ソースとなるWebページのURL。コンテンツを自動抽出するのだ。 | **なし** | ✅ (※) |
 | `--script-file` | **`-f`** | ローカルのテキストファイル、または `script` コマンドで出力したJSONパス。 | **なし** | ✅ (※) |
-| `--output-file` | **`-o`** | 生成されるMarkdown/HTML、または台本JSONの保存先パスなのだ。 | `output/manga_plot.md` | ❌ |
+| `--output-file` | **`-o`** | 保存先パス。`story` 実行時は `_1.png`, `_2.png` と連番保存されるのだ。 | `output/manga_plot.md` | ❌ |
 | `--output-image-dir` | **`-i`** | 生成された画像を保存するディレクトリ（ローカルまたは `gs://...`）。 | `output/images` | ❌ |
 | `--mode` | **`-m`** | キャラクター構成を指定 (`'duet'`, `'dialogue'` など)。 | `dialogue` | ❌ |
-| `--model` | なし | テキスト生成（台本構成）に使用する Gemini モデル名なのだ。 | `gemini-3-flash-preview` | ❌ |
+| `--model` | なし | 台本構成に使用する Gemini モデル名なのだ。 | `gemini-3-flash-preview` | ❌ |
 | `--image-model` | なし | 画像生成に使用する Gemini モデル名なのだ。 | `gemini-3-pro-image-preview` | ❌ |
 | `--char-config` | **`-c`** | **キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。** | `internal/config/characters.json` | ❌ |
-| `--panel-limit` | **`-p`** | 生成する漫画パネルの最大数。開発時のコスト節約に便利なのだ。 | `10` | ❌ |
-| `--http-timeout` | なし | Webリクエスト（スクレイピング等）のタイムアウト時間なのだ。 | `30s` | ❌ |
+| `--panel-limit` | **`-p`** | 生成する漫画パネルの最大数。コスト節約に便利なのだ。 | `10` | ❌ |
 
 **(※) 注意:** `--script-url` または `--script-file` のいずれか一方は必ず指定する必要があるのだ！
 
@@ -73,37 +72,32 @@
 
 ### 1. キャラクターのDNAを固定する (Setup DNA)
 
-本編を作る前に、まずキャラクターのデザインを固定してSeed値を取得するのだ！
-
 ```bash
 # ずんだもん、めたんの二面図を生成してSeedを確認
 bin/mangakit design --chars zundamon,metan
 
-# 📌 抽出された Seed 値: <your_generated_seed>
-# この値を characters.json の seed 欄に設定して、DNAを固定するのだ！
+# 📌 抽出された Seed 値を characters.json に設定してDNAを固定するのだ！
 
 ```
 
-### 2. 最高の1枚を一気に作る (Standard)
+### 2. 連載漫画を一気に作る (Standard)
 
 ```bash
-bin/mangakit generate --script-url "https://example.com/tech-blog" -m duet
+bin/mangakit generate --script-url "https://example.com/long-tech-blog" -m duet
 
 ```
 
 ### 3. 人間とAIの共作フロー (Advanced)
 
 ```bash
-# 1. 台本JSONの生成
+# 1. 台本JSONの生成（長いドキュメントでも自動構成！）
 bin/mangakit script -u "https://example.com/tech-blog" -o "output/script.json"
 
 # (ここで JSON のセリフや構図を編集可能)
 
-# 2. JSONから個別パネル画像（GroupPipeline）を生成
-bin/mangakit image -f "output/script.json" -o "output/manga_plot.md"
-
-# 3. 編集済みMarkdownから「完成済み1ページ漫画（PagePipeline）」を錬成
-bin/mangakit story -f "output/manga_plot.md" -o "output/final_page.png"
+# 2. 編集済みJSONから「複数枚の統合漫画ページ」を錬成
+# パネル数が6枚を超える場合、自動的に page_1.png, page_2.png... と出力されるのだ！
+bin/mangakit story -f "output/script.json" -o "output/final_page.png"
 
 ```
 
@@ -113,7 +107,7 @@ bin/mangakit story -f "output/manga_plot.md" -o "output/final_page.png"
 
 ```text
 go-manga-kit/
-├── cmd/             # CLIサブコマンド (generate, script, image, story)
+├── cmd/             # CLIサブコマンド (design, generate, script, image, story)
 ├── internal/
 │   ├── builder/     # DIコンテナ・アプリの初期化
 │   ├── config/      # 環境変数・設定管理
