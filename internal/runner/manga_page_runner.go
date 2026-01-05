@@ -22,9 +22,9 @@ type MangaPageRunner struct {
 }
 
 // NewMangaPageRunner マンガ生成パイプライン、共通スタイルサフィックス、Markdownパーサーを依存性として設定します。
-func NewMangaPageRunner(mangaGenerator generator.MangaGenerator, styleSuffix string, markdownParser *parser.Parser) *MangaPageRunner {
+func NewMangaPageRunner(mangaGen generator.MangaGenerator, styleSuffix string, markdownParser *parser.Parser) *MangaPageRunner {
 	return &MangaPageRunner{
-		pageGen:        generator.NewPageGenerator(mangaGenerator, styleSuffix),
+		pageGen:        generator.NewPageGenerator(mangaGen, styleSuffix),
 		markdownParser: markdownParser,
 	}
 }
