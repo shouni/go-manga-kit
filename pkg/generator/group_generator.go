@@ -17,16 +17,16 @@ import (
 
 // GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
 type GroupPipeline struct {
-	mangaPipeline Pipeline
-	styleSuffix   string
-	interval      time.Duration
+	mangaGenerator MangaGenerator
+	styleSuffix    string
+	interval       time.Duration
 }
 
-func NewGroupPipeline(mangaPipeline Pipeline, styleSuffix string, interval time.Duration) *GroupPipeline {
+func NewGroupPipeline(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupPipeline {
 	return &GroupPipeline{
-		mangaPipeline: mangaPipeline,
-		styleSuffix:   styleSuffix,
-		interval:      interval,
+		mangaGenerator: mangaGenerator,
+		styleSuffix:    styleSuffix,
+		interval:       interval,
 	}
 }
 
@@ -34,7 +34,7 @@ func NewGroupPipeline(mangaPipeline Pipeline, styleSuffix string, interval time.
 // ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
 func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
 
-	pb := prompt.NewPromptBuilder(gp.mangaPipeline.Characters, gp.styleSuffix)
+	pb := prompt.NewPromptBuilder(gp.mangaGenerator.Characters, gp.styleSuffix)
 
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -55,7 +55,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			}
 
 			// 1. キャラクター解決
-			char := gp.resolveAndGetCharacter(page, gp.mangaPipeline.Characters)
+			char := gp.resolveAndGetCharacter(page, gp.mangaGenerator.Characters)
 
 			// 2. プロンプト構築
 			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
@@ -66,7 +66,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			seedPtr = &finalSeed
 
 			// 4. アダプター呼び出し
-			resp, err := gp.mangaPipeline.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+			resp, err := gp.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         pmp,
 				NegativePrompt: negPrompt,
 				Seed:           seedPtr,

@@ -51,9 +51,9 @@ var designCmd = &cobra.Command{
 			return fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
 		}
 		httpClient := httpkit.New(config.DefaultHTTPTimeout)
-		imgPipe, err := generator.NewPipeline(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
+		mangaGen, err := generator.NewMangaGenerator(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
 		if err != nil {
-			return fmt.Errorf("パイプラインの初期化に失敗しました: %w", err)
+			return fmt.Errorf("MangaGeneratorの初期化に失敗しました: %w", err)
 		}
 
 		var refs []string
@@ -105,7 +105,7 @@ var designCmd = &cobra.Command{
 		}
 
 		// 統合ジェネレーターで生成
-		resp, err := imgPipe.ImgGen.GenerateMangaPage(ctx, pageReq)
+		resp, err := mangaGen.ImgGen.GenerateMangaPage(ctx, pageReq)
 		if err != nil {
 			slog.Error("Design generation failed", "error", err)
 			return fmt.Errorf("画像の生成に失敗したのだ: %w", err)

@@ -13,15 +13,15 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
-type Pipeline struct {
+type MangaGenerator struct {
 	ImgGen     generator.ImageGenerator
 	Characters map[string]domain.Character
 }
 
-func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (Pipeline, error) {
+func NewMangaGenerator(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (MangaGenerator, error) {
 	characters, err := loadCharacters(characterConfig)
 	if err != nil {
-		return Pipeline{}, fmt.Errorf("loadCharacters failed: %w", err)
+		return MangaGenerator{}, fmt.Errorf("loadCharacters failed: %w", err)
 	}
 	normalizedChars := make(map[string]domain.Character)
 	for k, v := range characters {
@@ -30,10 +30,10 @@ func NewPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeM
 
 	imgGen, err := initializeImageGenerator(httpClient, aiClient, model)
 	if err != nil {
-		return Pipeline{}, fmt.Errorf("InitializeImageGenerator failed: %w", err)
+		return MangaGenerator{}, fmt.Errorf("InitializeImageGenerator failed: %w", err)
 	}
 
-	return Pipeline{
+	return MangaGenerator{
 		ImgGen:     imgGen,
 		Characters: normalizedChars,
 	}, nil
