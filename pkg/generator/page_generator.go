@@ -13,26 +13,26 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/prompt"
 )
 
-// PagePipeline は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
-type PagePipeline struct {
+// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
+type PageGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
 }
 
-func NewPagePipeline(mangaGenerator MangaGenerator, styleSuffix string) *PagePipeline {
-	return &PagePipeline{
+func NewPageGenerator(mangaGenerator MangaGenerator, styleSuffix string) *PageGenerator {
+	return &PageGenerator{
 		mangaGenerator: mangaGenerator,
 		styleSuffix:    styleSuffix,
 	}
 }
 
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
-func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
 	// 共通のスタイルサフィックス（anime styleなど）を注入して生成するのだ
-	pb := prompt.NewPromptBuilder(pp.mangaGenerator.Characters, pp.styleSuffix)
+	pb := prompt.NewPromptBuilder(pg.mangaGenerator.Characters, pg.styleSuffix)
 
 	// 1. 参照URLの収集
-	refURLs := pp.collectReferences(manga.Pages, pp.mangaGenerator.Characters)
+	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
 
 	// 2. 巨大な統合プロンプトの構築
 	fullPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
@@ -44,7 +44,7 @@ func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.Manga
 	// 3. シード値の決定（最初のパネルのキャラを優先）
 	var defaultSeed *int64
 	if len(manga.Pages) > 0 {
-		char := pp.findCharacter(manga.Pages[0].SpeakerID, pp.mangaGenerator.Characters)
+		char := pg.findCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -59,11 +59,11 @@ func (pp *PagePipeline) ExecuteMangaPage(ctx context.Context, manga domain.Manga
 		ReferenceURLs:  refURLs,
 	}
 
-	return pp.mangaGenerator.ImgGen.GenerateMangaPage(ctx, req)
+	return pg.mangaGenerator.ImgGen.GenerateMangaPage(ctx, req)
 }
 
 // findCharacter は SpeakerID（名前またはハッシュ化ID）からキャラを特定するのだ
-func (pp *PagePipeline) findCharacter(speakerID string, characters map[string]domain.Character) *domain.Character {
+func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]domain.Character) *domain.Character {
 	sid := strings.ToLower(speakerID)
 	h := sha256.New()
 	for _, char := range characters {
@@ -83,7 +83,7 @@ func (pp *PagePipeline) findCharacter(speakerID string, characters map[string]do
 
 // TODO:あとで削除
 // buildUnifiedPrompt は AIに対してマンガのレイアウトとDNAを設定
-func (pp *PagePipeline) buildUnifiedPrompt(manga domain.MangaResponse, characters domain.CharactersMap, refURLs []string) string {
+func (pg *PageGenerator) buildUnifiedPrompt(manga domain.MangaResponse, characters domain.CharactersMap, refURLs []string) string {
 	var sb strings.Builder
 
 	// Reference URLの逆引きマップ（どのURLが何番目のパネルか）
@@ -99,9 +99,9 @@ func (pp *PagePipeline) buildUnifiedPrompt(manga domain.MangaResponse, character
 
 	// 2. グローバルな描画スタイル（Style DNA）
 	sb.WriteString(prompt.RenderingStyle)
-	if pp.styleSuffix != "" {
+	if pg.styleSuffix != "" {
 		// 共通の画風プロンプト（アニメ調、90年代風など）を最優先で注入
-		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pp.styleSuffix))
+		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pg.styleSuffix))
 	}
 	sb.WriteString("\n")
 
@@ -212,7 +212,7 @@ func (pp *PagePipeline) buildUnifiedPrompt(manga domain.MangaResponse, character
 //}
 
 // collectReferences は必要な全ての画像URLを重複なく収集するのだ
-func (pp *PagePipeline) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
+func (pp *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
 	for _, p := range pages {

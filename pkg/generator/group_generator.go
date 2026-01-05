@@ -15,15 +15,15 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// GroupPipeline は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
-type GroupPipeline struct {
+// GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
+type GroupGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
 	interval       time.Duration
 }
 
-func NewGroupPipeline(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupPipeline {
-	return &GroupPipeline{
+func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupGenerator {
+	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
 		styleSuffix:    styleSuffix,
 		interval:       interval,
@@ -32,17 +32,17 @@ func NewGroupPipeline(mangaGenerator MangaGenerator, styleSuffix string, interva
 
 // ExecutePanelGroup は、並列処理を用いてパネル群を生成する。
 // ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
-func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
+func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
 
-	pb := prompt.NewPromptBuilder(gp.mangaGenerator.Characters, gp.styleSuffix)
+	pb := prompt.NewPromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
 
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	// レートリミットの設定。intervalが0なら制限なしとして動くのだ。
 	var limiter *rate.Limiter
-	if gp.interval > 0 {
-		limiter = rate.NewLimiter(rate.Every(gp.interval), 2)
+	if gg.interval > 0 {
+		limiter = rate.NewLimiter(rate.Every(gg.interval), 2)
 	}
 
 	for i, page := range pages {
@@ -55,7 +55,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			}
 
 			// 1. キャラクター解決
-			char := gp.resolveAndGetCharacter(page, gp.mangaGenerator.Characters)
+			char := gg.resolveAndGetCharacter(page, gg.mangaGenerator.Characters)
 
 			// 2. プロンプト構築
 			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
@@ -66,7 +66,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 			seedPtr = &finalSeed
 
 			// 4. アダプター呼び出し
-			resp, err := gp.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         pmp,
 				NegativePrompt: negPrompt,
 				Seed:           seedPtr,
@@ -90,7 +90,7 @@ func (gp *GroupPipeline) ExecutePanelGroup(ctx context.Context, pages []domain.M
 }
 
 // resolveAndGetCharacter determines and retrieves the appropriate character for a given manga page based on speaker ID or visual cues.
-func (gp *GroupPipeline) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
+func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
 	// 1. IDの正規化
 	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
 

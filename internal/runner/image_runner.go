@@ -20,23 +20,23 @@ type ImageRunner interface {
 
 // MangaImageRunner は、アプリケーション層の実行管理を担う実体なのだ。
 type MangaImageRunner struct {
-	pipeline *mangakit.GroupPipeline // 汎用化された生成パイプライン
-	limit    int                     // 生成パネル数の制限（テスト用）
+	groupGen *mangakit.GroupGenerator // 汎用化された生成GroupGenerator
+	limit    int                      // 生成パネル数の制限（テスト用）
 }
 
 // NewMangaImageRunner は、依存関係を注入して Runner を初期化します
-func NewMangaImageRunner(mangaPipeline mangakit.MangaGenerator, styleSuffix string, limit int) *MangaImageRunner {
+func NewMangaImageRunner(mangaGen mangakit.MangaGenerator, styleSuffix string, limit int) *MangaImageRunner {
 
-	// pkg/pipeline にある汎用パイプラインを構築します
-	groupPipeline := generator.NewGroupPipeline(mangaPipeline, styleSuffix, config.DefaultRateLimit)
+	// pkg/generator にある汎用Generatorを構築します
+	groupGen := generator.NewGroupGenerator(mangaGen, styleSuffix, config.DefaultRateLimit)
 
 	return &MangaImageRunner{
-		pipeline: groupPipeline,
+		groupGen: groupGen,
 		limit:    limit,
 	}
 }
 
-// Run は、設定された制限やログ出力を管理しながら、パイプラインを実行します
+// Run は、設定された制限やログ出力を管理しながら、Generatorを実行します
 func (ir *MangaImageRunner) Run(ctx context.Context, manga mngdom.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	pages := manga.Pages
 
@@ -52,7 +52,7 @@ func (ir *MangaImageRunner) Run(ctx context.Context, manga mngdom.MangaResponse)
 	)
 
 	// 2. 汎用パイプラインへの処理委譲
-	images, err := ir.pipeline.ExecutePanelGroup(ctx, pages)
+	images, err := ir.groupGen.ExecutePanelGroup(ctx, pages)
 	if err != nil {
 		slog.Error("画像生成パイプラインの実行中にエラーが発生したのだ", "error", err)
 		return nil, err

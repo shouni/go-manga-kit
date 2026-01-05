@@ -16,14 +16,14 @@ type PageRunner interface {
 
 // MangaPageRunner MarkdownのパースとPipelineの実行を管理するのだ。
 type MangaPageRunner struct {
-	pipeline       *mangakit.PagePipeline
+	pageGen        *mangakit.PageGenerator
 	markdownParser *parser.Parser
 }
 
 // NewMangaPageRunner マンガ生成パイプライン、共通スタイルサフィックス、Markdownパーサーを依存性として設定します。
 func NewMangaPageRunner(mangaGenerator mangakit.MangaGenerator, styleSuffix string, markdownParser *parser.Parser) *MangaPageRunner {
 	return &MangaPageRunner{
-		pipeline:       mangakit.NewPagePipeline(mangaGenerator, styleSuffix),
+		pageGen:        mangakit.NewPageGenerator(mangaGenerator, styleSuffix),
 		markdownParser: markdownParser,
 	}
 }
@@ -37,5 +37,5 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*ima
 	if manga == nil {
 		return nil, fmt.Errorf("エラーなしでマンガのパース結果が nil になりました。")
 	}
-	return r.pipeline.ExecuteMangaPage(ctx, *manga)
+	return r.pageGen.ExecuteMangaPage(ctx, *manga)
 }
