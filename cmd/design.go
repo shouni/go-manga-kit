@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -80,12 +81,18 @@ var designCmd = &cobra.Command{
 			slog.Int("ref_count", len(refs)),
 		)
 
+		// フラグからシード値を取得するのだ
+		seedVal, err := cmd.Flags().GetInt64("seed")
+		if err != nil {
+			return fmt.Errorf("seedフラグの解析に失敗したのだ: %w", err)
+		}
+
 		// プロンプトのブラッシュアップ（ここにあなたの DefaultImagePromptSuffix の要素も混ぜたのだ！）
 		designPrompt := fmt.Sprintf(
 			"Masterpiece character design sheet of %s, side-by-side, multiple views (front, side, back), "+
 				"standing full body, high quality, anime style, manga illustration, clean lines, vivid colors, "+
 				"modern digital anime style, sharp clean lineart, vibrant flat colors, high contrast, cinematic lighting, "+
-				"white background, sharp focus, 8k resolution.",
+				"white background, sharp focus, 4k resolution, highly detailed.",
 			strings.Join(descriptions, " and "),
 		)
 
@@ -94,16 +101,38 @@ var designCmd = &cobra.Command{
 			Prompt:        designPrompt,
 			ReferenceURLs: refs,
 			AspectRatio:   "16:9",
-			Seed:          ptrInt64(1000),
+			Seed:          ptrInt64(seedVal),
 		}
 
 		// 統合ジェネレーターで生成
-		outputName := "design_" + strings.Join(charIDs, "_") + ".png" // 拡張子を付与
 		resp, err := imgPipe.ImgGen.GenerateMangaPage(ctx, pageReq)
 		if err != nil {
 			slog.Error("Design generation failed", "error", err)
 			return fmt.Errorf("画像の生成に失敗したのだ: %w", err)
 		}
+
+		// MIMEタイプから拡張子を決定
+		var extension string
+		extensions, err := mime.ExtensionsByType(resp.MimeType)
+		if err != nil || len(extensions) == 0 {
+			slog.Warn(
+				"Could not determine file extension from MIME type, defaulting to .png",
+				slog.String("mime_type", resp.MimeType),
+			)
+			extension = ".png" // フォールバック
+		} else {
+			// なるべく一般的なものを選ぶ
+			extension = extensions[0]
+			for _, ext := range extensions {
+				if ext == ".png" || ext == ".jpeg" || ext == ".jpg" {
+					extension = ext
+					break
+				}
+			}
+		}
+
+		// 拡張子を動的に付与してファイル名を決定
+		outputName := fmt.Sprintf("design_%s%s", strings.Join(charIDs, "_"), extension)
 
 		// 生成されたデータをローカルファイルに保存するのだ
 		outputDir := "output"
@@ -135,6 +164,7 @@ var designCmd = &cobra.Command{
 
 func init() {
 	designCmd.Flags().StringSliceP("chars", "c", []string{"zundamon", "metan"}, "生成対象のキャラクターID（カンマ区切り）")
+	designCmd.Flags().Int64P("seed", "s", 1000, "生成に使用するシード値。同じ値なら同じ結果が得られやすくなるのだ。")
 }
 
 func ptrInt64(v int64) *int64 { return &v }
