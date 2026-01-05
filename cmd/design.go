@@ -80,6 +80,12 @@ var designCmd = &cobra.Command{
 			slog.Int("ref_count", len(refs)),
 		)
 
+		// フラグからシード値を取得するのだ
+		seedVal, err := cmd.Flags().GetInt64("seed")
+		if err != nil {
+			return fmt.Errorf("seedフラグの解析に失敗したのだ: %w", err)
+		}
+
 		// プロンプトのブラッシュアップ（ここにあなたの DefaultImagePromptSuffix の要素も混ぜたのだ！）
 		designPrompt := fmt.Sprintf(
 			"Masterpiece character design sheet of %s, side-by-side, multiple views (front, side, back), "+
@@ -94,7 +100,7 @@ var designCmd = &cobra.Command{
 			Prompt:        designPrompt,
 			ReferenceURLs: refs,
 			AspectRatio:   "16:9",
-			Seed:          ptrInt64(1000),
+			Seed:          ptrInt64(seedVal),
 		}
 
 		// 統合ジェネレーターで生成
