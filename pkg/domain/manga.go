@@ -1,8 +1,9 @@
 package domain
 
 type MangaResponse struct {
-	Title string      `json:"title"`
-	Pages []MangaPage `json:"pages"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Pages       []MangaPage `json:"pages"`
 }
 
 // MangaPage は漫画の1ページまたは1パネルの構成、セリフ、話者情報を保持します。

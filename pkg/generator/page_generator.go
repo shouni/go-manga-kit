@@ -4,12 +4,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strings"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompt"
 )
+
+// MaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数
+const MaxPanelsPerPage = 6
 
 // PageGenerator は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
 type PageGenerator struct {
@@ -22,6 +26,35 @@ func NewPageGenerator(mangaGenerator MangaGenerator, styleSuffix string) *PageGe
 		mangaGenerator: mangaGenerator,
 		styleSuffix:    styleSuffix,
 	}
+}
+
+// ExecuteMangaPages は複数ページをチャンクして生成する新しいエントリーポイントなのだ
+func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
+	var allResponses []*imagedom.ImageResponse
+
+	if len(manga.Pages) == 0 {
+		return allResponses, nil
+	}
+
+	for i := 0; i < len(manga.Pages); i += MaxPanelsPerPage {
+		end := i + MaxPanelsPerPage
+		if end > len(manga.Pages) {
+			end = len(manga.Pages)
+		}
+
+		subManga := domain.MangaResponse{
+			Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, (i/MaxPanelsPerPage)+1, (len(manga.Pages)+MaxPanelsPerPage-1)/MaxPanelsPerPage),
+			Description: manga.Description,
+			Pages:       manga.Pages[i:end],
+		}
+
+		res, err := pg.ExecuteMangaPage(ctx, subManga)
+		if err != nil {
+			return nil, fmt.Errorf("failed page %d: %w", i/MaxPanelsPerPage, err)
+		}
+		allResponses = append(allResponses, res)
+	}
+	return allResponses, nil
 }
 
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する

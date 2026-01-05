@@ -51,7 +51,8 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 	), nil
 }
 
-// BuildMangaPageRunner は8パネル一括のページ生成を担当する MangaPageRunner を構築します。
+// BuildMangaPageRunner は、複数ページへの自動分割（チャンク）に対応した
+// MangaPageRunner を構築するのだ。
 func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (runner.PageRunner, error) {
 	// 2. Runner の生成
 	return runner.NewMangaPageRunner(
