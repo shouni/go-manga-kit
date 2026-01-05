@@ -92,7 +92,7 @@ var designCmd = &cobra.Command{
 			"Masterpiece character design sheet of %s, side-by-side, multiple views (front, side, back), "+
 				"standing full body, high quality, anime style, manga illustration, clean lines, vivid colors, "+
 				"modern digital anime style, sharp clean lineart, vibrant flat colors, high contrast, cinematic lighting, "+
-				"white background, sharp focus, 8k resolution.",
+				"white background, sharp focus, 4k resolution, highly detailed.",
 			strings.Join(descriptions, " and "),
 		)
 
