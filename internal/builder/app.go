@@ -2,7 +2,6 @@ package builder
 
 import (
 	"github.com/shouni/go-manga-kit/internal/config"
-
 	"github.com/shouni/go-manga-kit/pkg/generator"
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"

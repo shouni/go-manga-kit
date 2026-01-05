@@ -6,11 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shouni/go-manga-kit/pkg/domain"
+
 	"github.com/patrickmn/go-cache"
 	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 type MangaGenerator struct {

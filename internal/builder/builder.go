@@ -7,11 +7,11 @@ import (
 	"github.com/shouni/go-manga-kit/internal/prompt"
 	"github.com/shouni/go-manga-kit/internal/runner"
 	"github.com/shouni/go-manga-kit/pkg/parser"
+	"github.com/shouni/go-manga-kit/pkg/publisher"
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	mngkit "github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-text-format/pkg/builder"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 	"google.golang.org/genai"
@@ -97,10 +97,10 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 }
 
 // InitializeMangaGenerator は MangaGeneratorを初期化します。
-func InitializeMangaGenerator(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (mngkit.MangaGenerator, error) {
-	mangaGen, err := mngkit.NewMangaGenerator(httpClient, aiClient, model, characterConfig)
+func InitializeMangaGenerator(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (generator.MangaGenerator, error) {
+	mangaGen, err := generator.NewMangaGenerator(httpClient, aiClient, model, characterConfig)
 	if err != nil {
-		return mngkit.MangaGenerator{}, fmt.Errorf("MangaGeneratorの初期化に失敗しました: %w", err)
+		return generator.MangaGenerator{}, fmt.Errorf("MangaGeneratorの初期化に失敗しました: %w", err)
 	}
 
 	return mangaGen, nil

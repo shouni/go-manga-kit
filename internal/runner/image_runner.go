@@ -5,9 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/shouni/go-manga-kit/internal/config"
-	mngdom "github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
-	mangakit "github.com/shouni/go-manga-kit/pkg/generator"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
@@ -15,17 +14,17 @@ import (
 // ImageRunner は、漫画の台本データを基に画像を生成するためのインターフェース。
 type ImageRunner interface {
 	// Run は台本の全ページに対して画像生成を実行し、結果のリストを返します
-	Run(ctx context.Context, manga mngdom.MangaResponse) ([]*imagedom.ImageResponse, error)
+	Run(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
 
 // MangaImageRunner は、アプリケーション層の実行管理を担う実体なのだ。
 type MangaImageRunner struct {
-	groupGen *mangakit.GroupGenerator // 汎用化された生成GroupGenerator
-	limit    int                      // 生成パネル数の制限（テスト用）
+	groupGen *generator.GroupGenerator // 汎用化された生成GroupGenerator
+	limit    int                       // 生成パネル数の制限（テスト用）
 }
 
 // NewMangaImageRunner は、依存関係を注入して Runner を初期化します
-func NewMangaImageRunner(mangaGen mangakit.MangaGenerator, styleSuffix string, limit int) *MangaImageRunner {
+func NewMangaImageRunner(mangaGen generator.MangaGenerator, styleSuffix string, limit int) *MangaImageRunner {
 
 	// pkg/generator にある汎用Generatorを構築します
 	groupGen := generator.NewGroupGenerator(mangaGen, styleSuffix, config.DefaultRateLimit)
@@ -37,7 +36,7 @@ func NewMangaImageRunner(mangaGen mangakit.MangaGenerator, styleSuffix string, l
 }
 
 // Run は、設定された制限やログ出力を管理しながら、Generatorを実行します
-func (ir *MangaImageRunner) Run(ctx context.Context, manga mngdom.MangaResponse) ([]*imagedom.ImageResponse, error) {
+func (ir *MangaImageRunner) Run(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	pages := manga.Pages
 
 	// 1. パネル数制限の適用
