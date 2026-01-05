@@ -121,7 +121,14 @@ var designCmd = &cobra.Command{
 			)
 			extension = ".png" // フォールバック
 		} else {
-			extension = extensions[0] // 最も一般的な拡張子を取得 (例: ".jpeg")
+			// なるべく一般的なものを選ぶ
+			extension = extensions[0]
+			for _, ext := range extensions {
+				if ext == ".png" || ext == ".jpeg" || ext == ".jpg" {
+					extension = ext
+					break
+				}
+			}
 		}
 
 		// 拡張子を動的に付与してファイル名を決定
