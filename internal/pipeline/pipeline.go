@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"path/filepath"
+	"strings"
 
 	"github.com/shouni/go-manga-kit/internal/builder"
 	"github.com/shouni/go-manga-kit/internal/config"
@@ -116,7 +118,7 @@ func ExecuteImageOnly(ctx context.Context, cfg *config.Config) error {
 }
 
 // ExecuteStoryOnly は、すでに Phase 2 & 3 で出力された台本ファイルを基に、
-// MangaPageRunner を実行して「1枚の完成された漫画ページ」を生成する最終ステージなのだ！
+// MangaPageRunner を実行してチャンクされた漫画ページ」を生成する
 func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 	appCtx, err := setupAppContext(ctx, cfg)
 	if err != nil {
@@ -135,28 +137,34 @@ func ExecuteStoryOnly(ctx context.Context, cfg *config.Config) error {
 	}
 	markdownContent := buf.String()
 
-	// MangaPageRunner を使って、一括生成の準備をするのだ
 	pageRunner, err := builder.BuildMangaPageRunner(ctx, appCtx)
 	if err != nil {
 		return fmt.Errorf("MangaPageRunnerの構築に失敗したのだ: %w", err)
 	}
 
-	slog.Info("1枚の漫画ページとして一括生成を開始するのだ...")
-
-	// 生成実行（Markdownをパースして統合プロンプトでAIに投げる
-
-	resp, err := pageRunner.Run(ctx, markdownContent)
+	slog.Info("漫画ページの生成を開始するのだ（複数ページ対応）...")
+	resps, err := pageRunner.Run(ctx, markdownContent)
 	if err != nil {
-		return fmt.Errorf("漫画ページの一括生成に失敗したのだ: %w", err)
+		return fmt.Errorf("漫画ページの生成に失敗したのだ: %w", err)
 	}
 
-	outputPath := cfg.Options.OutputFile
-	err = appCtx.Writer.Write(ctx, outputPath, bytes.NewReader(resp.Data), resp.MimeType)
-	if err != nil {
-		return fmt.Errorf("最終ページの保存に失敗したのだ: %w", err)
+	// 出力パスのベース名と拡張子を事前に計算しておくのだ
+	outputFile := cfg.Options.OutputFile
+	ext := filepath.Ext(outputFile)
+	base := strings.TrimSuffix(outputFile, ext)
+
+	// 複数のページを順番に保存していくのだ
+	for i, resp := range resps {
+		pagePath := fmt.Sprintf("%s_%d%s", base, i+1, ext)
+
+		err = appCtx.Writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType)
+		if err != nil {
+			return fmt.Errorf("第 %d ページの保存に失敗したのだ: %w", i+1, err)
+		}
+		slog.Info("ページを保存したのだ", "path", pagePath)
 	}
 
-	slog.Info("物語の集大成が完成したのだ！", "path", outputPath)
+	slog.Info("全ての物語の集成が完成したのだ！", "total_pages", len(resps))
 	return nil
 }
 

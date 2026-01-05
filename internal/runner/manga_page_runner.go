@@ -12,7 +12,7 @@ import (
 
 // PageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
 type PageRunner interface {
-	Run(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error)
+	Run(ctx context.Context, markdownContent string) ([]*imagedom.ImageResponse, error)
 }
 
 // MangaPageRunner MarkdownのパースとPipelineの実行を管理するのだ。
@@ -29,8 +29,9 @@ func NewMangaPageRunner(mangaGen generator.MangaGenerator, styleSuffix string, m
 	}
 }
 
-// Run 提供されたMarkdownコンテンツを処理し、設定済みのパイプラインを使用してマンガのページ画像を生成する
-func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*imagedom.ImageResponse, error) {
+// Run 提供されたMarkdownコンテンツを処理し、設定済みのパイプラインを使用して
+// 複数枚のマンガページ画像を生成するのだ（チャンク対応版）。
+func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) ([]*imagedom.ImageResponse, error) {
 	manga, err := r.markdownParser.Parse(markdownContent)
 	if err != nil {
 		return nil, fmt.Errorf("Markdownコンテンツのパースに失敗しました: %w", err)
@@ -38,5 +39,6 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*ima
 	if manga == nil {
 		return nil, fmt.Errorf("エラーなしでマンガのパース結果が nil になりました。")
 	}
-	return r.pageGen.ExecuteMangaPage(ctx, *manga)
+
+	return r.pageGen.ExecuteMangaPages(ctx, *manga)
 }
