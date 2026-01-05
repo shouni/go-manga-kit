@@ -13,8 +13,9 @@ const (
 	DefaultHTTPTimeout       = 30 * time.Second
 	DefaultPanelLimit        = 10
 	DefaultRateLimit         = 30 * time.Second
-	DefaultLocalFile         = "output/manga_plot.md" // パブリッシャーで使用するデフォルト保存先なのだ
-	DefaultLocalImageDir     = "output/images"        // パブリッシャーで使用するデフォルト保存先なのだ
+	DefaultCharactersFile    = "internal/config/characters.json" // キャラクターの視覚情報（DNA）を定義したJSONパス
+	DefaultLocalFile         = "output/manga_plot.md"            // パブリッシャーで使用するデフォルト保存先なのだ
+	DefaultLocalImageDir     = "output/images"                   // パブリッシャーで使用するデフォルト保存先なのだ
 	DefaultImagePromptSuffix = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
 )
 
