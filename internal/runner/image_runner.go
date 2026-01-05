@@ -6,8 +6,8 @@ import (
 
 	"github.com/shouni/go-manga-kit/internal/config"
 	mngdom "github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/pipeline"
-	mangakit "github.com/shouni/go-manga-kit/pkg/pipeline"
+	"github.com/shouni/go-manga-kit/pkg/generator"
+	mangakit "github.com/shouni/go-manga-kit/pkg/generator"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
@@ -28,7 +28,7 @@ type MangaImageRunner struct {
 func NewMangaImageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, limit int) *MangaImageRunner {
 
 	// pkg/pipeline にある汎用パイプラインを構築します
-	groupPipeline := pipeline.NewGroupPipeline(mangaPipeline, styleSuffix, config.DefaultRateLimit)
+	groupPipeline := generator.NewGroupPipeline(mangaPipeline, styleSuffix, config.DefaultRateLimit)
 
 	return &MangaImageRunner{
 		pipeline: groupPipeline,

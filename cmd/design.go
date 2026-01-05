@@ -15,7 +15,7 @@ import (
 	// Gemini Image Kit のドメインモデルを使用するのだ
 	"github.com/shouni/go-manga-kit/internal/builder"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/pipeline"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/spf13/cobra"
@@ -51,7 +51,7 @@ var designCmd = &cobra.Command{
 			return fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
 		}
 		httpClient := httpkit.New(config.DefaultHTTPTimeout)
-		imgPipe, err := pipeline.NewPipeline(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
+		imgPipe, err := generator.NewPipeline(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
 		if err != nil {
 			return fmt.Errorf("パイプラインの初期化に失敗しました: %w", err)
 		}

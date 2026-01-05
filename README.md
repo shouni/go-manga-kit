@@ -32,7 +32,7 @@
 | **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
 | **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
 | **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
-| **Drawing Engine** | `gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
+| **Drawing Engine** | `shouni/gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
 
 ---
 
@@ -122,8 +122,8 @@ go-manga-kit/
 │   └── runner/      # 実行コア (Script, Image, Page, Publish)
 ├── pkg/
 │   ├── domain/      # ドメインモデル (Manga, Character DNA)
+│   ├── generator/   # 生成戦略 (Group: 個別, Page: 統合)
 │   ├── parser/      # Markdown台本の構造解析・正規表現による要素抽出
-│   ├── pipeline/    # 生成戦略 (Group: 個別, Page: 統合)
 │   ├── prompt/      # 画像生成用 PromptBuilder
 │   └── publisher/   # 成果物出力 (Webtoon HTML, Assets)
 └── output/          # 生成結果 (Images, HTML, Markdown)

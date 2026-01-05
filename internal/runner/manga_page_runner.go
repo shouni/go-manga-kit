@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	mangakit "github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/parser"
-	mangakit "github.com/shouni/go-manga-kit/pkg/pipeline"
 )
 
 // PageRunner は MarkdownのパースとPipelineの実行を管理するのだ。

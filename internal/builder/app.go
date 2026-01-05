@@ -3,7 +3,7 @@ package builder
 import (
 	"github.com/shouni/go-manga-kit/internal/config"
 
-	"github.com/shouni/go-manga-kit/pkg/pipeline"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -17,7 +17,7 @@ type AppContext struct {
 	Options       config.GenerateOptions  // Optionsは、コマンドラインから渡された実行時の設定です（モード、URL、モデル名など）。
 	Reader        remoteio.InputReader    // Readerは、外部データやスクリプトの読み込みに使用する入力元です。
 	Writer        remoteio.OutputWriter   // Writerは、生成された内容を保存するための出力先です。
-	MangaPipeline pipeline.Pipeline       // MangaPipelineは、画像生成とキャラクター管理を含むマンガ生成パイプラインです。
+	MangaPipeline generator.Pipeline      // MangaPipelineは、画像生成とキャラクター管理を含むマンガ生成パイプラインです。
 	aiClient      gemini.GenerativeModel  // aiClient はGeminiの通信に使う共通クライアント
 	httpClient    httpkit.ClientInterface // httpClient は外部APIとの通信に使う共通クライアント
 }
@@ -29,7 +29,7 @@ func NewAppContext(
 	aiClient gemini.GenerativeModel,
 	reader remoteio.InputReader,
 	writer remoteio.OutputWriter,
-	mangaPipeline pipeline.Pipeline,
+	mangaPipeline generator.Pipeline,
 ) AppContext {
 	return AppContext{
 		Config:        cfg,

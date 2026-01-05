@@ -10,7 +10,7 @@ import (
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
+	mngkit "github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-text-format/pkg/builder"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
