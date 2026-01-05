@@ -9,15 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-manga-kit/internal/config"
-
-	// Gemini Image Kit のドメインモデルを使用するのだ
-	"github.com/shouni/go-manga-kit/internal/builder"
-	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/pipeline"
-
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-http-kit/pkg/httpkit"
+	"github.com/shouni/go-manga-kit/internal/builder"
+	"github.com/shouni/go-manga-kit/internal/config"
+	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/spf13/cobra"
 )
 
@@ -51,9 +48,9 @@ var designCmd = &cobra.Command{
 			return fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
 		}
 		httpClient := httpkit.New(config.DefaultHTTPTimeout)
-		imgPipe, err := pipeline.NewPipeline(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
+		mangaGen, err := generator.NewMangaGenerator(httpClient, aiClient, opts.ImageModel, opts.CharacterConfig)
 		if err != nil {
-			return fmt.Errorf("パイプラインの初期化に失敗しました: %w", err)
+			return fmt.Errorf("MangaGeneratorの初期化に失敗しました: %w", err)
 		}
 
 		var refs []string
@@ -105,7 +102,7 @@ var designCmd = &cobra.Command{
 		}
 
 		// 統合ジェネレーターで生成
-		resp, err := imgPipe.ImgGen.GenerateMangaPage(ctx, pageReq)
+		resp, err := mangaGen.ImgGen.GenerateMangaPage(ctx, pageReq)
 		if err != nil {
 			slog.Error("Design generation failed", "error", err)
 			return fmt.Errorf("画像の生成に失敗したのだ: %w", err)

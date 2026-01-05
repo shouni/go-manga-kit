@@ -2,7 +2,7 @@ package prompt
 
 import (
 	"fmt"
-	"math/rand/v2" // 最新の Go 1.22+ 推奨なのだ
+	"math/rand/v2"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"

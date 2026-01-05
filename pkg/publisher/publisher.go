@@ -12,8 +12,9 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/shouni/go-manga-kit/pkg/domain"
+
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	mngdom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-text-format/pkg/md2htmlrunner"
 )
@@ -55,7 +56,7 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 }
 
 // Publish は画像の保存、Markdownの構築、HTML変換を一括して実行します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga mngdom.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
+func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
 	if opts.ImageDirName == "" {
 		opts.ImageDirName = defaultImageDirName
 	}
@@ -128,7 +129,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 }
 
 // BuildMarkdown returns the Markdown content for the specified manga.
-func (p *MangaPublisher) buildMarkdown(manga mngdom.MangaResponse, imagePaths []string) string {
+func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
 	h := sha256.New()

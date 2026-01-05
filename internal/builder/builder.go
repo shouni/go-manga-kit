@@ -7,11 +7,11 @@ import (
 	"github.com/shouni/go-manga-kit/internal/prompt"
 	"github.com/shouni/go-manga-kit/internal/runner"
 	"github.com/shouni/go-manga-kit/pkg/parser"
+	"github.com/shouni/go-manga-kit/pkg/publisher"
 
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	mngkit "github.com/shouni/go-manga-kit/pkg/pipeline"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-text-format/pkg/builder"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 	"google.golang.org/genai"
@@ -45,7 +45,7 @@ func BuildScriptRunner(ctx context.Context, appCtx *AppContext) (runner.ScriptRu
 // BuildImageRunner は個別パネル画像生成を担当する MangaImageRunner を構築します。
 func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunner, error) {
 	return runner.NewMangaImageRunner(
-		appCtx.MangaPipeline,
+		appCtx.MangaGenerator,
 		appCtx.Config.ImagePromptSuffix,
 		appCtx.Options.PanelLimit,
 	), nil
@@ -55,7 +55,7 @@ func BuildImageRunner(ctx context.Context, appCtx *AppContext) (runner.ImageRunn
 func BuildMangaPageRunner(ctx context.Context, appCtx *AppContext) (runner.PageRunner, error) {
 	// 2. Runner の生成
 	return runner.NewMangaPageRunner(
-		appCtx.MangaPipeline,
+		appCtx.MangaGenerator,
 		appCtx.Config.ImagePromptSuffix,
 		parser.NewParser(appCtx.Options.ScriptFile),
 	), nil
@@ -96,12 +96,12 @@ func InitializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 	return aiClient, nil
 }
 
-// InitializeMangaPipeline は MangaPipelineを初期化します。
-func InitializeMangaPipeline(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (mngkit.Pipeline, error) {
-	pl, err := mngkit.NewPipeline(httpClient, aiClient, model, characterConfig)
+// InitializeMangaGenerator は MangaGeneratorを初期化します。
+func InitializeMangaGenerator(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model, characterConfig string) (generator.MangaGenerator, error) {
+	mangaGen, err := generator.NewMangaGenerator(httpClient, aiClient, model, characterConfig)
 	if err != nil {
-		return mngkit.Pipeline{}, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
+		return generator.MangaGenerator{}, fmt.Errorf("MangaGeneratorの初期化に失敗しました: %w", err)
 	}
 
-	return pl, nil
+	return mangaGen, nil
 }

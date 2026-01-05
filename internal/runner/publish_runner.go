@@ -3,15 +3,16 @@ package runner
 import (
 	"context"
 
+	"github.com/shouni/go-manga-kit/pkg/domain"
+
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/internal/config"
-	mngdom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
 // PublisherRunner はパブリッシュ処理のインターフェースです。
 type PublisherRunner interface {
-	Run(ctx context.Context, manga mngdom.MangaResponse, images []*imagedom.ImageResponse) error
+	Run(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse) error
 }
 
 // DefaultPublisherRunner は pkg/publisher を利用した標準実装です。
@@ -27,7 +28,7 @@ func NewDefaultPublisherRunner(options config.GenerateOptions, pub *publisher.Ma
 	}
 }
 
-func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga mngdom.MangaResponse, images []*imagedom.ImageResponse) error {
+func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse) error {
 	// internal/config の値を pkg/publisher 用の構造体に詰め替えます。
 	opts := publisher.Options{
 		OutputFile:     pr.options.OutputFile,

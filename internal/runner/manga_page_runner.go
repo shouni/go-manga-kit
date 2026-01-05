@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/parser"
-	mangakit "github.com/shouni/go-manga-kit/pkg/pipeline"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
 // PageRunner は MarkdownのパースとPipelineの実行を管理するのだ。
@@ -16,14 +17,14 @@ type PageRunner interface {
 
 // MangaPageRunner MarkdownのパースとPipelineの実行を管理するのだ。
 type MangaPageRunner struct {
-	pipeline       *mangakit.PagePipeline
+	pageGen        *generator.PageGenerator
 	markdownParser *parser.Parser
 }
 
 // NewMangaPageRunner マンガ生成パイプライン、共通スタイルサフィックス、Markdownパーサーを依存性として設定します。
-func NewMangaPageRunner(mangaPipeline mangakit.Pipeline, styleSuffix string, markdownParser *parser.Parser) *MangaPageRunner {
+func NewMangaPageRunner(mangaGen generator.MangaGenerator, styleSuffix string, markdownParser *parser.Parser) *MangaPageRunner {
 	return &MangaPageRunner{
-		pipeline:       mangakit.NewPagePipeline(mangaPipeline, styleSuffix),
+		pageGen:        generator.NewPageGenerator(mangaGen, styleSuffix),
 		markdownParser: markdownParser,
 	}
 }
@@ -37,5 +38,5 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownContent string) (*ima
 	if manga == nil {
 		return nil, fmt.Errorf("エラーなしでマンガのパース結果が nil になりました。")
 	}
-	return r.pipeline.ExecuteMangaPage(ctx, *manga)
+	return r.pageGen.ExecuteMangaPage(ctx, *manga)
 }
