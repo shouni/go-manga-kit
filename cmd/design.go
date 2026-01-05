@@ -98,7 +98,7 @@ var designCmd = &cobra.Command{
 		}
 
 		// 統合ジェネレーターで生成
-		outputName := "design_" + strings.Join(charIDs, "_") + ".png" // 拡張子を付与
+		outputName := "design_" + strings.Join(charIDs, "_") + ".jpeg" // 拡張子を付与
 		resp, err := imgPipe.ImgGen.GenerateMangaPage(ctx, pageReq)
 		if err != nil {
 			slog.Error("Design generation failed", "error", err)
@@ -135,6 +135,7 @@ var designCmd = &cobra.Command{
 
 func init() {
 	designCmd.Flags().StringSliceP("chars", "c", []string{"zundamon", "metan"}, "生成対象のキャラクターID（カンマ区切り）")
+	designCmd.Flags().Int64P("seed", "s", 1000, "生成に使用するシード値。同じ値なら同じ結果が得られやすくなるのだ。")
 }
 
 func ptrInt64(v int64) *int64 { return &v }
