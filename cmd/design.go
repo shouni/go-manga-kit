@@ -104,12 +104,20 @@ var designCmd = &cobra.Command{
 		}
 
 		// 統合ジェネレーターで生成
-		outputName := "design_" + strings.Join(charIDs, "_") + ".jpeg" // 拡張子を付与
 		resp, err := imgPipe.ImgGen.GenerateMangaPage(ctx, pageReq)
 		if err != nil {
 			slog.Error("Design generation failed", "error", err)
 			return fmt.Errorf("画像の生成に失敗したのだ: %w", err)
 		}
+
+		// MIMEタイプから拡張子を決定するのだ！
+		extension := ".png" // デフォルト
+		if resp.MimeType == "image/jpeg" || resp.MimeType == "image/jpg" {
+			extension = ".jpeg"
+		}
+
+		// 拡張子を動的に付与してファイル名を決定
+		outputName := fmt.Sprintf("design_%s%s", strings.Join(charIDs, "_"), extension)
 
 		// 生成されたデータをローカルファイルに保存するのだ
 		outputDir := "output"
