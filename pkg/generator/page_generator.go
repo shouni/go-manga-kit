@@ -131,6 +131,8 @@ func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]d
 func (pp *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
+
+	// 1. キャラクターのリファレンスを優先的に収集
 	for _, p := range pages {
 		if char := pp.findCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
 			if _, exists := urlMap[char.ReferenceURL]; !exists {
@@ -139,6 +141,8 @@ func (pp *PageGenerator) collectReferences(pages []domain.MangaPage, characters 
 			}
 		}
 	}
+
+	// 2. パネル個別の追加リファレンスを収集
 	for _, p := range pages {
 		if p.ReferenceURL != "" {
 			if _, exists := urlMap[p.ReferenceURL]; !exists {
@@ -147,5 +151,15 @@ func (pp *PageGenerator) collectReferences(pages []domain.MangaPage, characters 
 			}
 		}
 	}
+	const maxRefs = 3
+	if len(urls) > maxRefs {
+		slog.Warn("Reference URLs exceeding limit, truncating for API stability",
+			"original_count", len(urls),
+			"limit", maxRefs,
+		)
+		// 最初の 3 枚だけを採用するのだ（通常は主要キャラが先に来るはずなのだ）
+		urls = urls[:maxRefs]
+	}
+
 	return urls
 }
