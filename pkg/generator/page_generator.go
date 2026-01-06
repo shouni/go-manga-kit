@@ -5,11 +5,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"strings"
+	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompt"
+	"golang.org/x/time/rate"
 )
 
 // MaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数
@@ -19,16 +22,18 @@ const MaxPanelsPerPage = 6
 type PageGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
+	limiter        *rate.Limiter
 }
 
 func NewPageGenerator(mangaGenerator MangaGenerator, styleSuffix string) *PageGenerator {
 	return &PageGenerator{
 		mangaGenerator: mangaGenerator,
 		styleSuffix:    styleSuffix,
+		limiter:        rate.NewLimiter(rate.Every(30*time.Second), 1),
 	}
 }
 
-// ExecuteMangaPages は複数ページをチャンクして生成する新しいエントリーポイントなのだ
+// ExecuteMangaPages は複数ページをチャンクして生成するエントリーポイントなのだ
 func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	var allResponses []*imagedom.ImageResponse
 
@@ -39,6 +44,14 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 	totalPages := (len(manga.Pages) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
 
 	for i := 0; i < len(manga.Pages); i += MaxPanelsPerPage {
+		slog.Info("APIリミッターのトークンを待機中なのだ...",
+			slog.Int("current_idx", i),
+		)
+		if err := pg.limiter.Wait(ctx); err != nil {
+			return nil, fmt.Errorf("リミッターの待機中にエラーが発生したのだ: %w", err)
+		}
+
+		// --- チャンク処理 ---
 		end := i + MaxPanelsPerPage
 		if end > len(manga.Pages) {
 			end = len(manga.Pages)
@@ -51,12 +64,15 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 			Pages:       manga.Pages[i:end],
 		}
 
+		slog.Info("生成リクエストを送信するのだ", slog.Int("page", currentPage))
+
 		res, err := pg.ExecuteMangaPage(ctx, subManga)
 		if err != nil {
 			return nil, fmt.Errorf("failed page %d: %w", currentPage-1, err)
 		}
 		allResponses = append(allResponses, res)
 	}
+
 	return allResponses, nil
 }
 
