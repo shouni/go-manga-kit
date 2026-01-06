@@ -87,9 +87,20 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	// 巨大な統合プロンプトの構築
 	fullPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
 
-	// シード値の決定（最初のパネルのキャラを優先）
 	var defaultSeed *int64
-	if len(manga.Pages) > 0 {
+
+	// 1. まずはページ内の全パネルを走査して、IsPrimaryなキャラ（二人組など）がいるか確認するのだ
+	for _, p := range manga.Pages {
+		char := pg.findCharacter(p.SpeakerID, pg.mangaGenerator.Characters)
+		if char != nil && char.IsPrimary && char.Seed > 0 {
+			s := char.Seed
+			defaultSeed = &s
+			break // 最優先キャラが見つかったら、即座に採用してループを抜けるのだ
+		}
+	}
+
+	// 2. もしIsPrimaryなキャラがいなかったら、従来通り最初のパネルの話者のSeedを使うのだ
+	if defaultSeed == nil && len(manga.Pages) > 0 {
 		char := pg.findCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
@@ -128,11 +139,11 @@ func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]d
 }
 
 // collectReferences は必要な全ての画像URLを重複なく収集するのだ
-func (pp *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
+func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
 	for _, p := range pages {
-		if char := pp.findCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
+		if char := pg.findCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
 			if _, exists := urlMap[char.ReferenceURL]; !exists {
 				urlMap[char.ReferenceURL] = struct{}{}
 				urls = append(urls, char.ReferenceURL)
