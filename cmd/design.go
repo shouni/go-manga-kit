@@ -50,7 +50,10 @@ var designCmd = &cobra.Command{
 		}
 
 		// 複数キャラの情報を集約
-		refs, descriptions, _ := collectCharacterAssets(chars, charIDs)
+		refs, descriptions, err := collectCharacterAssets(chars, charIDs)
+		if err != nil {
+			return err
+		}
 		slog.Info("Executing design work generation",
 			slog.Any("chars", charIDs),
 			slog.Int("ref_count", len(refs)),
@@ -79,7 +82,11 @@ var designCmd = &cobra.Command{
 			return fmt.Errorf("画像の生成に失敗したのだ: %w", err)
 		}
 
-		outputPath, _ := saveResponseImage(*resp, charIDs, "output")
+		outputPath, err := saveResponseImage(*resp, charIDs, "output")
+		if err != nil {
+			slog.Error("Failed to save image", "error", err)
+			return fmt.Errorf("画像の保存に失敗しました: %w", err)
+		}
 		// 結果表示とSeed値の出力 (フィールド名を UsedSeed に変更)
 		slog.Info("Design generation completed successfully",
 			slog.String("output_path", outputPath),
