@@ -2,6 +2,7 @@
   "zundamon_metan": {
     "id": "zundamon_metan",
     "name": "Zundamon and Metan",
+    "is_primary": true,
     "seed": 1000,
     "reference_url": "https://storage.googleapis.com/action-perfect-get-on-go/apm/character/design_works/design_zundamon_metan.jpeg",
     "visual_cues": [
