@@ -110,8 +110,8 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-github.com/shouni/gemini-image-kit v1.0.6 h1:XlbSwQTIl0XN44YVkeYholy/bx96OiXR+7rLZQR75tg=
-github.com/shouni/gemini-image-kit v1.0.6/go.mod h1:slJi/yLOa9LqIjsuHPNytYaVxzb4SBTfDtbhRmVAgQo=
+github.com/shouni/gemini-image-kit v1.0.7 h1:FiMZXztVWSS1Dd+ZHM9s97/RnkF9jLxpRsZ9QMAr2hk=
+github.com/shouni/gemini-image-kit v1.0.7/go.mod h1:slJi/yLOa9LqIjsuHPNytYaVxzb4SBTfDtbhRmVAgQo=
 github.com/shouni/go-ai-client/v2 v2.1.2 h1:E3D692n91Gz1sS3R0jnzeSzqIOdSJc7ZJ8vQ1MI2E6Q=
 github.com/shouni/go-ai-client/v2 v2.1.2/go.mod h1:9ZY4RoXCq7L0o8n+sFqikRqz3hIW1Gq39d/mqUCKCwc=
 github.com/shouni/go-cli-base v1.0.5 h1:Wn09yji6/DIesFwo81/xlzWaJMqZVG07gXoRxMIre4c=
