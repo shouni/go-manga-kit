@@ -124,7 +124,6 @@ func buildDesignPrompt(descriptions []string) string {
 	base := fmt.Sprintf("Masterpiece character design sheet of %s, side-by-side, multiple views (front, side, back), standing full body",
 		strings.Join(descriptions, " and "))
 
-	// config等からスタイルを取得できるようになるとさらに良い
 	return fmt.Sprintf("%s, %s, white background, sharp focus, 4k resolution", base, config.DefaultImagePromptSuffix)
 }
 
