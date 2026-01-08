@@ -89,42 +89,34 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 	return images, nil
 }
 
-// resolveAndGetCharacter determines and retrieves the appropriate character for a given manga page based on speaker ID or visual cues.
+// resolveAndGetCharacter は、ページ情報から最適なキャラクターを決定します。
+// IDで特定できない場合は、IsPrimary フラグが立っているキャラクターを優先的に返します。
 func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
-	// 1. IDの正規化
+	// 1. IDでの直接検索（正規化して一致を確認）
 	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
-
-	// 2. SpeakerIDが空なら、VisualAnchor（描写指示）からキャラ名を推測する
-	if id == "" {
-		anchor := strings.ToLower(page.VisualAnchor)
-		// 優先順位：2人組 -> 特定キャラ の順でチェック
-		if strings.Contains(anchor, "zundamon") && strings.Contains(anchor, "metan") {
-			id = "zundamon_metan"
-		} else if strings.Contains(anchor, "metan") {
-			id = "metan"
-		} else if strings.Contains(anchor, "zundamon") {
-			id = "zundamon"
-		}
-	}
-
-	// 3. 確定したIDで検索
 	if c, ok := characters[id]; ok {
 		return c
 	}
 
-	// 4. 見つからない場合のフォールバック（ここは慎重に！）
-	// IDが指定されていたのに見つからない場合、勝手に「ずんだもん」にするよりは、
-	// 名前だけ入れた空のCharacterを返して BuildUnifiedPrompt 側の GetSeedFromName に任せるのが安全なのだ。
-	if id != "" {
-		return domain.Character{ID: id, Name: id}
+	// 2. IDで見つからない、または空の場合：IsPrimary キャラクターを探索
+	var fallbackChar *domain.Character
+	for _, c := range characters {
+		if c.IsPrimary {
+			return c // Primaryが見つかったら即座に採用
+		}
+		// 万が一 Primary が設定されていない場合のために、最初に見つかったキャラを控えておく
+		if fallbackChar == nil {
+			temp := c
+			fallbackChar = &temp
+		}
 	}
 
-	// 5. 本当に何も情報がない場合のみ、デフォルトキャラを返す
-	if zunda, ok := characters["zundamon"]; ok {
-		return zunda
+	// 3. Primaryもいない場合：最初に見つかったキャラか、空のCharacterを返す
+	if fallbackChar != nil {
+		slog.Debug("Primary character not found, falling back to first available character", "name", fallbackChar.Name)
+		return *fallbackChar
 	}
 
-	// 最終手段
-	slog.Warn("Could not resolve character from page info, falling back to 'Unknown'", "speakerID", page.SpeakerID, "visualAnchor", page.VisualAnchor)
+	slog.Warn("No characters available in the map", "speakerID", page.SpeakerID)
 	return domain.Character{Name: "Unknown"}
 }
