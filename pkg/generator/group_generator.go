@@ -21,11 +21,12 @@ type GroupGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
 	interval       time.Duration
-	sortedCharKeys []string
+	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
+	primaryChar    *domain.Character // 優先的にフォールバック先となる Primary キャラクター
 }
 
 // NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
-// キャラクターマップのキーを事前にソートして保持することで、生成時の計算コストを削減します。
+// キャラクターマップの解析（ソート・Primary特定の事前計算）を行い、生成時のコストを最適化します。
 func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupGenerator {
 	keys := make([]string, 0, len(mangaGenerator.Characters))
 	for k := range mangaGenerator.Characters {
@@ -33,11 +34,22 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 	}
 	sort.Strings(keys)
 
+	// 最も優先度の高い（ID順で最小の）Primaryキャラクターを事前に特定しておく
+	var primary *domain.Character
+	for _, k := range keys {
+		if char := mangaGenerator.Characters[k]; char.IsPrimary {
+			c := char // ループ変数のコピーを作成
+			primary = &c
+			break
+		}
+	}
+
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
 		styleSuffix:    styleSuffix,
 		interval:       interval,
 		sortedCharKeys: keys,
+		primaryChar:    primary,
 	}
 }
 
@@ -61,11 +73,11 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 				}
 			}
 
-			// 1. キャラクター解決
+			// 1. キャラクター解決（不正な SpeakerID や空の場合に備える）
 			char := gg.resolveAndGetCharacter(page, gg.mangaGenerator.Characters)
 
 			// 2. プロンプト構築
-			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
+			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, char.ID)
 
 			// 3. アダプター呼び出し
 			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
@@ -91,11 +103,11 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 	return images, nil
 }
 
-// resolveAndGetCharacter は、与えられたページ情報とキャラクターリストから最も適切なキャラクターを解決します。
+// resolveAndGetCharacter は、与えられたページ情報から最適なキャラクターを決定します。
 // 解決ロジックは以下の優先順位で実行されます:
-// 1. SpeakerID に完全一致する ID を持つキャラクター。
-// 2. IsPrimary フラグが true に設定されているキャラクター（複数ある場合は ID 順で最初）。
-// 3. 上記で見つからない場合、キャッシュされた ID リストの最初のキャラクター。
+// 1. ページに指定された SpeakerID に完全一致するキャラクター。
+// 2. IsPrimary フラグが true に設定されているキャラクター（NewGroupGenerator で事前特定済み）。
+// 3. 上記で見つからない場合、事前にソートされた ID リストの最初のキャラクター。
 // 4. キャラクターリストが空の場合、"Unknown" という名前のデフォルトキャラクター。
 func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
 	// 1. IDでの直接検索
@@ -104,19 +116,16 @@ func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characte
 		return c
 	}
 
-	// 指定されたIDが見つからない場合のログ記録
 	if id != "" {
 		slog.Debug("SpeakerID not found in character map, attempting to resolve fallback", "speakerID", id)
 	}
 
-	// 2. ソート済みキャッシュを用いて Primary キャラクターを探索
-	for _, k := range gp.sortedCharKeys {
-		if char := characters[k]; char.IsPrimary {
-			return char // ID順で最小の Primary を返す
-		}
+	// 2. 事前に特定した Primary キャラクターを優先フォールバック
+	if gp.primaryChar != nil {
+		return *gp.primaryChar
 	}
 
-	// 3. Primary が見つからなかった場合、ソート順の最初のキャラをフォールバックとして返す
+	// 3. Primary がいない場合、ソート順の最初のキャラをフォールバック
 	if len(gp.sortedCharKeys) > 0 {
 		fallbackID := gp.sortedCharKeys[0]
 		slog.Debug("Primary character not found, falling back to deterministic first character",
