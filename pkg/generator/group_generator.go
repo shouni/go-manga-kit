@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -15,33 +16,51 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
+// GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type GroupGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
 	interval       time.Duration
+	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
+	primaryChar    *domain.Character // 優先的にフォールバック先となる Primary キャラクター
 }
 
+// NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
+// キャラクターマップの解析（ソート・Primary特定の事前計算）を行い、生成時のコストを最適化します。
 func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupGenerator {
+	keys := make([]string, 0, len(mangaGenerator.Characters))
+	for k := range mangaGenerator.Characters {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// 最も優先度の高い（ID順で最小の）Primaryキャラクターを事前に特定しておく
+	var primary *domain.Character
+	for _, k := range keys {
+		if char := mangaGenerator.Characters[k]; char.IsPrimary {
+			primary = &char // このスコープではcharが再代入される前にbreakするため安全です
+			break
+		}
+	}
+
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
 		styleSuffix:    styleSuffix,
 		interval:       interval,
+		sortedCharKeys: keys,
+		primaryChar:    primary,
 	}
 }
 
-// ExecutePanelGroup は、並列処理を用いてパネル群を生成する。
-// ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
+// ExecutePanelGroup は、並列処理を用いてパネル群を生成します。
 func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
-
 	pb := prompt.NewPromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
-
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	// レートリミットの設定。intervalが0なら制限なしとして動くのだ。
 	var limiter *rate.Limiter
 	if gg.interval > 0 {
+		// APIのバースト制限を考慮し、同時に2リクエストまでを許容するレートリミッターを設定します。
 		limiter = rate.NewLimiter(rate.Every(gg.interval), 2)
 	}
 
@@ -54,22 +73,17 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 				}
 			}
 
-			// 1. キャラクター解決
+			// 1. キャラクター解決（不正な SpeakerID や空の場合に備える）
 			char := gg.resolveAndGetCharacter(page, gg.mangaGenerator.Characters)
 
 			// 2. プロンプト構築
-			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
+			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, char.ID)
 
-			// 3. シード値の処理
-			// char.Seed 自体が設定されているか、あるいは決定論的に生成された finalSeed を使うのだ
-			var seedPtr *int64
-			seedPtr = &finalSeed
-
-			// 4. アダプター呼び出し
+			// 3. アダプター呼び出し
 			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         pmp,
 				NegativePrompt: negPrompt,
-				Seed:           seedPtr,
+				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,
 				AspectRatio:    "16:9",
 			})
@@ -89,42 +103,37 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 	return images, nil
 }
 
-// resolveAndGetCharacter determines and retrieves the appropriate character for a given manga page based on speaker ID or visual cues.
+// resolveAndGetCharacter は、与えられたページ情報から最適なキャラクターを決定します。
+// 解決ロジックは以下の優先順位で実行されます:
+// 1. ページに指定された SpeakerID に完全一致するキャラクター。
+// 2. IsPrimary フラグが true に設定されているキャラクター（NewGroupGenerator で事前特定済み）。
+// 3. 上記で見つからない場合、事前にソートされた ID リストの最初のキャラクター。
+// 4. キャラクターリストが空の場合、"Unknown" という名前のデフォルトキャラクター。
 func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
-	// 1. IDの正規化
+	// 1. IDでの直接検索
 	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
-
-	// 2. SpeakerIDが空なら、VisualAnchor（描写指示）からキャラ名を推測する
-	if id == "" {
-		anchor := strings.ToLower(page.VisualAnchor)
-		// 優先順位：2人組 -> 特定キャラ の順でチェック
-		if strings.Contains(anchor, "zundamon") && strings.Contains(anchor, "metan") {
-			id = "zundamon_metan"
-		} else if strings.Contains(anchor, "metan") {
-			id = "metan"
-		} else if strings.Contains(anchor, "zundamon") {
-			id = "zundamon"
-		}
-	}
-
-	// 3. 確定したIDで検索
 	if c, ok := characters[id]; ok {
 		return c
 	}
 
-	// 4. 見つからない場合のフォールバック（ここは慎重に！）
-	// IDが指定されていたのに見つからない場合、勝手に「ずんだもん」にするよりは、
-	// 名前だけ入れた空のCharacterを返して BuildUnifiedPrompt 側の GetSeedFromName に任せるのが安全なのだ。
 	if id != "" {
-		return domain.Character{ID: id, Name: id}
+		slog.Debug("SpeakerID not found in character map, attempting to resolve fallback", "speakerID", id)
 	}
 
-	// 5. 本当に何も情報がない場合のみ、デフォルトキャラを返す
-	if zunda, ok := characters["zundamon"]; ok {
-		return zunda
+	// 2. 事前に特定した Primary キャラクターを優先フォールバック
+	if gp.primaryChar != nil {
+		return *gp.primaryChar
 	}
 
-	// 最終手段
-	slog.Warn("Could not resolve character from page info, falling back to 'Unknown'", "speakerID", page.SpeakerID, "visualAnchor", page.VisualAnchor)
+	// 3. Primary がいない場合、ソート順の最初のキャラをフォールバック
+	if len(gp.sortedCharKeys) > 0 {
+		fallbackID := gp.sortedCharKeys[0]
+		slog.Debug("Primary character not found, falling back to deterministic first character",
+			"originalID", page.SpeakerID, "selectedID", fallbackID)
+		return characters[fallbackID]
+	}
+
+	// 4. 最終手段
+	slog.Warn("No characters available in the map", "speakerID", page.SpeakerID)
 	return domain.Character{Name: "Unknown"}
 }
