@@ -95,6 +95,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 		if char != nil && char.IsPrimary && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
+
 			break // 最優先キャラが見つかったら、即座に採用してループを抜けるのだ
 		}
 	}

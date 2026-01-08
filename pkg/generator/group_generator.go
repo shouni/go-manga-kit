@@ -16,13 +16,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成する。
+// GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type GroupGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
 	interval       time.Duration
 }
 
+// NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
 func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupGenerator {
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
@@ -31,16 +32,12 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 	}
 }
 
-// ExecutePanelGroup は、並列処理を用いてパネル群を生成する。
-// ログ出力や進捗管理はここでは行わず、純粋に生成結果を返すことに専念するのだ！
+// ExecutePanelGroup は、並列処理を用いてパネル群を生成します。
 func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
-
 	pb := prompt.NewPromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
-
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	// レートリミットの設定。intervalが0なら制限なしとして動くのだ。
 	var limiter *rate.Limiter
 	if gg.interval > 0 {
 		limiter = rate.NewLimiter(rate.Every(gg.interval), 2)
@@ -61,10 +58,8 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 			// 2. プロンプト構築
 			pmp, negPrompt, finalSeed := pb.BuildUnifiedPrompt(page, page.SpeakerID)
 
-			// 3. シード値の処理
-			// char.Seed 自体が設定されているか、あるいは決定論的に生成された finalSeed を使うのだ
-			var seedPtr *int64
-			seedPtr = &finalSeed
+			// 3. シード値の処理（ポインタとして保持）
+			seedPtr := &finalSeed
 
 			// 4. アダプター呼び出し
 			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
@@ -90,43 +85,47 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 	return images, nil
 }
 
-// resolveAndGetCharacter は、ページ情報から最適なキャラクターを決定します。
-// 1. IDでの完全一致を最優先します。
-// 2. IDが不明な場合は、IsPrimary フラグが立っているキャラからID順で決定します。
-// 3. それ以外は全キャラからID順で最初のキャラをフォールバックとして採用します。
-// ※ 以前の VisualAnchor からの推測ロジックは、推測の不確実性を排除し、
-//
-//	データ定義(IsPrimary)による制御を優先するため、意図的に削除されました。
+// resolveAndGetCharacter は、与えられたページ情報とキャラクターリストから最も適切なキャラクターを解決します。
+// 解決ロジックは以下の優先順位で実行され、マップの順序に依存しない決定論的な動作を保証します：
+// 1. SpeakerID に完全一致する ID を持つキャラクター。
+// 2. IsPrimary フラグが true に設定されているキャラクター（複数ある場合は ID 順で最初）。
+// 3. 上記で見つからない場合、全キャラクターを ID でソートした際の最初のキャラクター。
+// 4. キャラクターリストが空の場合、"Unknown" という名前のデフォルトキャラクター。
+// ※ 以前の VisualAnchor からの推測ロジックは、データ定義（IsPrimary）による制御を優先するため削除されました。
 func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
-	// 1. IDでの直接検索（正規化して一致を確認）
+	// 1. IDでの直接検索
 	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
 	if c, ok := characters[id]; ok {
 		return c
 	}
 
-	// 2. キャラクターリストの決定論的な平坦化（ソート）
-	// マップのイテレーション順序が不定なため、スライスに抽出してIDでソートします。
-	allChars := make([]domain.Character, 0, len(characters))
-	for _, c := range characters {
-		allChars = append(allChars, c)
+	// 2. マップの非決定性を排除するためのソート済みスライスの作成
+	keys := make([]string, 0, len(characters))
+	for k := range characters {
+		keys = append(keys, k)
 	}
-	sort.Slice(allChars, func(i, j int) bool {
-		return allChars[i].ID < allChars[j].ID
-	})
+	sort.Strings(keys)
 
-	// 3. IsPrimary キャラクターをソート済みリストから探索
-	for _, c := range allChars {
-		if c.IsPrimary {
-			// 最初にヒットしたものが「ID順で最初」であることが保証される
-			return c
+	var fallbackChar *domain.Character
+
+	// 3. ソートされた順序で Primary キャラクターを探索
+	for _, k := range keys {
+		char := characters[k]
+		if char.IsPrimary {
+			return char // 最初に見つかった（＝ID順で最小の）Primaryを返す
+		}
+		// 4. フォールバック用にソート順の最初のキャラを保持
+		if fallbackChar == nil {
+			temp := char
+			fallbackChar = &temp
 		}
 	}
 
-	// 4. Primaryもいない場合：ソート済みリストの先頭をフォールバック
-	if len(allChars) > 0 {
-		slog.Debug("Primary character not found, falling back to the first character by sorted ID",
-			"originalID", page.SpeakerID, "selectedName", allChars[0].Name)
-		return allChars[0]
+	// 5. Primaryもいない場合：ソート順の最初のキャラを返す
+	if fallbackChar != nil {
+		slog.Debug("Primary character not found, falling back to deterministic first character",
+			"originalID", page.SpeakerID, "selectedID", fallbackChar.ID)
+		return *fallbackChar
 	}
 
 	// 最終手段
