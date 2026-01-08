@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
 	"time"
 
@@ -90,7 +91,12 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 }
 
 // resolveAndGetCharacter は、ページ情報から最適なキャラクターを決定します。
-// IDで特定できない場合は、IsPrimary フラグが立っているキャラクターを優先的に返します。
+// 1. IDでの完全一致を最優先します。
+// 2. IDが不明な場合は、IsPrimary フラグが立っているキャラからID順で決定します。
+// 3. それ以外は全キャラからID順で最初のキャラをフォールバックとして採用します。
+// ※ 以前の VisualAnchor からの推測ロジックは、推測の不確実性を排除し、
+//
+//	データ定義(IsPrimary)による制御を優先するため、意図的に削除されました。
 func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
 	// 1. IDでの直接検索（正規化して一致を確認）
 	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
@@ -98,25 +104,32 @@ func (gp *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characte
 		return c
 	}
 
-	// 2. IDで見つからない、または空の場合：IsPrimary キャラクターを探索
-	var fallbackChar *domain.Character
+	// 2. キャラクターリストの決定論的な平坦化（ソート）
+	// マップのイテレーション順序が不定なため、スライスに抽出してIDでソートします。
+	allChars := make([]domain.Character, 0, len(characters))
 	for _, c := range characters {
+		allChars = append(allChars, c)
+	}
+	sort.Slice(allChars, func(i, j int) bool {
+		return allChars[i].ID < allChars[j].ID
+	})
+
+	// 3. IsPrimary キャラクターをソート済みリストから探索
+	for _, c := range allChars {
 		if c.IsPrimary {
-			return c // Primaryが見つかったら即座に採用
-		}
-		// 万が一 Primary が設定されていない場合のために、最初に見つかったキャラを控えておく
-		if fallbackChar == nil {
-			temp := c
-			fallbackChar = &temp
+			// 最初にヒットしたものが「ID順で最初」であることが保証される
+			return c
 		}
 	}
 
-	// 3. Primaryもいない場合：最初に見つかったキャラか、空のCharacterを返す
-	if fallbackChar != nil {
-		slog.Debug("Primary character not found, falling back to first available character", "name", fallbackChar.Name)
-		return *fallbackChar
+	// 4. Primaryもいない場合：ソート済みリストの先頭をフォールバック
+	if len(allChars) > 0 {
+		slog.Debug("Primary character not found, falling back to the first character by sorted ID",
+			"originalID", page.SpeakerID, "selectedName", allChars[0].Name)
+		return allChars[0]
 	}
 
+	// 最終手段
 	slog.Warn("No characters available in the map", "speakerID", page.SpeakerID)
 	return domain.Character{Name: "Unknown"}
 }
