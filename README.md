@@ -48,6 +48,11 @@ go-manga-kit/
 
 ---
 
+## 🤝 依存関係 (Dependencies)
+
+* [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - Gemini 画像作成抽象化
+* [shouni/go-remote-io](https://github.com/shouni/go-remote-io) - Google Cloud Storage (GCS)、Amazon S3、およびローカルファイルシステムへの I/O 操作を統一化
+
 ### 📜 ライセンス (License)
 
 このプロジェクトは [MIT License](https://opensource.org/licenses/MIT) の下で公開されています。
