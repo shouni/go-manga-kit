@@ -51,51 +51,42 @@ go-manga-kit/
 ```mermaid
 sequenceDiagram
     participant CLI as CLI Application
-    participant Config as キャラクター設定 (JSON)
-    participant Gen as generator.MangaGenerator
-    participant Core as generator.GeminiImageCore (Cache/HTTP)
-    participant Client as adapters.GeminiImageAdapter
-    participant PageGen as generator.PageGenerator
+    participant Gen as manga-kit.MangaGenerator
+    participant Kit_Gen as gemini-image-kit.GeminiGenerator
+    participant Kit_Core as gemini-image-kit.GeminiImageCore
+    participant Kit_Util as gemini-image-kit.imgutil (Compressor)
     participant API as Gemini API (File/Model)
-    participant Pub as publisher.MangaPublisher
 
-    Note over CLI, Gen: 1. 初期化フェーズ (Setup)
-    CLI->>Config: キャラクター情報の読み込み
-    Config-->>CLI: domain.Character マップ
-    
-    CLI->>Gen: NewMangaGenerator(httpClient, aiClient, model)
-    Gen->>Core: NewGeminiImageCore (...)
-    Note over Gen, Client: Client(Adapter) に Core を注入
-    Gen->>Client: NewGeminiImageAdapter(core, aiClient, model)
-    Gen-->>CLI: MangaGenerator (初期化完了)
+    Note over CLI, Kit_Gen: 1. 初期化
+    CLI->>Gen: NewMangaGenerator
+    Gen->>Kit_Core: NewGeminiImageCore(httpClient, cache)
+    Gen->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
 
-    Note over CLI, PageGen: 2. 生成フェーズ (Execution)
-    CLI->>PageGen: ExecuteMangaPages(mangaResponse)
-    
-    loop ページごとのチャンク処理 (Max 6 panels)
-        PageGen->>PageGen: limiter.Wait (APIリミット待機)
+    Note over CLI, Kit_Util: 2. 生成と内部処理 (Core/Util)
+    CLI->>Kit_Gen: GenerateMangaPage(req)
+
+    loop 各 ReferenceURL の処理
+        Kit_Gen->>Kit_Core: GetReferenceImage(url)
         
-        Note over PageGen, Client: 3. AI Client (Adapter) 連携
-        PageGen->>Client: GenerateMangaPage(req)
-
-        alt 参照URLがキャッシュにない / 未アップロード
-            Note over Client, Core: Clientは注入されたCoreの<br/>キャッシュ/HTTP機能を利用
-            Client->>Core: 参照画像の取得 (HTTP)
-            Core-->>Client: 画像バイナリ
-            Client->>API: File API へのアップロード
-            API-->>Client: File URI 返却
+        rect rgb(240, 240, 240)
+            Note over Kit_Core: 【Security: SSRF対策】
+            Kit_Core->>Kit_Core: isSafeURL (DNS/IPバリデーション)
         end
-
-        Client->>API: GenerateContent (軽量プロンプト)
-        API-->>Client: 生成画像データ (PNG)
-        Client-->>PageGen: ImageResponse
+        
+        Kit_Core->>Kit_Core: キャッシュ確認
+        alt キャッシュなし
+            Kit_Core->>Kit_Core: 外部から画像ダウンロード
+            Kit_Gen->>Kit_Util: 画像の最適化 (JPEG圧縮)
+            Note over Kit_Util: ペイロード削減
+        end
+        
+        Kit_Gen->>API: File API へのアップロード
     end
 
-    PageGen-->>CLI: 全ページの画像レスポンス
-    
-    Note over CLI, Pub: 4. 出力フェーズ (Publisher)
-    CLI->>Pub: Publish (画像保存・Markdown/HTML変換)
-    Pub-->>CLI: 完了通知
+    Note over Kit_Gen, API: 3. 推論と応答
+    Kit_Gen->>API: GenerateContent (シード値 int32 変換済)
+    API-->>Kit_Gen: 生成画像データ
+    Kit_Gen-->>CLI: domain.ImageResponse
 
 ```
 
