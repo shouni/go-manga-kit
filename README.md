@@ -46,6 +46,56 @@ go-manga-kit/
     └── publisher/   # 成果物出力 (publisher.go)
 ```
 
+### 🏗️ 作画生成システム 全体シーケンスフロー
+
+```mermaid
+sequenceDiagram
+    participant App as main / CLI
+    participant Config as キャラクター設定 (JSON)
+    participant Gen as generator.MangaGenerator
+    participant Core as generator.GeminiImageCore (Cache/HTTP)
+    participant PageGen as generator.PageGenerator
+    participant Client as Go AI Client (Adapter)
+    participant API as Gemini API (File/Model)
+
+    Note over App, Gen: 1. 初期化フェーズ (Setup)
+    App->>Config: キャラクター情報の読み込み
+    Config-->>App: domain.Character マップ
+    
+    App->>Gen: NewMangaGenerator(httpClient, aiClient, model)
+    Gen->>Core: NewGeminiImageCore (キャッシュとHTTPクライアントの紐付け)
+    Gen->>Gen: characters の ID を小文字に正規化
+    Gen-->>App: MangaGenerator インスタンス
+
+    Note over App, PageGen: 2. 生成フェーズ (Execution)
+    App->>PageGen: ExecuteMangaPages(mangaResponse)
+    
+    loop ページごとのチャンク処理 (Max 6 panels)
+        PageGen->>PageGen: limiter.Wait (APIリミット待機)
+        PageGen->>PageGen: findCharacter & collectReferences (参照URL収集)
+        
+        Note over PageGen, Client: 3. AI Client へのリクエスト
+        PageGen->>Client: GenerateMangaPage(req)
+
+        alt 参照URLがキャッシュにない / 未アップロード
+            Client->>Core: 参照画像の取得 (HTTP)
+            Core-->>Client: 画像バイナリ
+            Client->>API: File API へのアップロード
+            API-->>Client: File URI (https://.../files/...)
+        end
+
+        Client->>API: GenerateContent (軽量化されたプロンプト)
+        Note right of API: IsPrimaryキャラのSeedで<br/>ページ内の一貫性を保持
+        API-->>Client: 生成された画像データ (PNG)
+        Client-->>PageGen: ImageResponse
+    end
+
+    PageGen-->>App: 全ページの画像レスポンス
+    Note over App: 4. 出力フェーズ (Publisher)
+    App->>App: MangaPublisher.Publish (保存・HTML変換)
+
+```
+
 ---
 
 ## 🤝 依存関係 (Dependencies)
