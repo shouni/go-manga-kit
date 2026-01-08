@@ -50,49 +50,52 @@ go-manga-kit/
 
 ```mermaid
 sequenceDiagram
-    participant App as main / CLI
+    participant CLI as CLI Application
     participant Config as キャラクター設定 (JSON)
     participant Gen as generator.MangaGenerator
     participant Core as generator.GeminiImageCore (Cache/HTTP)
+    participant Client as adapters.GeminiImageAdapter
     participant PageGen as generator.PageGenerator
-    participant Client as Go AI Client (Adapter)
     participant API as Gemini API (File/Model)
+    participant Pub as publisher.MangaPublisher
 
-    Note over App, Gen: 1. 初期化フェーズ (Setup)
-    App->>Config: キャラクター情報の読み込み
-    Config-->>App: domain.Character マップ
+    Note over CLI, Gen: 1. 初期化フェーズ (Setup)
+    CLI->>Config: キャラクター情報の読み込み
+    Config-->>CLI: domain.Character マップ
     
-    App->>Gen: NewMangaGenerator(httpClient, aiClient, model)
-    Gen->>Core: NewGeminiImageCore (キャッシュとHTTPクライアントの紐付け)
-    Gen->>Gen: characters の ID を小文字に正規化
-    Gen-->>App: MangaGenerator インスタンス
+    CLI->>Gen: NewMangaGenerator(httpClient, aiClient, model)
+    Gen->>Core: NewGeminiImageCore (...)
+    Note over Gen, Client: Client(Adapter) に Core を注入
+    Gen->>Client: NewGeminiImageAdapter(core, aiClient, model)
+    Gen-->>CLI: MangaGenerator (初期化完了)
 
-    Note over App, PageGen: 2. 生成フェーズ (Execution)
-    App->>PageGen: ExecuteMangaPages(mangaResponse)
+    Note over CLI, PageGen: 2. 生成フェーズ (Execution)
+    CLI->>PageGen: ExecuteMangaPages(mangaResponse)
     
     loop ページごとのチャンク処理 (Max 6 panels)
         PageGen->>PageGen: limiter.Wait (APIリミット待機)
-        PageGen->>PageGen: findCharacter & collectReferences (参照URL収集)
         
-        Note over PageGen, Client: 3. AI Client へのリクエスト
+        Note over PageGen, Client: 3. AI Client (Adapter) 連携
         PageGen->>Client: GenerateMangaPage(req)
 
         alt 参照URLがキャッシュにない / 未アップロード
+            Note over Client, Core: Clientは注入されたCoreの<br/>キャッシュ/HTTP機能を利用
             Client->>Core: 参照画像の取得 (HTTP)
             Core-->>Client: 画像バイナリ
             Client->>API: File API へのアップロード
-            API-->>Client: File URI (https://.../files/...)
+            API-->>Client: File URI 返却
         end
 
-        Client->>API: GenerateContent (軽量化されたプロンプト)
-        Note right of API: IsPrimaryキャラのSeedで<br/>ページ内の一貫性を保持
-        API-->>Client: 生成された画像データ (PNG)
+        Client->>API: GenerateContent (軽量プロンプト)
+        API-->>Client: 生成画像データ (PNG)
         Client-->>PageGen: ImageResponse
     end
 
-    PageGen-->>App: 全ページの画像レスポンス
-    Note over App: 4. 出力フェーズ (Publisher)
-    App->>App: MangaPublisher.Publish (保存・HTML変換)
+    PageGen-->>CLI: 全ページの画像レスポンス
+    
+    Note over CLI, Pub: 4. 出力フェーズ (Publisher)
+    CLI->>Pub: Publish (画像保存・Markdown/HTML変換)
+    Pub-->>CLI: 完了通知
 
 ```
 
