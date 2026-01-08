@@ -5,137 +5,49 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 概要 (About) - 技術を「連載」へ。自動ページ分割対応・解説漫画生成パイプライン
+## 🚀 概要 (About) - 自動ページ分割対応・解説漫画生成パイプライン
 
-**Go Manga Kit** は、非構造化された技術ドキュメントやWeb記事を解析し、AIによる「精密なネーム構成」と「キャラクターDNAの一貫性を維持した一括作画」を介して、認知的負荷の低い**解説漫画ページ**へと変換するハイエンド・ツールキットなのだ！
+**Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
-[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画エンジンとして活用。独自の**オート・チャンク・システム**により、長大な記事でも6パネルごとに自動でページを分割。AIの描画限界を超えた、読み応えのある本格的な連載漫画体験を提供するのだ。
-
----
-
-## ✨ 主な特徴 (Features)
-
-* **🧬 Character DNA System**: `design` コマンドで抽出したSeed値と参照URLをプロンプトへ動的に注入。全ページ・全パネルで外見の一貫性を保持するのだ。
-* **📑 Auto-Chunk Pagination**: 1ページあたり**最大6パネル**で自動スライス。どんなに長いソーステキストでも、AIが破綻することなく美しい複数枚の漫画として出力されるのだ。
-* **📖 Script-to-Manga Pipeline**: 「伝説の漫画編集者プロンプト」がドキュメントを解析。セリフ、構図指示、SHA256ハッシュ化された `speaker_id` を含む構造化JSONを自動生成。
-* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定。生成のたびに異なる演出とレイアウトを楽しめるのだ。
-* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きキャッシュにより、APIクォータを尊重しつつ安定した作画を継続するのだ。
+[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルで自動分割を行います。複数枚の「連載漫画」として出力できるハイエンドなツールキットです。
 
 ---
 
-## 🏗 システムスタック
+## ✨ コア・コンセプト (Core Concepts)
 
-| レイヤー | 技術 / ライブラリ | 役割 |
-| --- | --- | --- |
-| **Intelligence** | **Gemini 3.0 Flash** | 伝説の編集者プロンプトによるネーム構成 |
-| **Artistic** | **Nano Banana** | DNA注入と空間構成プロンプトによる一括作画 |
-| **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
-| **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
-| **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
-| **Drawing Engine** | `shouni/gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
+* **🧬 Character DNA System**: `domain.Character` に定義したSeed値と視覚特徴をプロンプトへ動的に注入します。全ページを通じてキャラクターの外見を一貫させることが可能です。
+* **📑 Auto-Chunk Pagination**: パネル数が上限を超えると自動でページをスライスします。AIの描画限界を回避し、複数枚構成の漫画を安定して生成します。
+* **📖 Script-to-Manga Pipeline**: Markdown等のソースを `parser` が解析し、演出指示を含む構造化データへ変換します。これを `generator` が受け取り、一括で作画を行う一気通貫の設計です。
+* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定します。単調なコマ割りを防ぎ、ドラマチックな演出を自動生成します。
 
 ---
 
-## 🛠 ワークフローとサブコマンド
+## 📦 パッケージ構成 (Package Layout)
 
-本ツールは、制作プロセスに応じて5つのサブコマンドを使い分けられるのだ。
-
-| コマンド | 役割 | 出力 |
-| --- | --- | --- |
-| **`design`** | **DNA抽出**。設定画を生成し、固定用のSeed値を特定するのだ。 | **Design Image, Seed** |
-| **`generate`** | **一括生成**。解析から全ページのパブリッシュまで一気通貫で行うのだ。 | HTML, Images, MD |
-| **`script`** | **台本生成**。AIによる構成案（JSON）のみを出力するのだ。 | **JSON** |
-| **`image`** | **パネル作画**。各コマの個別画像とHTMLを生成するのだ。 | Images, HTML, MD |
-| **`story`** | **最終錬成**。Markdown/JSONから**複数枚の統合漫画画像**を生成するのだ。 | **Final Images (PNGs)** |
+| パッケージ | 役割 |
+| --- | --- |
+| **`pkg/domain`** | `Character`, `Panel`, `Manga` 等の基底モデル。DNA情報やコアとなるデータ構造を定義します。 |
+| **`pkg/parser`** | Markdown や正規表現を用いて、ソーステキストをネーム（台本）へ解析・変換します。 |
+| **`pkg/generator`** | **中核機能**。`PageGenerator` や `GroupGenerator` による作画・レイアウト制御を担います。 |
+| **`pkg/prompt`** | 描画AIへの空間構成指示や、テンプレート管理を行うプロンプトの司令塔です。 |
+| **`pkg/publisher`** | 生成したアセットを統合画像（PNG）やHTMLとして書き出す最終出力を担当します。 |
 
 ---
 
-### 🎨 主要なフラグ (Major Flags)
-
-| フラグ | ショートカット | 説明 | デフォルト値 | 必須 |
-| --- | --- | --- | --- | --- |
-| `--script-url` | **`-u`** | ソースとなるWebページのURL。コンテンツを自動抽出するのだ。 | **なし** | ✅ (※) |
-| `--script-file` | **`-f`** | ローカルのテキストファイル、または `script` コマンドで出力したJSONパス。 | **なし** | ✅ (※) |
-| `--output-file` | **`-o`** | 保存先パス。`story` 実行時は `_1.png`, `_2.png` と連番保存されるのだ。 | `output/manga_plot.md` | ❌ |
-| `--output-image-dir` | **`-i`** | 生成された画像を保存するディレクトリ（ローカルまたは `gs://...`）。 | `output/images` | ❌ |
-| `--mode` | **`-m`** | キャラクター構成を指定 (`'duet'`, `'dialogue'` など)。 | `dialogue` | ❌ |
-| `--model` | なし | 台本構成に使用する Gemini モデル名なのだ。 | `gemini-3-flash-preview` | ❌ |
-| `--image-model` | なし | 画像生成に使用する Gemini モデル名なのだ。 | `gemini-3-pro-image-preview` | ❌ |
-| `--char-config` | **`-c`** | **キャラクターの視覚情報（DNA）を定義したJSONパスなのだ。** | `internal/config/characters.json` | ❌ |
-| `--panel-limit` | **`-p`** | 生成する漫画パネルの最大数。コスト節約に便利なのだ。 | `10` | ❌ |
-
-**(※) 注意:** `--script-url` または `--script-file` のいずれか一方は必ず指定する必要があるのだ！
-
----
-
-## 💻 実行例 (Usage)
-
-### 1. キャラクターのDNAを固定する (Setup DNA)
-
-```bash
-# ずんだもん、めたんの二面図を生成してSeedを確認
-bin/mangakit design --chars zundamon,metan
-
-# 📌 抽出された Seed 値を characters.json に設定してDNAを固定するのだ！
-
-```
-
-### 2. 連載漫画を一気に作る (Standard)
-
-```bash
-bin/mangakit generate --script-url "https://example.com/long-tech-blog" -m duet
-
-```
-
-### 3. 人間とAIの共作フロー (Advanced)
-
-```bash
-# 1. 台本JSONの生成（長いドキュメントでも自動構成！）
-bin/mangakit script -u "https://example.com/tech-blog" -o "output/script.json"
-
-# (ここで JSON のセリフや構図を編集可能)
-
-# 2. 編集済みJSONから「複数枚の統合漫画ページ」を錬成
-# パネル数が6枚を超える場合、自動的に page_1.png, page_2.png... と出力されるのだ！
-bin/mangakit story -f "output/script.json" -o "output/final_page.png"
-
-```
-
----
-
-## 📂 プロジェクト構造 (Project Layout)
+## 📂 プロジェクト構造 (Project Structure)
 
 ```text
 go-manga-kit/
-├── cmd/             # CLIサブコマンド (design, generate, script, image, story)
-├── internal/
-│   ├── builder/     # DIコンテナ・アプリの初期化
-│   ├── config/      # 環境変数・設定管理
-│   ├── pipeline/    # 実行制御の司令塔 (Pipeline管理)
-│   ├── prompt/      # 台本作成用テンプレート (Markdown)
-│   └── runner/      # 実行コア (Script, Image, Page, Publish)
-├── pkg/
-│   ├── domain/      # ドメインモデル (Manga, Character DNA)
-│   ├── generator/   # 生成戦略 (Group: 個別, Page: 統合)
-│   ├── parser/      # Markdown台本の構造解析・正規表現による要素抽出
-│   ├── prompt/      # 画像生成用 PromptBuilder
-│   └── publisher/   # 成果物出力 (Webtoon HTML, Assets)
-└── output/          # 生成結果 (Images, HTML, Markdown)
-
+└── pkg/             # 公開ライブラリパッケージ
+    ├── domain/      # ドメインモデル (character.go, manga.go)
+    ├── generator/   # 生成戦略 (builder.go, page/group_generator.go)
+    ├── parser/      # 構文解析 (markdown.go, regex.go)
+    ├── prompt/      # プロンプト構築 (template.go)
+    └── publisher/   # 成果物出力 (publisher.go)
 ```
-
----
-
-### 🤝 依存関係 (Dependencies)
-
-* [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - 高度な画像生成エンジン
-* [shouni/go-remote-io](https://github.com/shouni/go-remote-io) - ストレージ抽象化
-* [shouni/go-text-format](https://github.com/shouni/go-text-format) - Webtoon変換コア
 
 ---
 
 ### 📜 ライセンス (License)
 
 このプロジェクトは [MIT License](https://opensource.org/licenses/MIT) の下で公開されています。
-
-**デフォルトキャラクター**: VOICEVOX:ずんだもん、VOICEVOX:四国めたん
