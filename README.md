@@ -46,6 +46,59 @@ go-manga-kit/
     └── publisher/   # 成果物出力 (publisher.go)
 ```
 
+## 🏗️ 作画生成システム 全体シーケンスフロー
+
+```mermaid
+sequenceDiagram
+    participant CLI as CLI Application
+    participant Gen as manga-kit.MangaGenerator (Page/Group)
+    participant Kit_Gen as gemini-image-kit.GeminiGenerator
+    participant Kit_Core as gemini-image-kit.GeminiImageCore
+    participant Kit_Util as gemini-image-kit.imgutil (Compressor)
+    participant API as Gemini API (File/Model)
+
+    Note over CLI, Gen: 1. 初期化フェーズ (Setup)
+    CLI->>Gen: NewMangaGenerator
+    Gen->>Kit_Core: NewGeminiImageCore(httpClient, cache)
+    Gen->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
+
+    Note over CLI, Kit_Util: 2. 生成フェーズ (Execution)
+    CLI->>Gen: ExecuteMangaPages (または ExecutePanelGroup)
+    
+    rect
+        Note over Gen, Kit_Gen: manga-kit は core-kit の抽象化インターフェースを利用
+        Gen->>Kit_Gen: GenerateMangaPage(req)
+    end
+
+    loop 各 ReferenceURL の処理 (Core Pipeline)
+        Kit_Gen->>Kit_Core: GetReferenceImage(url)
+        
+        rect
+            Note over Kit_Core: 【Security: SSRF対策】
+            Kit_Core->>Kit_Core: isSafeURL (DNS/IPバリデーション)
+        end
+        
+        Kit_Core->>Kit_Core: キャッシュ確認
+        alt キャッシュなし / 新規取得
+            Kit_Core->>Kit_Core: 外部から画像ダウンロード
+            
+            Note over Kit_Core, Kit_Util: 取得から最適化までを Core 内で完結
+            Kit_Core->>Kit_Util: 画像の最適化 (JPEG圧縮)
+            Kit_Util-->>Kit_Core: 最適化済みバイナリ
+        end
+        Kit_Core-->>Kit_Gen: 最終画像データ
+        
+        Kit_Gen->>API: File API へのアップロード (Multipart)
+    end
+
+    Note over Kit_Gen, API: 3. AI推論 (Inference)
+    Kit_Gen->>API: GenerateContent (int32 Seed / FileData)
+    API-->>Kit_Gen: 生成画像データ (PNG)
+    Kit_Gen-->>Gen: domain.ImageResponse
+    Gen-->>CLI: 生成完了通知
+
+```
+
 ---
 
 ## 🤝 依存関係 (Dependencies)
