@@ -38,8 +38,7 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 	var primary *domain.Character
 	for _, k := range keys {
 		if char := mangaGenerator.Characters[k]; char.IsPrimary {
-			c := char // ループ変数のコピーを作成
-			primary = &c
+			primary = &char // このスコープではcharが再代入される前にbreakするため安全です
 			break
 		}
 	}
@@ -61,6 +60,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 
 	var limiter *rate.Limiter
 	if gg.interval > 0 {
+		// APIのバースト制限を考慮し、同時に2リクエストまでを許容するレートリミッターを設定します。
 		limiter = rate.NewLimiter(rate.Every(gg.interval), 2)
 	}
 
