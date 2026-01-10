@@ -16,7 +16,7 @@ type TextPromptBuilder struct {
 	templates map[string]*template.Template
 }
 
-// TextPromptBuilder は TextPromptBuilder を初期化します。
+// NewTextPromptBuilder は TextPromptBuilder を初期化します。
 func NewTextPromptBuilder() (*TextPromptBuilder, error) {
 	parsedTemplates := make(map[string]*template.Template)
 	for mode, content := range allTemplates {

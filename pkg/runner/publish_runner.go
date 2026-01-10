@@ -3,20 +3,19 @@ package runner
 import (
 	"context"
 
-	"github.com/shouni/go-manga-kit/pkg/workflow"
-
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
 // DefaultPublisherRunner は pkg/publisher を利用した標準実装なのだ。
 type DefaultPublisherRunner struct {
-	cfg       workflow.Config
+	cfg       config.Config
 	publisher *publisher.MangaPublisher
 }
 
-func NewDefaultPublisherRunner(cfg workflow.Config, pub *publisher.MangaPublisher) *DefaultPublisherRunner {
+func NewDefaultPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher) *DefaultPublisherRunner {
 	return &DefaultPublisherRunner{
 		cfg:       cfg,
 		publisher: pub,
