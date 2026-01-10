@@ -23,30 +23,32 @@
 
 ---
 
-## 🏗 システムスタック
+## 🏗 システムスタック (System Stack)
 
 | レイヤー | 技術 / ライブラリ | 役割 |
 | --- | --- | --- |
+| **Language** | **Go (Golang)** | 型安全で高速な並列処理を実現するバックエンド基盤。 |
 | **Intelligence** | **Gemini 3.0 Flash** | 伝説の編集者プロンプトによるネーム構成 |
 | **Artistic** | **Nano Banana** | DNA注入と空間構成プロンプトによる一括作画 |
 | **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
 | **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
 | **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
 | **Drawing Engine** | `shouni/gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
+| **Web Extract** | **Web-Exact** | Webページからのセマンティックなコンテンツ抽出。 |
 
 ---
 
 ## 🎨 5つのワークフロー (Workflows)
 
-制作プロセスに応じて、以下の5つの機能をWeb UIから使い分けられるのだ。
+`pkg/workflow` インターフェースが定義する、漫画制作の各工程なのだ。
 
-| 画面 (Command) | 役割 | 主な出力 |
+| ワークフロー | 担当インターフェース | 内容 |
 | --- | --- | --- |
-| **Design** | DNA抽出。設定画を生成し、**固定用のSeed値を特定**する。 | Design Image, **Final Seed (via Slack)** |
-| **Generate** | 一括生成。解析から全ページのパブリッシュまで一気通貫。 | HTML, Images, MD |
-| **Script** | 台本生成。AIによる構成案（JSON）のみを出力。 | JSON (Script) |
-| **Image** | パネル作画。既存の台本から画像とHTMLを生成。 | Images, HTML, MD |
-| **Story** | 最終錬成。プロット（Markdown）から漫画構成案を生成。 | Manga Structure (JSON) |
+| **1. Scripting** | `ScriptRunner` | Web/テキストから、キャラクター・セリフ・構図を含むJSON台本を生成。 |
+| **2. Designing** | `DesignRunner` | キャラクターのDNA（特徴）を固定し、一貫性のあるデザインシートを生成。 |
+| **3. Panel Gen** | `PanelImageRunner` | 台本の各パネルに対し、並列かつレート制限を守りながら画像を生成。 |
+| **4. Page Gen** | `PageImageRunner` | Markdown形式の台本から、ページ単位での一括レンダリングを実行。 |
+| **5. Publishing** | `PublishRunner` | 画像とテキストを統合し、最終的なHTML/Markdown/PNG等で出力。 |
 
 ---
 
@@ -81,7 +83,7 @@ go-manga-kit/
 
 ---
 
-## 🏗️ 作画生成システム 全体シーケンスフロー
+## 🏗️ 作画生成シーケンスフロー (Image Generation Sequence Flow)
 
 ```mermaid
 sequenceDiagram
