@@ -58,7 +58,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	if err != nil {
 		return nil, fmt.Errorf("failed to load characters: %w", err)
 	}
-	imgGen, err := initializeImageGenerator(httpClient, aiClient, cfg.GeminiModel)
+	imgGen, err := initializeImageGenerator(httpClient, aiClient, cfg.ImageModel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load characters: %w", err)
 	}
@@ -118,11 +118,11 @@ func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 	}
 	md2htmlBuilder, err := builder.NewBuilder(htmlCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create markdown builder: %w", err)
+		return nil, fmt.Errorf("md2htmlBuilderの初期化に失敗しました: %w", err)
 	}
 	md2htmlRunner, err := md2htmlBuilder.BuildRunner()
 	if err != nil {
-		return nil, fmt.Errorf("failed to build markdown runner: %w", err)
+		return nil, fmt.Errorf("md2htmlrunnerの初期化に失敗しました: %w", err)
 	}
 
 	pub := publisher.NewMangaPublisher(b.writer, md2htmlRunner)
