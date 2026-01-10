@@ -20,6 +20,11 @@ type Character struct {
 // CharactersMap はIDをキーとしたキャラクターのマップ定義です。
 type CharactersMap map[string]Character
 
+// String はキャラクターの情報を文字列で返します。
+func (c Character) String() string {
+	return fmt.Sprintf("%s (%s)", c.Name, c.ID)
+}
+
 // GetCharacters はJSONバイト列からキャラクターマップをパースして返します。
 // この関数はステートレスであり、キャッシュを行いません。
 func GetCharacters(charactersJSON []byte) (map[string]Character, error) {
@@ -28,11 +33,6 @@ func GetCharacters(charactersJSON []byte) (map[string]Character, error) {
 		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
 	}
 	return chars, nil
-}
-
-// String はキャラクターの情報を文字列で返します。
-func (c Character) String() string {
-	return fmt.Sprintf("%s (%s)", c.Name, c.ID)
 }
 
 // GetSeedFromName は名前から決定論的なシード値を生成、または設定値から取得します。
