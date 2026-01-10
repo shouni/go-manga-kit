@@ -25,9 +25,8 @@ type Options struct {
 }
 
 const (
-	defaultImageDirName = "images"
-	placeholder         = "placeholder.png"
-
+	defaultImageDirName  = "images"
+	placeholder          = "placeholder.png"
 	evenPanelTail        = "top"
 	evenPanelBottom      = "10%"
 	evenPanelLeft        = "10%"
@@ -56,7 +55,7 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 // Publish は画像の保存、Markdownの構築、HTML変換を一括して実行します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
 	markdown := filepath.Join(opts.OutputDir, "manga.md")
-	imgDir := opts.OutputDir + "/" + defaultImageDirName
+	imgDir := filepath.Join(opts.OutputDir, defaultImageDirName)
 	// 1. 画像の保存
 	savedPaths, err := p.saveImages(ctx, images, imgDir)
 	if err != nil {
@@ -66,7 +65,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	// 2. Markdown用相対パスの作成
 	relativePaths := make([]string, 0, len(savedPaths))
 	for _, path := range savedPaths {
-		relPath := filepath.Join(imgDir, filepath.Base(path))
+		relPath := filepath.Join(defaultImageDirName, filepath.Base(path))
 		relativePaths = append(relativePaths, relPath)
 	}
 
