@@ -8,10 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/prompt"
-
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
@@ -54,7 +53,7 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 
 // ExecutePanelGroup は、並列処理を用いてパネル群を生成します。
 func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
-	pb := prompt.NewPromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
+	pb := prompts.NewPromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 

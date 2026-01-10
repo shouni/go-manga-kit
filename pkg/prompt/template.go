@@ -14,7 +14,7 @@ const (
 	// MangaNegativePrompt Negative Prompt の定義
 	MangaNegativePrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
 
-	// MangaStructureHeader はマンガの全体構造を定義します。
+	// MangaStructureHeader は作画の全体構造を定義します。
 	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
 - STRUCTURE: A professional Japanese manga spread with clear frame borders.
 - READING ORDER: Right-to-Left, Top-to-Bottom.
@@ -25,7 +25,7 @@ const (
 - RENDERING: Sharp clean lineart, vibrant colors, no blurring, high contrast, cinematic manga lighting.`
 )
 
-// BuildPanelHeader は各コマの属性（サイズや順序）を生成します。
+// BuildPanelHeader は各パネルの属性（サイズや順序）を生成します。
 func BuildPanelHeader(current, total int, isBigPanel bool) string {
 	var sb strings.Builder
 	sb.WriteString("\n===========================================\n")

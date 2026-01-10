@@ -94,15 +94,20 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (domain.MangaResponse, er
 	if len(matches) > 1 {
 		rawJSON = matches[1]
 	} else {
-		// Fallback: Assume the entire response is JSON if no markdown block is found.
-		// This is safer than trying to slice the string with brackets.
-		rawJSON = raw
+		// Fallback 1: Find the outermost JSON object.
+		firstBracket := strings.Index(raw, "{")
+		lastBracket := strings.LastIndex(raw, "}")
+		if firstBracket != -1 && lastBracket != -1 && lastBracket > firstBracket {
+			rawJSON = raw[firstBracket : lastBracket+1]
+		} else {
+			// Fallback 2: Assume the entire response is JSON.
+			rawJSON = raw
+		}
 	}
 
 	var manga domain.MangaResponse
 	if err := json.Unmarshal([]byte(rawJSON), &manga); err != nil {
-		// Provide more context in the error for easier debugging.
-		return domain.MangaResponse{}, fmt.Errorf("failed to unmarshal JSON response (raw response snippet: %q): %w", truncateString(raw, 200), err)
+		return domain.MangaResponse{}, fmt.Errorf("AIからの応答に含まれるJSONの解析に失敗しました (応答抜粋: %q): %w", truncateString(raw, 200), err)
 	}
 	return manga, nil
 }
