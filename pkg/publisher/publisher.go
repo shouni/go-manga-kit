@@ -21,12 +21,12 @@ import (
 
 // Options はパブリッシュ動作を制御する設定項目です。
 type Options struct {
-	OutputFile     string
-	OutputImageDir string
-	ImageDirName   string // Markdown内で参照するディレクトリ名 (例: "images")
+	OutputDir string
 }
 
 const (
+	defaultImageDirName  = "images"
+	placeholder          = "placeholder.png"
 	evenPanelTail        = "top"
 	evenPanelBottom      = "10%"
 	evenPanelLeft        = "10%"
@@ -35,9 +35,6 @@ const (
 	oddPanelRight        = "10%"
 	defaultNarrationName = "narration"
 )
-
-const defaultImageDirName = "images"
-const placeholder = "placeholder.png"
 
 var tagRegex = regexp.MustCompile(`\[[^\]]+\]`)
 
@@ -57,12 +54,10 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 
 // Publish は画像の保存、Markdownの構築、HTML変換を一括して実行します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
-	if opts.ImageDirName == "" {
-		opts.ImageDirName = defaultImageDirName
-	}
-
+	markdown := filepath.Join(opts.OutputDir, "manga.md")
+	imgDir := filepath.Join(opts.OutputDir, defaultImageDirName)
 	// 1. 画像の保存
-	savedPaths, err := p.saveImages(ctx, images, opts.OutputImageDir)
+	savedPaths, err := p.saveImages(ctx, images, imgDir)
 	if err != nil {
 		return fmt.Errorf("failed to save images: %w", err)
 	}
@@ -70,7 +65,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	// 2. Markdown用相対パスの作成
 	relativePaths := make([]string, 0, len(savedPaths))
 	for _, path := range savedPaths {
-		relPath := filepath.Join(opts.ImageDirName, filepath.Base(path))
+		relPath := filepath.Join(defaultImageDirName, filepath.Base(path))
 		relativePaths = append(relativePaths, relPath)
 	}
 
@@ -78,7 +73,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	content := p.buildMarkdown(manga, relativePaths)
 
 	// 4. Markdownファイルの書き出し
-	if err := p.writer.Write(ctx, opts.OutputFile, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
+	if err := p.writer.Write(ctx, markdown, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
 		return fmt.Errorf("failed to write markdown: %w", err)
 	}
 
@@ -90,7 +85,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 			return fmt.Errorf("failed to convert HTML: %w", err)
 		}
 
-		htmlPath := strings.TrimSuffix(opts.OutputFile, filepath.Ext(opts.OutputFile)) + ".html"
+		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
 			return fmt.Errorf("failed to write HTML: %w", err)
 		}

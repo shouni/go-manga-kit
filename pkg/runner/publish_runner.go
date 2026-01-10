@@ -25,8 +25,7 @@ func NewDefaultPublisherRunner(cfg workflow.Config, pub *publisher.MangaPublishe
 
 func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, outputDir string) error {
 	opts := publisher.Options{
-		OutputImageDir: outputDir,
-		ImageDirName:   "images",
+		OutputDir: outputDir,
 	}
 
 	return pr.publisher.Publish(ctx, manga, images, opts)
