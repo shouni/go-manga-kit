@@ -10,9 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/shouni/go-manga-kit/pkg/workflow"
-
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
@@ -20,13 +19,13 @@ import (
 
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
-	cfg      workflow.Config
+	cfg      config.Config
 	mangaGen generator.MangaGenerator
 	writer   remoteio.OutputWriter
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化するのだ。
-func NewMangaDesignRunner(cfg workflow.Config, mangaGen generator.MangaGenerator, writer remoteio.OutputWriter) *MangaDesignRunner {
+func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, writer remoteio.OutputWriter) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		cfg:      cfg,
 		mangaGen: mangaGen,

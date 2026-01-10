@@ -8,11 +8,10 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/shouni/go-manga-kit/pkg/prompts"
-	"github.com/shouni/go-manga-kit/pkg/workflow"
-
 	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
+	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
@@ -20,7 +19,7 @@ import (
 var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 
 type MangaScriptRunner struct {
-	cfg           workflow.Config
+	cfg           config.Config
 	extractor     *extract.Extractor
 	promptBuilder prompts.PromptBuilder
 	aiClient      gemini.GenerativeModel
@@ -29,7 +28,7 @@ type MangaScriptRunner struct {
 
 // NewMangaScriptRunner は依存関係（ビルダーを含む）を注入して初期化します。
 func NewMangaScriptRunner(
-	cfg workflow.Config,
+	cfg config.Config,
 	ext *extract.Extractor,
 	pb prompts.PromptBuilder,
 	ai gemini.GenerativeModel,

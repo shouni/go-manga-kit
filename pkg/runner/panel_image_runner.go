@@ -5,22 +5,21 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/shouni/go-manga-kit/pkg/workflow"
-
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 )
 
 // MangaPanelImageRunner は、台本を元に並列画像生成を管理する実装なのだ。
 type MangaPanelImageRunner struct {
-	cfg      workflow.Config
+	cfg      config.Config
 	groupGen *generator.GroupGenerator // 並列生成とレートリミットを管理するコアなのだ
 }
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
 // config.DefaultRateLimit などの具体的な値は builder から渡されることを想定しているのだ。
-func NewMangaPanelImageRunner(cfg workflow.Config, mangaGen generator.MangaGenerator, styleSuffix string, interval time.Duration) *MangaPanelImageRunner {
+func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerator, styleSuffix string, interval time.Duration) *MangaPanelImageRunner {
 	groupGen := generator.NewGroupGenerator(mangaGen, styleSuffix, interval)
 
 	return &MangaPanelImageRunner{
