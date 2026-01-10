@@ -5,7 +5,7 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 概要 (About) - 自動ページ分割対応・作画生成Workflows
+## 🚀 概要 (About) - 自動ページ分割対応・漫画制作Workflows
 
 **Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
@@ -27,7 +27,6 @@
 
 | レイヤー | 技術 / ライブラリ | 役割 |
 | --- | --- | --- |
-| **Language** | **Go (Golang)** | 型安全で高速な並列処理を実現するバックエンド基盤。 |
 | **Intelligence** | **Gemini 3.0 Flash** | 伝説の編集者プロンプトによるネーム構成 |
 | **Artistic** | **Nano Banana** | DNA注入と空間構成プロンプトによる一括作画 |
 | **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
@@ -40,14 +39,14 @@
 
 ## 🎨 5つのワークフロー (Workflows)
 
-`pkg/workflow` インターフェースが定義する、漫画制作の各工程なのだ。
+以下は `pkg/workflow` インターフェースによって定義される、漫画制作の主要な工程です。
 
 | ワークフロー | 担当インターフェース | 内容 |
 | --- | --- | --- |
 | **1. Scripting** | `ScriptRunner` | Web/テキストから、キャラクター・セリフ・構図を含むJSON台本を生成。 |
 | **2. Designing** | `DesignRunner` | キャラクターのDNA（特徴）を固定し、一貫性のあるデザインシートを生成。 |
-| **3. Panel Gen** | `PanelImageRunner` | 台本の各パネルに対し、並列かつレート制限を守りながら画像を生成。 |
-| **4. Page Gen** | `PageImageRunner` | Markdown形式の台本から、ページ単位での一括レンダリングを実行。 |
+| **3. Panel Gen** | `PanelImageRunner` | 台本の各パネル（コマ）に対応する画像を、並列かつレート制限を遵守しながら個別に生成。 |
+| **4. Page Gen** | `PageImageRunner` | 生成済みのパネル画像を、Markdown形式の台本に基づきページ単位にレイアウトし、最終的なページ画像を生成。 |
 | **5. Publishing** | `PublishRunner` | 画像とテキストを統合し、最終的なHTML/Markdown/PNG等で出力。 |
 
 ---
