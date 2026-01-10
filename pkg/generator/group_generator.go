@@ -53,7 +53,7 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 
 // ExecutePanelGroup は、並列処理を用いてパネル群を生成します。
 func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
-	pb := prompts.NewPromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
+	pb := prompts.NewImagePromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 

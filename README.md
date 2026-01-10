@@ -70,7 +70,7 @@ go-manga-kit/
     ├── domain/      # ドメインモデル (character.go, manga.go)
     ├── generator/   # 生成戦略 (builder.go, page/group_generator.go)
     ├── parser/      # 構文解析 (markdown.go, regex.go)
-    ├── prompt/      # プロンプト構築 (template.go)
+    ├── prompts/     # プロンプト構築
     ├── publisher/   # 成果物出力 (publisher.go)
     ├── runner/      # ワークフローの実行処理
     └── workflow/    # ワークフローの管理

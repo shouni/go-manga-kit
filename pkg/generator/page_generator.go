@@ -79,7 +79,7 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
 func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
 	// 共通のスタイルサフィックス（anime styleなど）を注入して生成するのだ
-	pb := prompts.NewPromptBuilder(pg.mangaGenerator.Characters, pg.styleSuffix)
+	pb := prompts.NewImagePromptBuilder(pg.mangaGenerator.Characters, pg.styleSuffix)
 
 	// 参照URLの収集
 	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
