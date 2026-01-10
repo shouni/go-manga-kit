@@ -5,7 +5,7 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 概要 (About) - 自動ページ分割対応・作画生成Workflows
+## 🚀 概要 (About) - 自動ページ分割対応・漫画制作Workflows
 
 **Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
@@ -23,7 +23,7 @@
 
 ---
 
-## 🏗 システムスタック
+## 🏗 システムスタック (System Stack)
 
 | レイヤー | 技術 / ライブラリ | 役割 |
 | --- | --- | --- |
@@ -31,22 +31,23 @@
 | **Artistic** | **Nano Banana** | DNA注入と空間構成プロンプトによる一括作画 |
 | **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
 | **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
-| **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
 | **Drawing Engine** | `shouni/gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
+| **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
+| **Web Extract** | `shouni/go-web-exact` | Webページからのセマンティックなコンテンツ抽出。 |
 
 ---
 
 ## 🎨 5つのワークフロー (Workflows)
 
-制作プロセスに応じて、以下の5つの機能をWeb UIから使い分けられるのだ。
+以下は `pkg/workflow` インターフェースによって定義される、漫画制作の主要な工程です。
 
-| 画面 (Command) | 役割 | 主な出力 |
+| ワークフロー | 担当インターフェース | 内容 |
 | --- | --- | --- |
-| **Design** | DNA抽出。設定画を生成し、**固定用のSeed値を特定**する。 | Design Image, **Final Seed (via Slack)** |
-| **Generate** | 一括生成。解析から全ページのパブリッシュまで一気通貫。 | HTML, Images, MD |
-| **Script** | 台本生成。AIによる構成案（JSON）のみを出力。 | JSON (Script) |
-| **Image** | パネル作画。既存の台本から画像とHTMLを生成。 | Images, HTML, MD |
-| **Story** | 最終錬成。プロット（Markdown）から漫画構成案を生成。 | Manga Structure (JSON) |
+| **1. Scripting** | `ScriptRunner` | Web/テキストから、キャラクター・セリフ・構図を含むJSON台本を生成。 |
+| **2. Designing** | `DesignRunner` | キャラクターのDNA（特徴）を固定し、一貫性のあるデザインシートを生成。 |
+| **3. Panel Gen** | `PanelImageRunner` | 台本の各パネル（コマ）に対応する画像を、並列かつレート制限を遵守しながら個別に生成。 |
+| **4. Page Gen** | `PageImageRunner` | 生成済みのパネル画像を、Markdown形式の台本に基づきページ単位にレイアウトし、最終的なページ画像を生成。 |
+| **5. Publishing** | `PublishRunner` | 画像とテキストを統合し、最終的なHTML/Markdown/PNG等で出力。 |
 
 ---
 
@@ -81,7 +82,7 @@ go-manga-kit/
 
 ---
 
-## 🏗️ 作画生成システム 全体シーケンスフロー
+## 🏗️ 作画生成シーケンスフロー (Image Generation Sequence Flow)
 
 ```mermaid
 sequenceDiagram
