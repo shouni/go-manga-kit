@@ -50,15 +50,17 @@
 
 ---
 
-## 📦 パッケージ構成 (Package Layout)
+### 📦 パッケージ構成 (Package Layout)
 
 | パッケージ | 役割 |
 | --- | --- |
-| **`pkg/domain`** | `Character`, `Panel`, `Manga` 等の基底モデル。DNA情報やコアとなるデータ構造を定義します。 |
-| **`pkg/parser`** | Markdown や正規表現を用いて、ソーステキストをネーム（台本）へ解析・変換します。 |
-| **`pkg/generator`** | **中核機能**。`PageGenerator` や `GroupGenerator` による作画・レイアウト制御を担います。 |
-| **`pkg/prompt`** | 描画AIへの空間構成指示や、テンプレート管理を行うプロンプトの司令塔です。 |
-| **`pkg/publisher`** | 生成したアセットを統合画像（PNG）やHTMLとして書き出す最終出力を担当します。 |
+| **`pkg/domain`** | `Character`, `Panel`, `Manga` 等の基底モデル。DNA情報やコアとなるデータ構造を定義。 |
+| **`pkg/generator`** | **中核機能**。`PageGenerator` や `GroupGenerator` による作画・レイアウト制御を担当。 |
+| **`pkg/parser`** | Markdown や正規表現を用いて、ソーステキストをネーム（台本）へ解析・変換。 |
+| **`pkg/prompts`** | 描画AIへの空間構成指示や、テンプレート管理を行うプロンプトの司令塔。 |
+| **`pkg/publisher`** | 生成したアセットを統合画像（PNG）やHTMLとして書き出す最終出力を担当。 |
+| **`pkg/runner`** | `workflow` インターフェースを満たす具体的な実行実体（各工程のメインロジック）。 |
+| **`pkg/workflow`** | 全体のワークフロー定義、インターフェース、および `Builder` による統合。 |
 
 ---
 
@@ -67,6 +69,7 @@
 ```text
 go-manga-kit/
 └── pkg/             # 公開ライブラリパッケージ
+    ├── config/      # 環境変数管理
     ├── domain/      # ドメインモデル (character.go, manga.go)
     ├── generator/   # 生成戦略 (builder.go, page/group_generator.go)
     ├── parser/      # 構文解析 (markdown.go, regex.go)
