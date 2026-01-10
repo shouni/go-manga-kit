@@ -31,9 +31,9 @@
 | **Artistic** | **Nano Banana** | DNA注入と空間構成プロンプトによる一括作画 |
 | **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
 | **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
-| **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
 | **Drawing Engine** | `shouni/gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
-| **Web Extract** | **Web-Exact** | Webページからのセマンティックなコンテンツ抽出。 |
+| **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
+| **Web Extract** | `shouni/go-web-exact` | Webページからのセマンティックなコンテンツ抽出。 |
 
 ---
 
