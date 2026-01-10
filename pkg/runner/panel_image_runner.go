@@ -20,10 +20,11 @@ type MangaPanelImageRunner struct {
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
 // config.DefaultRateLimit などの具体的な値は builder から渡されることを想定しているのだ。
-func NewMangaPanelImageRunner(mangaGen generator.MangaGenerator, styleSuffix string, interval time.Duration) *MangaPanelImageRunner {
+func NewMangaPanelImageRunner(cfg workflow.Config, mangaGen generator.MangaGenerator, styleSuffix string, interval time.Duration) *MangaPanelImageRunner {
 	groupGen := generator.NewGroupGenerator(mangaGen, styleSuffix, interval)
 
 	return &MangaPanelImageRunner{
+		cfg:      cfg,
 		groupGen: groupGen,
 	}
 }
