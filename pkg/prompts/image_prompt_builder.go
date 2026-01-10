@@ -1,29 +1,30 @@
-package prompt
+package prompts
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand/v2"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
-// PromptBuilder は、キャラクター情報を考慮してAIプロンプトを構築します。
-type PromptBuilder struct {
+// ImagePromptBuilder は、キャラクター情報を考慮してAIプロンプトを構築します。
+type ImagePromptBuilder struct {
 	characterMap  domain.CharactersMap
 	defaultSuffix string // "anime style, high quality" 等の共通サフィックス
 }
 
-// NewPromptBuilder は新しい PromptBuilder を生成します。
-func NewPromptBuilder(chars domain.CharactersMap, suffix string) *PromptBuilder {
-	return &PromptBuilder{
+// NewImagePromptBuilder は新しい PromptBuilder を生成します。
+func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImagePromptBuilder {
+	return &ImagePromptBuilder{
 		characterMap:  chars,
 		defaultSuffix: suffix,
 	}
 }
 
 // BuildFullPagePrompt は、全パネル情報と参照URLを統合してプロンプトを構築します。
-func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) string {
+func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) string {
 	var sb strings.Builder
 
 	// 1. マンガ全体構造の定義
@@ -31,8 +32,12 @@ func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.M
 	sb.WriteString(fmt.Sprintf("\n- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
 
 	// 2. タイトルと共通スタイルの適用
-	// Note: 漫画タイトルは個別の画像生成プロンプトには不要なため、この処理は無効化しています。
-	//	sb.WriteString(fmt.Sprintf("\n### TITLE: %s ###\n", mangaTitle))
+	slog.Info("Building generation prompt",
+		"manga_title", mangaTitle,
+		"style_suffix", pb.defaultSuffix,
+		"panel_count", len(pages),
+	)
+
 	sb.WriteString(RenderingStyle)
 	if pb.defaultSuffix != "" {
 		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pb.defaultSuffix))
@@ -72,7 +77,7 @@ func (pb *PromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.M
 }
 
 // BuildUnifiedPrompt は、単体パネル用のプロンプトとシード値を生成します。
-func (pb *PromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
+func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	// 1. キャラクター設定の注入
 	var visualParts []string
 	var targetSeed int64
