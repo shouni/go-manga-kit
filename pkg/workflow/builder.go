@@ -29,12 +29,13 @@ const (
 // Builder はワークフローの各工程を担う Runner 群を構築・管理するのだ。
 type Builder struct {
 	cfg        config.Config
+	chars      domain.CharactersMap
 	httpClient httpkit.ClientInterface
 	aiClient   gemini.GenerativeModel
-	imgGen     imageKit.ImageGenerator
 	reader     remoteio.InputReader
 	writer     remoteio.OutputWriter
-	chars      domain.CharactersMap
+	imgGen     imageKit.ImageGenerator
+	mangaGen   generator.MangaGenerator
 }
 
 // NewBuilder は Config と必要なキャラクター定義を基に新しい Builder を作成するのだ。
@@ -62,14 +63,20 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		return nil, fmt.Errorf("failed to load characters: %w", err)
 	}
 
+	mangaGen := generator.MangaGenerator{
+		ImgGen:     imgGen,
+		Characters: chars,
+	}
+
 	return &Builder{
 		cfg:        cfg,
+		chars:      chars,
 		httpClient: httpClient,
 		aiClient:   aiClient,
-		imgGen:     imgGen,
 		reader:     reader,
 		writer:     writer,
-		chars:      chars,
+		imgGen:     imgGen,
+		mangaGen:   mangaGen,
 	}, nil
 }
 
@@ -90,30 +97,17 @@ func (b *Builder) BuildScriptRunner() (ScriptRunner, error) {
 
 // BuildDesignRunner はキャラクターデザインを担当する Runner を作成するのだ。
 func (b *Builder) BuildDesignRunner() DesignRunner {
-	mangaGen := generator.MangaGenerator{
-		ImgGen:     b.imgGen,
-		Characters: b.chars,
-	}
-	return runner.NewMangaDesignRunner(b.cfg, mangaGen, b.writer)
+	return runner.NewMangaDesignRunner(b.cfg, b.mangaGen, b.writer)
 }
 
 // BuildPanelImageRunner はパネル並列生成を担当する Runner を作成するのだ。
 func (b *Builder) BuildPanelImageRunner() PanelImageRunner {
-	mangaGen := generator.MangaGenerator{
-		ImgGen:     b.imgGen,
-		Characters: b.chars,
-	}
-
-	return runner.NewMangaPanelImageRunner(b.cfg, mangaGen, b.cfg.StyleSuffix, b.cfg.RateInterval)
+	return runner.NewMangaPanelImageRunner(b.cfg, b.mangaGen, b.cfg.StyleSuffix, b.cfg.RateInterval)
 }
 
 // BuildPageImageRunner は Markdown からの一括生成を担当する Runner を作成するのだ。
 func (b *Builder) BuildPageImageRunner() PageImageRunner {
-	mangaGen := generator.MangaGenerator{
-		ImgGen:     b.imgGen,
-		Characters: b.chars,
-	}
-	return runner.NewMangaPageRunner(b.cfg, mangaGen, b.cfg.StyleSuffix)
+	return runner.NewMangaPageRunner(b.cfg, b.mangaGen, b.cfg.StyleSuffix)
 }
 
 // BuildPublishRunner は成果物のパブリッシュを担当する Runner を作成するのだ。
