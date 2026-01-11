@@ -3,6 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/config"
@@ -35,6 +36,11 @@ func (r *MangaPageRunner) Run(ctx context.Context, scriptURL, markdownContent st
 	if manga == nil {
 		return nil, fmt.Errorf("マンガのパース結果が nil になりました")
 	}
+
+	slog.Info("Runner内部でのパース結果確認",
+		"title", manga.Title,
+		"panel_count", len(manga.Pages), // ここが 6 になっているはずなのだ
+	)
 
 	// ページ生成エンジンを実行して、画像バイナリ群を取得
 	return r.pageGen.ExecuteMangaPages(ctx, *manga)
