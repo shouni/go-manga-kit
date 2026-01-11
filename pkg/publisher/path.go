@@ -3,6 +3,7 @@ package publisher
 import (
 	"fmt"
 	"net/url"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -51,4 +52,21 @@ func ResolveFullPath(baseURL string, refPath string) string {
 	}
 
 	return refPath
+}
+
+// ResolveBaseURL は rawURL からディレクトリパスを安全に抽出します。
+func ResolveBaseURL(rawURL string) string {
+	if rawURL == "" {
+		return ""
+	}
+
+	u, err := url.Parse(rawURL)
+	if err == nil && u.Scheme != "" {
+		// URL のパス部分に対してのみ path.Dir を適用し、スキーマを維持したままディレクトリを特定します
+		u.Path = path.Dir(u.Path)
+		return u.String()
+	}
+
+	// スキーマがない場合は、単純なファイルパスとして path.Dir を適用します
+	return path.Dir(rawURL)
 }

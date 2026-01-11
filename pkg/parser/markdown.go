@@ -3,8 +3,6 @@ package parser
 import (
 	"fmt"
 	"log/slog"
-	"net/url"
-	"path"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -33,17 +31,8 @@ func NewMarkdownParser() *MarkdownParser {
 // Parse は指定された scriptURL を基に参照パスを解決し、Markdown テキストを解析して
 // domain.MangaResponse 構造体に変換します。
 func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaResponse, error) {
-	baseURL := ""
-	if scriptURL != "" {
-		if u, err := url.Parse(scriptURL); err == nil && u.Scheme != "" {
-			// URL のパス部分に対してのみ path.Dir を適用し、スキーマを維持したままディレクトリを特定します
-			u.Path = path.Dir(u.Path)
-			baseURL = u.String()
-		} else {
-			// スキーマがない場合は、単純なファイルパスとして path.Dir を適用します
-			baseURL = path.Dir(scriptURL)
-		}
-	}
+	// ベースURLの解決をヘルパー関数に委譲し、Parse の責務を明確化したのだ！
+	baseURL := publisher.ResolveBaseURL(scriptURL)
 
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
@@ -76,7 +65,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-			// baseURL を基に、相対パスを絶対 URL に変換します
+			// ResolveFullPath は内部で url.JoinPath を使い、安全に結合します
 			fullPath := publisher.ResolveFullPath(baseURL, refPath)
 
 			currentPage = &domain.MangaPage{
@@ -86,6 +75,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			continue
 		}
 
+		// フィールド行の解析 (speaker: ..., text: ..., action: ...)
 		if currentPage != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
