@@ -39,14 +39,14 @@ func NewMarkdownParser(r remoteio.InputReader) *MarkdownParser {
 func (p *MarkdownParser) ParseFromPath(ctx context.Context, assetPath string) (*domain.MangaResponse, error) {
 	rc, err := p.reader.Open(ctx, assetPath)
 	if err != nil {
-		return nil, fmt.Errorf("台本ソースの読み込みに失敗したのだ (%s): %w", assetPath, err)
+		return nil, fmt.Errorf("台本ソースの読み込みに失敗しました (%s): %w", assetPath, err)
 	}
 	defer rc.Close()
 
 	// リーダーのコンテンツをバッファに読み込みます。
 	buf := new(bytes.Buffer)
 	if _, err := io.Copy(buf, rc); err != nil {
-		return nil, fmt.Errorf("読み込み中のコピーに失敗したのだ: %w", err)
+		return nil, fmt.Errorf("読み込み中のコンテンツコピーに失敗しました: %w", err)
 	}
 
 	// fullPath からディレクトリ部分（baseDir）を割り出すのだ
