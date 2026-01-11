@@ -32,12 +32,6 @@ func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []dom
 	sb.WriteString(fmt.Sprintf("\n- TOTAL PANELS: This page MUST contain exactly %d distinct panels.\n", len(pages)))
 
 	// 2. タイトルと共通スタイルの適用
-	slog.Info("Building generation prompt",
-		"manga_title", mangaTitle,
-		"style_suffix", pb.defaultSuffix,
-		"panel_count", len(pages),
-	)
-
 	sb.WriteString(RenderingStyle)
 	if pb.defaultSuffix != "" {
 		sb.WriteString(fmt.Sprintf("- STYLE_DNA: %s\n", pb.defaultSuffix))
@@ -54,6 +48,16 @@ func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []dom
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
 	}
+
+	logArgs := []any{
+		"manga_title", mangaTitle,
+		"style_suffix", pb.defaultSuffix,
+		"panel_count", numPanels,
+	}
+	if bigPanelIndex != -1 {
+		logArgs = append(logArgs, "big_panel", bigPanelIndex+1)
+	}
+	slog.Info("Building generation prompt", logArgs...)
 
 	// 5. 各パネルの指示
 	for i, page := range pages {
