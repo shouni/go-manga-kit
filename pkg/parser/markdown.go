@@ -35,7 +35,8 @@ func NewMarkdownParser(r remoteio.InputReader) *MarkdownParser {
 	return &MarkdownParser{reader: r}
 }
 
-// ParseFromPath は assetPath（GCS URIやローカルファイルパスなど）からコンテンツを読み込み、解析します。
+// ParseFromPath は指定された markdownAssetPath（GCS URIやローカルファイルパスなど）から
+// コンテンツを読み込み、解析して domain.MangaResponse を返します。
 func (p *MarkdownParser) ParseFromPath(ctx context.Context, markdownAssetPath string) (*domain.MangaResponse, error) {
 	rc, err := p.reader.Open(ctx, markdownAssetPath)
 	if err != nil {

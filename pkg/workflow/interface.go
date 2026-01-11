@@ -3,9 +3,9 @@ package workflow
 import (
 	"context"
 
-	// imagedom は画像生成サービスに関連するドメインモデルを扱います。
+	// package imagedom は画像生成サービスに関連するドメインモデルを扱います。
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	// mangadom は漫画制作キット自体のドメインモデルを扱います。
+	// package mangadom は漫画制作キット自体のドメインモデルを扱います。
 	// 'domain' パッケージ名の衝突を避けるため、エイリアスを使用しています。
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
