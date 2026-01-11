@@ -52,7 +52,7 @@ type MangaPublisher struct {
 	htmlRunner md2htmlrunner.Runner
 }
 
-// NewMangaPublisher creates and returns a new instance of MangaPublisher with the specified writer and HTML runner.
+// NewMangaPublisher は、指定されたwriterとHTML runnerを持つMangaPublisherの新しいインスタンスを作成して返却します。
 func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer:     writer,
@@ -60,7 +60,7 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 	}
 }
 
-// Publish は画像の保存、Markdownの構築、HTML変換を一括して実行し、生成されたファイル情報を返却するのだ！
+// Publish は画像の保存、Markdownの構築、HTML変換を一括して実行し、生成されたファイル情報を返却します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) (PublishResult, error) {
 	result := PublishResult{}
 
@@ -107,10 +107,10 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 			return result, fmt.Errorf("HTMLの変換に失敗しました: %w", err)
 		}
 
-		// Markdownの拡張子を置換してHTMLパスを生成するのだ
+		// Markdownファイルのパスから拡張子を置換し、HTMLファイルのパスを生成します。
 		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
-			return result, fmt.Errorf("markdownファイルの書き込みに失敗しました: : %w", err)
+			return result, fmt.Errorf("HTMLファイルの書き込みに失敗しました: %w", err)
 		}
 		result.HTMLPath = htmlPath
 	}
@@ -118,7 +118,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	return result, nil
 }
 
-// saveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
+// saveImages 指定されたディレクトリまたはリモートストレージ（GCS等）に画像データを保存し、保存先のパス一覧を返却します。
 func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
 	var paths []string
 	for i, img := range images {
@@ -139,7 +139,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 	return paths, nil
 }
 
-// buildMarkdown returns the Markdown content for the specified manga.
+// buildMarkdown 指定された漫画データ（manga）から、Markdown形式のコンテンツを生成して返します。
 func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
