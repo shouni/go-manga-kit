@@ -28,7 +28,7 @@ type PublishRunner interface {
 	Run(ctx context.Context, manga domain.MangaResponse, images []*imgdom.ImageResponse, outputDir string) (publisher.PublishResult, error)
 }
 
-// PageImageRunner は提供された fullPathからMarkdown コンテンツを解析し、複数枚の漫画ページ画像を生成するのだ。
+// PageImageRunner は、指定されたパスのMarkdownコンテンツから漫画のページ画像を生成する責務を持ちます。
 type PageImageRunner interface {
 	Run(ctx context.Context, fullPath string) ([]*imgdom.ImageResponse, error)
 }

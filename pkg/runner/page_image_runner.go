@@ -27,7 +27,7 @@ func NewMangaPageRunner(cfg config.Config, mkParser parser.Parser, mangaGen gene
 	}
 }
 
-// Run は提供された fullPathからMarkdown コンテンツを解析し、複数枚の漫画ページ画像を生成するのだ。
+// Run は提供されたfullPathのMarkdownコンテンツを解析し、複数枚の漫画ページ画像を生成します。
 func (r *MangaPageRunner) Run(ctx context.Context, fullPath string) ([]*imgdom.ImageResponse, error) {
 	manga, err := r.mkParser.ParseFromPath(ctx, fullPath)
 	if err != nil {
