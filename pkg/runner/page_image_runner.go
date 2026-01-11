@@ -39,7 +39,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownAssetPath string) ([]
 
 	slog.Info("Runner内部でのパース結果確認",
 		"title", manga.Title,
-		"panel_count", len(manga.Pages),
+		"panelCount", len(manga.Pages),
 	)
 
 	// ページ生成エンジンを実行して、画像バイナリ群を取得
