@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
@@ -50,7 +50,7 @@ func (p *MarkdownParser) ParseFromPath(ctx context.Context, assetPath string) (*
 	}
 
 	// fullPath からディレクトリ部分（baseDir）を割り出すのだ
-	baseDir := publisher.ResolveBaseURL(assetPath)
+	baseDir := asset.ResolveBaseURL(assetPath)
 
 	return p.Parse(buf.String(), baseDir)
 }
@@ -87,7 +87,7 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-			resolvedFullPath, err := publisher.ResolveOutputPath(baseDir, refPath)
+			resolvedFullPath, err := asset.ResolveOutputPath(baseDir, refPath)
 			if err != nil {
 				// パス解決の失敗は処理継続不可能なため、エラーをラップして返します。
 				return nil, fmt.Errorf("panel画像のパス解決に失敗しました (base: %s, ref: %s): %w", baseDir, refPath, err)
