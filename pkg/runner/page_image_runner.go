@@ -27,9 +27,9 @@ func NewMangaPageRunner(cfg config.Config, mkParser parser.Parser, mangaGen gene
 	}
 }
 
-// Run は提供された Markdown コンテンツを解析し、複数枚の漫画ページ画像を生成するのだ。
-func (r *MangaPageRunner) Run(ctx context.Context, scriptURL, markdownContent string) ([]*imagedom.ImageResponse, error) {
-	manga, err := r.mkParser.Parse(scriptURL, markdownContent)
+// Run は提供されたassetPathのMarkdownコンテンツを解析し、複数枚の漫画ページ画像を生成します。
+func (r *MangaPageRunner) Run(ctx context.Context, markdownAssetPath string) ([]*imagedom.ImageResponse, error) {
+	manga, err := r.mkParser.ParseFromPath(ctx, markdownAssetPath)
 	if err != nil {
 		return nil, fmt.Errorf("markdownコンテンツのパースに失敗しました: %w", err)
 	}
@@ -39,7 +39,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, scriptURL, markdownContent st
 
 	slog.Info("Runner内部でのパース結果確認",
 		"title", manga.Title,
-		"panel_count", len(manga.Pages), // ここが 6 になっているはずなのだ
+		"panelCount", len(manga.Pages),
 	)
 
 	// ページ生成エンジンを実行して、画像バイナリ群を取得

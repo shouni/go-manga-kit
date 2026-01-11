@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
@@ -35,22 +35,23 @@ func NewMarkdownParser(r remoteio.InputReader) *MarkdownParser {
 	return &MarkdownParser{reader: r}
 }
 
-// ParseFromPath は fullPath（GCS URIやローカルパス）から直接読み込みと解析を行うのだ。
-func (p *MarkdownParser) ParseFromPath(ctx context.Context, fullPath string) (*domain.MangaResponse, error) {
-	rc, err := p.reader.Open(ctx, fullPath)
+// ParseFromPath は指定された markdownAssetPath（GCS URIやローカルファイルパスなど）から
+// コンテンツを読み込み、解析して domain.MangaResponse を返します。
+func (p *MarkdownParser) ParseFromPath(ctx context.Context, markdownAssetPath string) (*domain.MangaResponse, error) {
+	rc, err := p.reader.Open(ctx, markdownAssetPath)
 	if err != nil {
-		return nil, fmt.Errorf("台本ソースの読み込みに失敗したのだ (%s): %w", fullPath, err)
+		return nil, fmt.Errorf("台本ソースの読み込みに失敗しました (%s): %w", markdownAssetPath, err)
 	}
 	defer rc.Close()
 
 	// リーダーのコンテンツをバッファに読み込みます。
 	buf := new(bytes.Buffer)
 	if _, err := io.Copy(buf, rc); err != nil {
-		return nil, fmt.Errorf("読み込み中のコピーに失敗したのだ: %w", err)
+		return nil, fmt.Errorf("読み込み中のコンテンツコピーに失敗しました: %w", err)
 	}
 
 	// fullPath からディレクトリ部分（baseDir）を割り出すのだ
-	baseDir := publisher.ResolveBaseURL(fullPath)
+	baseDir := asset.ResolveBaseURL(markdownAssetPath)
 
 	return p.Parse(buf.String(), baseDir)
 }
@@ -87,7 +88,7 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-			resolvedFullPath, err := publisher.ResolveOutputPath(baseDir, refPath)
+			resolvedFullPath, err := asset.ResolveOutputPath(baseDir, refPath)
 			if err != nil {
 				// パス解決の失敗は処理継続不可能なため、エラーをラップして返します。
 				return nil, fmt.Errorf("panel画像のパス解決に失敗しました (base: %s, ref: %s): %w", baseDir, refPath, err)

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -65,14 +66,14 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	result := PublishResult{}
 
 	// 1. 出力パスの解決
-	markdown, err := ResolveOutputPath(opts.OutputDir, defaultMangaPlotName)
+	markdown, err := asset.ResolveOutputPath(opts.OutputDir, defaultMangaPlotName)
 	if err != nil {
 		return result, err
 	}
 	result.MarkdownPath = markdown
 
 	// 画像ディレクトリのベースパスを作成
-	imgDir, err := ResolveOutputPath(opts.OutputDir, defaultImageDirName)
+	imgDir, err := asset.ResolveOutputPath(opts.OutputDir, defaultImageDirName)
 	if err != nil {
 		return result, err
 	}
@@ -126,7 +127,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 			continue
 		}
 		name := fmt.Sprintf("panel_%d.png", i+1)
-		fullPath, err := ResolveOutputPath(baseDir, name)
+		fullPath, err := asset.ResolveOutputPath(baseDir, name)
 		if err != nil {
 			return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
 		}
