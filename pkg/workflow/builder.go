@@ -7,6 +7,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+	"github.com/shouni/go-manga-kit/pkg/parser"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
@@ -107,7 +108,9 @@ func (b *Builder) BuildPanelImageRunner() PanelImageRunner {
 
 // BuildPageImageRunner は Markdown からの一括生成を担当する Runner を作成するのだ。
 func (b *Builder) BuildPageImageRunner() PageImageRunner {
-	return runner.NewMangaPageRunner(b.cfg, b.mangaGen, b.cfg.StyleSuffix)
+	mkParser := parser.NewMarkdownParser()
+
+	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen, b.cfg.StyleSuffix)
 }
 
 // BuildPublishRunner は成果物のパブリッシュを担当する Runner を作成するのだ。
@@ -133,7 +136,6 @@ func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 // initializeImageGenerator は ImageGeneratorを初期化します。
 func initializeImageGenerator(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model string) (imageKit.ImageGenerator, error) {
 	imgCache := cache.New(defaultCacheExpiration, cacheCleanupInterval)
-	// 画像処理コアを生成
 	core, err := imageKit.NewGeminiImageCore(
 		httpClient,
 		imgCache,

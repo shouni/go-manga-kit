@@ -6,11 +6,11 @@ import (
 
 // デフォルト値の定義なのだ
 const (
-	DefaultGeminiModel  = "gemini-3-flash-preview"
-	DefaultImageModel   = "gemini-3-pro-image-preview"
-	DefaultPanelLimit   = 10
-	DefaultRateInterval = 30 * time.Second
-	DefaultStyleSuffix  = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
+	DefaultGeminiModel    = "gemini-3-flash-preview"
+	DefaultImageModel     = "gemini-3-pro-image-preview"
+	DefaultRateInterval   = 30 * time.Second
+	DefaultStyleSuffix    = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
+	DefaultRequestTimeout = 5 * time.Minute
 )
 
 // Config は Go Manga Kit の各 Runner を動作させるための基本設定なのだ。
@@ -23,7 +23,6 @@ type Config struct {
 	// --- Generation Settings ---
 	StyleSuffix  string
 	RateInterval time.Duration
-	PanelLimit   int
 
 	// --- Storage & Output Settings ---
 	GCSBucket  string
@@ -33,13 +32,6 @@ type Config struct {
 	RequestTimeout time.Duration
 }
 
-// NewConfig はデフォルト値で初期化された Config を作成し、必要最小限の値をセットして返すのだ。
-func NewConfig(apiKey string) Config {
-	cfg := DefaultConfig()
-	cfg.GeminiAPIKey = apiKey
-	return cfg
-}
-
 // DefaultConfig は推奨されるデフォルト設定を返すヘルパー関数なのだ。
 func DefaultConfig() Config {
 	return Config{
@@ -47,7 +39,6 @@ func DefaultConfig() Config {
 		ImageModel:     DefaultImageModel,
 		StyleSuffix:    DefaultStyleSuffix,
 		RateInterval:   DefaultRateInterval,
-		PanelLimit:     DefaultPanelLimit,
-		RequestTimeout: 5 * time.Minute,
+		RequestTimeout: DefaultRequestTimeout,
 	}
 }
