@@ -108,7 +108,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 		if img == nil || len(img.Data) == 0 {
 			continue
 		}
-		name := fmt.Sprintf("panel_%d.png", i)
+		name := fmt.Sprintf("panel_%d.png", i+1)
 		fullPath, err := ResolveOutputPath(baseDir, name)
 		if err != nil {
 			return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
