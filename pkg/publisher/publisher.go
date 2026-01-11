@@ -101,7 +101,10 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 			continue
 		}
 		name := fmt.Sprintf("panel_%d.png", i+1)
-		fullPath, _ := ResolveOutputPath(baseDir, name)
+		fullPath, err := ResolveOutputPath(baseDir, name)
+		if err != nil {
+			return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
+		}
 
 		if err := p.writer.Write(ctx, fullPath, bytes.NewReader(img.Data), "image/png"); err != nil {
 			return nil, fmt.Errorf("画像の書き込みに失敗しました %s: %w", fullPath, err)
