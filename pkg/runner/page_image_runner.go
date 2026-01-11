@@ -12,22 +12,23 @@ import (
 
 // MangaPageRunner は Markdownのパースと複数ページの生成（チャンク処理）を管理するのだ。
 type MangaPageRunner struct {
-	cfg     config.Config
-	pageGen *generator.PageGenerator
+	cfg      config.Config
+	mkParser parser.Parser
+	pageGen  *generator.PageGenerator
 }
 
-// NewMangaPageRunner は生成エンジン、スタイル設定、パーサーを依存性として注入して初期化するのだ。
-func NewMangaPageRunner(cfg config.Config, mangaGen generator.MangaGenerator, styleSuffix string) *MangaPageRunner {
+// NewMangaPageRunner は、設定、パーサー、および生成エンジンを依存性として注入し、MangaPageRunnerを初期化します。
+func NewMangaPageRunner(cfg config.Config, mkParser parser.Parser, mangaGen generator.MangaGenerator) *MangaPageRunner {
 	return &MangaPageRunner{
-		cfg:     cfg,
-		pageGen: generator.NewPageGenerator(mangaGen, styleSuffix),
+		cfg:      cfg,
+		mkParser: mkParser,
+		pageGen:  generator.NewPageGenerator(mangaGen, cfg.StyleSuffix),
 	}
 }
 
 // Run は提供された Markdown コンテンツを解析し、複数枚の漫画ページ画像を生成するのだ。
 func (r *MangaPageRunner) Run(ctx context.Context, scriptURL, markdownContent string) ([]*imagedom.ImageResponse, error) {
-	markdownParser := parser.NewParser(scriptURL)
-	manga, err := markdownParser.Parse(markdownContent)
+	manga, err := r.mkParser.Parse(scriptURL, markdownContent)
 	if err != nil {
 		return nil, fmt.Errorf("markdownコンテンツのパースに失敗しました: %w", err)
 	}

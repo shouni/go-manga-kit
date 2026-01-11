@@ -16,26 +16,33 @@ const (
 	fieldKeyLayout  = "layout"
 )
 
-// Parser はMarkdown形式の台本を解析し、構造化データに変換する構造体です。
-type Parser struct {
-	baseURL string
+// Parser は解析するためのインターフェースなのだ。
+type Parser interface {
+	// Parse はスクリプトのURLと内容を受け取り、構造化された MangaResponse を返すのだ。
+	Parse(scriptURL string, input string) (*domain.MangaResponse, error)
 }
 
-func NewParser(scriptURL string) *Parser {
-	return &Parser{
-		baseURL: resolveBaseURL(scriptURL),
-	}
+// MarkdownParser はMarkdown形式を解析し、構造化データに変換する構造体です。
+type MarkdownParser struct {
 }
 
-// Parse はMarkdownテキストを解析し、domain.MangaResponse 構造体に変換します。
-func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
+// NewMarkdownParser は Parser を初期化するのだ。引数は不要になったのだ。
+func NewMarkdownParser() *MarkdownParser {
+	return &MarkdownParser{}
+}
+
+// Parse は指定された scriptURL を基に参照パスを解決し、Markdown テキストを解析して domain.MangaResponse 構造体に変換します。
+func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaResponse, error) {
+	// 1. その時の scriptURL に基づいてベースURLを算出する
+	baseURL := resolveBaseURL(scriptURL)
+
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
 	var currentPage *domain.MangaPage
 
 	// 前のページを確定して追加するヘルパー関数
 	addPreviousPage := func() {
-		if currentPage != nil && p.hasContent(currentPage) {
+		if currentPage != nil && hasContent(currentPage) {
 			manga.Pages = append(manga.Pages, *currentPage)
 		}
 	}
@@ -52,13 +59,14 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 		}
 
 		if m := PanelRegex.FindStringSubmatch(trimmedLine); m != nil {
-			addPreviousPage() // 新しいパネルの開始前に、前のパネルを追加する
+			addPreviousPage()
 
 			var refPath string
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-			fullPath := p.resolveFullPath(refPath)
+			// baseURL を渡して絶対パスを解決するのだ
+			fullPath := resolveFullPath(baseURL, refPath)
 
 			currentPage = &domain.MangaPage{
 				Page:         len(manga.Pages) + 1,
@@ -80,7 +88,7 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 				case fieldKeyAction:
 					currentPage.VisualAnchor = val
 				case fieldKeyLayout:
-					// 将来的な拡張（レイアウト指定等）のために予約
+					// 予約済み
 				default:
 					slog.Debug("Markdown内に未知のフィールドキーが見つかりました", "key", key)
 				}
@@ -88,8 +96,8 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 		}
 	}
 
-	// 最後のパネルのバリデーションと追加
-	if currentPage != nil && p.hasContent(currentPage) {
+	// 最後のパネルの追加
+	if currentPage != nil && hasContent(currentPage) {
 		manga.Pages = append(manga.Pages, *currentPage)
 	}
 
@@ -100,12 +108,8 @@ func (p *Parser) Parse(input string) (*domain.MangaResponse, error) {
 	return manga, nil
 }
 
-// hasContent はパネルに有効な情報が含まれているか判定します。
-func (p *Parser) hasContent(page *domain.MangaPage) bool {
-	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
-}
-
-func (p *Parser) resolveFullPath(refPath string) string {
+// resolveFullPath はベースURLと相対パスから絶対URLを構築するのだ。
+func resolveFullPath(baseURL string, refPath string) string {
 	if refPath == "" {
 		return ""
 	}
@@ -116,5 +120,10 @@ func (p *Parser) resolveFullPath(refPath string) string {
 		return refPath
 	}
 
-	return p.baseURL + refPath
+	return baseURL + refPath
+}
+
+// hasContent はパネルに有効な情報が含まれているか判定します。
+func hasContent(page *domain.MangaPage) bool {
+	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
 }
