@@ -43,7 +43,7 @@ func (p *MarkdownParser) ParseFromPath(ctx context.Context, fullPath string) (*d
 	}
 	defer rc.Close()
 
-	// 文字列としてバッファに読み出すのだ
+	// リーダーのコンテンツをバッファに読み込みます。
 	buf := new(bytes.Buffer)
 	if _, err := io.Copy(buf, rc); err != nil {
 		return nil, fmt.Errorf("読み込み中のコピーに失敗したのだ: %w", err)
@@ -87,14 +87,11 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-			resolvedFullPath, _ := publisher.ResolveOutputPath(baseDir, refPath)
-
-			slog.Info("パス解決の実行",
-				"assetRoot", baseDir,
-				"rawRef", refPath,
-				"resolvedFull", resolvedFullPath,
-			)
-
+			resolvedFullPath, err := publisher.ResolveOutputPath(baseDir, refPath)
+			if err != nil {
+				// パス解決の失敗は処理継続不可能なため、エラーをラップして返します。
+				return nil, fmt.Errorf("panel画像のパス解決に失敗しました (base: %s, ref: %s): %w", baseDir, refPath, err)
+			}
 			currentPage = &domain.MangaPage{
 				Page:         len(manga.Pages) + 1,
 				ReferenceURL: resolvedFullPath,
@@ -113,6 +110,8 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 					currentPage.Dialogue = val
 				case fieldKeyAction:
 					currentPage.VisualAnchor = val
+				default:
+					slog.Debug("未知のフィールドキーをスキップしました", "key", key)
 				}
 			}
 		}

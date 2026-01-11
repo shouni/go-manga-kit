@@ -5,18 +5,19 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
 // GCS/ローカルを考慮した最終的な出力パスを生成します。
 func ResolveOutputPath(baseDir, fileName string) (string, error) {
-	if strings.HasPrefix(strings.ToLower(baseDir), "gs://") {
+	if remoteio.IsGCSURI(baseDir) {
 		u, err := url.Parse(baseDir)
 		if err != nil {
 			return "", fmt.Errorf("無効なGCS URIです: %w", err)
 		}
 
-		// url.JoinPath はパス部分のみを安全に結合し、スキーム部分を保護します
 		u.Path, err = url.JoinPath(u.Path, fileName)
 		if err != nil {
 			return "", fmt.Errorf("GCSパスの結合に失敗しました: %w", err)
@@ -32,7 +33,6 @@ func ResolveBaseURL(rawPath string) string {
 		return ""
 	}
 
-	// 1. スキーム（gs://, http://等）があるか確認するのだ
 	u, err := url.Parse(rawPath)
 	if err == nil && u.IsAbs() {
 		// URL形式の場合は ResolveReference(".") を使って親ディレクトリを取得するのだ
