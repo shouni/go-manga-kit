@@ -4,7 +4,7 @@ import (
 	"context"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
@@ -15,17 +15,17 @@ type DesignRunner interface {
 
 // ScriptRunner はソース（URLやテキスト）を解析し、構造化された漫画台本を生成するのだ。
 type ScriptRunner interface {
-	Run(ctx context.Context, scriptURL string, mode string) (domain.MangaResponse, error)
+	Run(ctx context.Context, scriptURL string, mode string) (mangadom.MangaResponse, error)
 }
 
-// PanelImageRunner は台本データを基に、指定されたパネルの画像を生成するのだ。
+// PanelImageRunner は、解析済みの漫画データと対象パネルのインデックスを基に、パネル画像を生成する責務を持ちます。
 type PanelImageRunner interface {
-	Run(ctx context.Context, manga domain.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error)
+	Run(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error)
 }
 
-// PublishRunner は生成された画像と台本を統合し、HTMLやMarkdownとして保存するのだ。
+// PublishRunner は、生成された画像と漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
 type PublishRunner interface {
-	Run(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
+	Run(ctx context.Context, manga mangadom.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
 }
 
 // PageImageRunner は、指定されたパスのMarkdownコンテンツから漫画のページ画像を生成する責務を持ちます。
