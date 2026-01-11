@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -97,23 +96,12 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 // SaveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
 func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
 	var paths []string
-	isGCS := remoteio.IsGCSURI(baseDir)
-
 	for i, img := range images {
 		if img == nil || len(img.Data) == 0 {
 			continue
 		}
 		name := fmt.Sprintf("panel_%d.png", i+1)
-		var fullPath string
-		var err error
-		if isGCS {
-			fullPath, err = url.JoinPath(baseDir, name)
-			if err != nil {
-				return nil, fmt.Errorf("GCSパスの生成に失敗しました base: %s, name: %s: %w", baseDir, name, err)
-			}
-		} else {
-			fullPath = filepath.Join(baseDir, name)
-		}
+		fullPath, _ := ResolveOutputPath(baseDir, name)
 
 		if err := p.writer.Write(ctx, fullPath, bytes.NewReader(img.Data), "image/png"); err != nil {
 			return nil, fmt.Errorf("画像の書き込みに失敗しました %s: %w", fullPath, err)
