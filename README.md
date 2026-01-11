@@ -43,11 +43,11 @@
 
 | ワークフロー | 担当インターフェース | 内容 |
 | --- | --- | --- |
-| **1. Scripting** | `ScriptRunner` | Web/テキストから、キャラクター・セリフ・構図を含むJSON台本を生成。 |
-| **2. Designing** | `DesignRunner` | キャラクターのDNA（特徴）を固定し、一貫性のあるデザインシートを生成。 |
+| **1. Designing**  | `DesignRunner` | キャラクターのDNA（特徴）を固定し、一貫性のあるデザインシートを生成。 |
+| **2. Scripting**  | `ScriptRunner` | Web/テキストから、キャラクター・セリフ・構図を含むJSON台本を生成。 |
 | **3. Panel Gen** | `PanelImageRunner` | 台本の各パネル（コマ）に対応する画像を、並列かつレート制限を遵守しながら個別に生成。 |
-| **4. Page Gen** | `PageImageRunner` | 生成済みのパネル画像を、Markdown形式の台本に基づきページ単位にレイアウトし、最終的なページ画像を生成。 |
-| **5. Publishing** | `PublishRunner` | 画像とテキストを統合し、最終的なHTML/Markdown/PNG等で出力。 |
+| **4. Publishing** | `PublishRunner` | 画像とテキストを統合し、HTML/Markdown/PNG等で出力。 |
+| **5. Page Gen**   | `PageImageRunner` | 生成済みのパネル画像を、Markdown形式に基づきページ単位にレイアウトし、ページ画像を生成。 |
 
 ---
 
