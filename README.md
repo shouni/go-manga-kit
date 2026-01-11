@@ -9,17 +9,17 @@
 
 **Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
-[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルで自動分割を行います。複数枚の作画として出力できるハイエンドなツールキットです。
+[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルで自動分割を行います。GCS (Google Cloud Storage) とシームレスに連携し、クラウド上のリソースを最大限に活用した漫画制作を実現するハイエンドなツールキットです。
 
 ---
 
 ## ✨ コア・コンセプト (Core Concepts)
 
-* **🧬 Character DNA System**: `domain.Character` に定義したSeed値と視覚特徴をプロンプトへ動的に注入します。全ページを通じてキャラクターの外見を一貫させることが可能です。
-* **📑 Auto-Chunk Pagination**: パネル数が上限を超えると自動でページをスライスします。AIの描画限界を回避し、複数枚構成の漫画を安定して生成します。
-* **📖 Script-to-Manga Generator**: Markdown等のソースを `parser` が解析し、演出指示を含む構造化データへ変換します。これを `generator` が受け取り、一括で作画を行う一気通貫の設計です。
-* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定します。単調なコマ割りを防ぎ、ドラマチックな演出を自動生成します。
-* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きキャッシュにより、APIクォータを尊重しつつ安定した作画を継続します。
+* **🧬 Character DNA System**: `domain.Character` に定義したSeed値と視覚特徴をプロンプトへ動的に注入。全ページを通じてキャラクターの外見を一貫させることが可能です。
+* **📑 Auto-Chunk Pagination**: パネル数が上限を超えると自動でページをスライス。AIの描画限界を回避し、複数枚構成の漫画を安定して生成します。
+* **📖 Script-to-Manga Generator**: Markdown等のソースを `parser` が解析。`net/url` を基盤とした解析により、クラウド上の相対パスを正確な絶対URL（`gs://...`）へ解決します。
+* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定。単調なコマ割りを防ぎ、ドラマチックな演出を自動生成します。
+* **🛡️ Robust Path Resolution**: `url.ResolveReference` を採用。`../` などの相対参照も標準プロトコルに従って安全に解決し、GCSやHTTPのスキームを破壊することなくアセットを特定します。
 
 ---
 
@@ -87,49 +87,54 @@ go-manga-kit/
 ```mermaid
 sequenceDiagram
     participant CLI as CLI Application
-    participant Gen as manga-kit.MangaGenerator (Page/Group)
+    participant Gen as manga-kit.MangaGenerator
     participant Kit_Gen as gemini-image-kit.GeminiGenerator
     participant Kit_Core as gemini-image-kit.GeminiImageCore
-    participant Kit_Util as gemini-image-kit.imgutil (Compressor)
-    participant API as Gemini API (File/Model)
+    participant R_IO as remoteio.InputReader (GCS)
+    participant HTTP as HTTP Client (Web)
+    participant API as Gemini API (Nano Banana)
 
-    Note over CLI, Gen: 1. 初期化フェーズ (Setup)
-    CLI->>Gen: NewMangaGenerator
-    Gen->>Kit_Core: NewGeminiImageCore(httpClient, cache)
-    Gen->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
+    Note over CLI, Kit_Gen: 1. 初期化フェーズ
+    CLI->>Kit_Core: NewGeminiImageCore(reader, client, cache)
+    CLI->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
 
-    Note over CLI, Kit_Util: 2. 生成フェーズ (Execution)
-    CLI->>Gen: ExecuteMangaPages (または ExecutePanelGroup)
-    
-    rect
-        Note over Gen, Kit_Gen: manga-kit は core-kit の抽象化インターフェースを利用
-        Gen->>Kit_Gen: GenerateMangaPage(req)
-    end
+    Note over CLI, API: 2. 生成フェーズ (Execution)
+    CLI->>Gen: ExecuteMangaPages
+    Gen->>Kit_Gen: GenerateMangaPage(req)
 
     loop 各 ReferenceURL の処理 (Core Pipeline)
-        Kit_Gen->>Kit_Core: GetReferenceImage(url)
+        Kit_Gen->>Kit_Core: prepareImagePart(url)
         
-        rect
-            Note over Kit_Core: 【Security: SSRF対策】
-            Kit_Core->>Kit_Core: isSafeURL (DNS/IPバリデーション)
+        rect rgb(240, 240, 240)
+            Note over Kit_Core: 【Security】 IsSafeURL (SSRF Check)
         end
-        
+
         Kit_Core->>Kit_Core: キャッシュ確認
-        alt キャッシュなし / 新規取得
-            Kit_Core->>Kit_Core: 外部から画像ダウンロード
-            
-            Note over Kit_Core, Kit_Util: 取得から最適化までを Core 内で完結
-            Kit_Core->>Kit_Util: 画像の最適化 (JPEG圧縮)
-            Kit_Util-->>Kit_Core: 最適化済みバイナリ
-        end
-        Kit_Core-->>Kit_Gen: 最終画像データ
         
-        Kit_Gen->>API: File API へのアップロード (Multipart)
+        alt キャッシュなし
+            Note over Kit_Core, HTTP: スキームに応じて取得先を分岐
+            critical URL Scheme check
+                option gs://
+                    Kit_Core->>R_IO: Open / ReadAll (GCS)
+                    R_IO-->>Kit_Core: []byte
+                option http(s)://
+                    Kit_Core->>HTTP: FetchBytes (Web)
+                    HTTP-->>Kit_Core: []byte
+            end
+
+            rect rgb(230, 245, 255)
+                Note over Kit_Core: 【Optimization】 imgutil.CompressToJPEG
+            end
+            Kit_Core->>Kit_Core: キャッシュ保存
+        end
+        
+        Kit_Core-->>Kit_Gen: genai.Part (InlineData)
     end
 
     Note over Kit_Gen, API: 3. AI推論 (Inference)
-    Kit_Gen->>API: GenerateContent (int32 Seed / FileData)
-    API-->>Kit_Gen: 生成画像データ (PNG)
+    Kit_Gen->>API: GenerateContent (Part + Prompt + Seed)
+    API-->>Kit_Gen: Candidate Image Data
+    Kit_Gen->>Kit_Core: parseToResponse (抽出・正規化)
     Kit_Gen-->>Gen: domain.ImageResponse
     Gen-->>CLI: 生成完了通知
 

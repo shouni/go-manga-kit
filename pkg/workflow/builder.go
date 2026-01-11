@@ -59,7 +59,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	if err != nil {
 		return nil, fmt.Errorf("failed to load characters: %w", err)
 	}
-	imgGen, err := initializeImageGenerator(httpClient, aiClient, cfg.ImageModel)
+	imgGen, err := initializeImageGenerator(reader, httpClient, aiClient, cfg.ImageModel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load characters: %w", err)
 	}
@@ -134,9 +134,10 @@ func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 }
 
 // initializeImageGenerator は ImageGeneratorを初期化します。
-func initializeImageGenerator(httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model string) (imageKit.ImageGenerator, error) {
+func initializeImageGenerator(reader remoteio.InputReader, httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model string) (imageKit.ImageGenerator, error) {
 	imgCache := cache.New(defaultCacheExpiration, cacheCleanupInterval)
 	core, err := imageKit.NewGeminiImageCore(
+		reader,
 		httpClient,
 		imgCache,
 		defaultTTL,
