@@ -31,8 +31,7 @@ func NewMarkdownParser() *MarkdownParser {
 	return &MarkdownParser{}
 }
 
-// Parse はMarkdownテキストを解析し、domain.MangaResponse 構造体に変換します。
-// 引数に scriptURL を追加し、解析時にベースURLを解決するようにしたのだ！
+// Parse は指定された scriptURL を基に参照パスを解決し、Markdown テキストを解析して domain.MangaResponse 構造体に変換します。
 func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaResponse, error) {
 	// 1. その時の scriptURL に基づいてベースURLを算出する
 	baseURL := resolveBaseURL(scriptURL)

@@ -17,7 +17,7 @@ type MangaPageRunner struct {
 	pageGen  *generator.PageGenerator
 }
 
-// NewMangaPageRunner は生成エンジン、スタイル設定、パーサーを依存性として注入して初期化するのだ。
+// NewMangaPageRunner は、設定、パーサー、および生成エンジンを依存性として注入し、MangaPageRunnerを初期化します。
 func NewMangaPageRunner(cfg config.Config, mkParser parser.Parser, mangaGen generator.MangaGenerator) *MangaPageRunner {
 	return &MangaPageRunner{
 		cfg:      cfg,
