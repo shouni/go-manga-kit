@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -18,12 +19,11 @@ func ResolveOutputPath(baseDir, fileName string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("無効なGCS URIです: %w", err)
 		}
-		// url.JoinPath を使用して、GCS スキームを維持したままパスを安全に結合します
-		newPath, err := url.JoinPath(u.String(), fileName)
+		u.Path, err = url.JoinPath(u.Path, fileName)
 		if err != nil {
 			return "", fmt.Errorf("GCSパスの結合に失敗しました: %w", err)
 		}
-		return newPath, nil
+		return u.String(), nil
 	}
 	return filepath.Join(baseDir, fileName), nil
 }
@@ -36,19 +36,26 @@ func ResolveFullPath(baseURL string, refPath string) string {
 
 	// 1. 既に絶対URL（スキームを持つ形式）であるかを確認します
 	u, err := url.Parse(refPath)
-	if err == nil && u.Scheme != "" && u.IsAbs() {
+	if err == nil && u.IsAbs() {
 		return refPath
 	}
 
 	// 2. 相対パスをベースURLと結合し、完全なURLを生成します
 	if baseURL != "" {
-		// url.JoinPath はスラッシュの重複を自動的に解決し、堅牢にパスを結合します
-		fullPath, err := url.JoinPath(baseURL, refPath)
-		if err == nil {
-			return fullPath
+		base, err := url.Parse(baseURL)
+		if err != nil {
+			slog.Warn("無効なベースURLが渡されたため、単純結合にフォールバックします", "baseURL", baseURL, "error", err)
+			return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
 		}
-		// JoinPath が失敗した場合は、フォールバックとして単純結合を試みます
-		return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
+
+		ref, err := url.Parse(refPath)
+		if err != nil {
+			slog.Warn("無効な参照パスが渡されたため、単純結合にフォールバックします", "refPath", refPath, "error", err)
+			return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
+		}
+
+		// ResolveReference により、../ や絶対パス (/) も適切に処理されます。
+		return base.ResolveReference(ref).String()
 	}
 
 	return refPath
@@ -61,7 +68,7 @@ func ResolveBaseURL(rawURL string) string {
 	}
 
 	u, err := url.Parse(rawURL)
-	if err == nil && u.Scheme != "" {
+	if err == nil && u.IsAbs() {
 		// URL のパス部分に対してのみ path.Dir を適用し、スキーマを維持したままディレクトリを特定します
 		u.Path = path.Dir(u.Path)
 		return u.String()
