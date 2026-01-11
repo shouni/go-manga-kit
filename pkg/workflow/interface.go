@@ -5,6 +5,7 @@ import (
 
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
 // DesignRunner はキャラクターIDに基づいてデザインシートを生成し、Seed値を特定するのだ。
@@ -24,7 +25,7 @@ type PanelImageRunner interface {
 
 // PublishRunner は生成された画像と台本を統合し、HTMLやMarkdownとして保存するのだ。
 type PublishRunner interface {
-	Run(ctx context.Context, manga domain.MangaResponse, images []*imgdom.ImageResponse, outputDir string) error
+	Run(ctx context.Context, manga domain.MangaResponse, images []*imgdom.ImageResponse, outputDir string) (publisher.PublishResult, error)
 }
 
 // PageImageRunner はHTMLやMarkdownとして保存するのだデータを基に、ページの画像を生成するのだ。

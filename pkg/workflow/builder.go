@@ -108,7 +108,7 @@ func (b *Builder) BuildPanelImageRunner() PanelImageRunner {
 
 // BuildPageImageRunner は Markdown からの一括生成を担当する Runner を作成するのだ。
 func (b *Builder) BuildPageImageRunner() PageImageRunner {
-	mkParser := parser.NewMarkdownParser()
+	mkParser := parser.NewMarkdownParser(b.reader)
 
 	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen)
 }

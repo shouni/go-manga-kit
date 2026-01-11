@@ -87,8 +87,7 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-
-			resolvedFullPath := publisher.ResolveFullPath(baseDir, refPath)
+			resolvedFullPath, _ := publisher.ResolveOutputPath(baseDir, refPath)
 
 			slog.Info("パス解決の実行",
 				"assetRoot", baseDir,
