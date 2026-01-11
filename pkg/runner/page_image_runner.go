@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/parser"
@@ -27,9 +27,9 @@ func NewMangaPageRunner(cfg config.Config, mkParser parser.Parser, mangaGen gene
 	}
 }
 
-// Run は提供された Markdown コンテンツを解析し、複数枚の漫画ページ画像を生成するのだ。
-func (r *MangaPageRunner) Run(ctx context.Context, scriptURL, markdownContent string) ([]*imagedom.ImageResponse, error) {
-	manga, err := r.mkParser.Parse(scriptURL, markdownContent)
+// Run は提供された fullPathからMarkdown コンテンツを解析し、複数枚の漫画ページ画像を生成するのだ。
+func (r *MangaPageRunner) Run(ctx context.Context, fullPath string) ([]*imgdom.ImageResponse, error) {
+	manga, err := r.mkParser.ParseFromPath(ctx, fullPath)
 	if err != nil {
 		return nil, fmt.Errorf("markdownコンテンツのパースに失敗しました: %w", err)
 	}
