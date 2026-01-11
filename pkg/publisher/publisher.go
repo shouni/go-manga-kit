@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -53,8 +54,16 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 
 // Publish は画像の保存、Markdownの構築、HTML変換を一括して実行します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
-	markdown := filepath.Join(opts.OutputDir, "manga.md")
-	imgDir := filepath.Join(opts.OutputDir, defaultImageDirName)
+	markdown, err := ResolveOutputPath(opts.OutputDir, "manga.md")
+	if err != nil {
+		return err
+	}
+	// 画像ディレクトリのベースパスを作成
+	imgDir, err := ResolveOutputPath(opts.OutputDir, defaultImageDirName)
+	if err != nil {
+		return err
+	}
+
 	// 1. 画像の保存
 	savedPaths, err := p.saveImages(ctx, images, imgDir)
 	if err != nil {
@@ -63,8 +72,8 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 
 	// 2. Markdown用相対パスの作成
 	relativePaths := make([]string, 0, len(savedPaths))
-	for _, path := range savedPaths {
-		relPath := filepath.Join(defaultImageDirName, filepath.Base(path))
+	for _, pathStr := range savedPaths {
+		relPath := path.Join(defaultImageDirName, filepath.Base(pathStr))
 		relativePaths = append(relativePaths, relPath)
 	}
 
@@ -83,7 +92,6 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 		if err != nil {
 			return fmt.Errorf("failed to convert HTML: %w", err)
 		}
-
 		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
 			return fmt.Errorf("failed to write HTML: %w", err)
@@ -100,7 +108,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 		if img == nil || len(img.Data) == 0 {
 			continue
 		}
-		name := fmt.Sprintf("panel_%d.png", i+1)
+		name := fmt.Sprintf("panel_%d.png", i)
 		fullPath, err := ResolveOutputPath(baseDir, name)
 		if err != nil {
 			return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
