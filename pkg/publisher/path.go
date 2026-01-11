@@ -17,32 +17,36 @@ func ResolveOutputPath(baseDir, fileName string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("無効なGCS URIです: %w", err)
 		}
-		u.Path, err = url.JoinPath(u.Path, fileName)
+		// url.JoinPath を使用して、GCS スキームを維持したままパスを安全に結合します
+		newPath, err := url.JoinPath(u.String(), fileName)
 		if err != nil {
 			return "", fmt.Errorf("GCSパスの結合に失敗しました: %w", err)
 		}
-		return u.String(), nil
+		return newPath, nil
 	}
 	return filepath.Join(baseDir, fileName), nil
 }
 
-// ResolveFullPath は、絶対URLの作成
+// ResolveFullPath は、相対的な参照パスをベースURLと結合し、絶対URLを生成します。
 func ResolveFullPath(baseURL string, refPath string) string {
 	if refPath == "" {
 		return ""
 	}
 
-	// 1. 既に完全なURL（http, https, gs）ならそのまま返す
-	if strings.HasPrefix(refPath, "http://") ||
-		strings.HasPrefix(refPath, "https://") ||
-		strings.HasPrefix(refPath, "gs://") {
+	// 1. 既に絶対URL（スキームを持つ形式）であるかを確認します
+	u, err := url.Parse(refPath)
+	if err == nil && u.Scheme != "" && u.IsAbs() {
 		return refPath
 	}
 
-	// 2. 相対パス（images/など）を、ベースURL（gs://.../）と結合する
-	// これにより、相対パスが「gs://bucket/path/images/panel_1.png」に昇格するのだ！
+	// 2. 相対パスをベースURLと結合し、完全なURLを生成します
 	if baseURL != "" {
-		// strings.TrimPrefix を使って、スラッシュの重複を防ぐのがコツなのだ
+		// url.JoinPath はスラッシュの重複を自動的に解決し、堅牢にパスを結合します
+		fullPath, err := url.JoinPath(baseURL, refPath)
+		if err == nil {
+			return fullPath
+		}
+		// JoinPath が失敗した場合は、フォールバックとして単純結合を試みます
 		return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
 	}
 
