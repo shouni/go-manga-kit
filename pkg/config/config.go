@@ -24,10 +24,6 @@ type Config struct {
 	StyleSuffix  string
 	RateInterval time.Duration
 
-	// --- Storage & Output Settings ---
-	GCSBucket  string
-	ServiceURL string
-
 	// --- Timeout & Retries ---
 	RequestTimeout time.Duration
 }
