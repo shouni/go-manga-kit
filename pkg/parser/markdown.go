@@ -17,7 +17,8 @@ const (
 
 // Parser は解析するためのインターフェースを定義します。
 type Parser interface {
-	Parse(scriptURL string, input string) (*domain.MangaResponse, error)
+	// Parse は input（Markdown）を解析し、baseAssetURL を起点として画像パスを解決します。
+	Parse(baseAssetURL string, input string) (*domain.MangaResponse, error)
 }
 
 // MarkdownParser は Markdown 形式の台本を解析する構造体です。
@@ -28,11 +29,17 @@ func NewMarkdownParser() *MarkdownParser {
 	return &MarkdownParser{}
 }
 
-// Parse は指定された scriptURL を基に参照パスを解決し、Markdown テキストを解析して
+// Parse は指定された baseAssetURL を基に参照パスを解決し、Markdown テキストを解析して
 // domain.MangaResponse 構造体に変換します。
-func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaResponse, error) {
-	// ベースURLの解決をヘルパー関数に委譲し、Parse の責務を明確化したのだ！
-	baseURL := publisher.ResolveBaseURL(scriptURL)
+func (p *MarkdownParser) Parse(baseAssetURL string, input string) (*domain.MangaResponse, error) {
+	// baseAssetURL (ファイルパス or URL) から、ディレクトリ部分を抽出するのだ。
+	// これが相対パス解決の「絶対的な起点」になるのだ！
+	baseURL := publisher.ResolveBaseURL(baseAssetURL)
+
+	slog.Info("Markdownパース開始",
+		"baseAssetURL", baseAssetURL,
+		"resolvedAssetRoot", baseURL,
+	)
 
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
@@ -57,7 +64,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			continue
 		}
 
-		// パネル解析 (## Panel: path/to/image.png)
+		// パネル解析 (## Panel: images/panel_1.png)
 		if m := PanelRegex.FindStringSubmatch(trimmedLine); m != nil {
 			addPreviousPage()
 
@@ -65,9 +72,15 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
-			// ResolveFullPath は内部で url.JoinPath を使い、安全に結合します
+
+			// 起点となる baseURL と Markdown内の相対パスをガッチャンコするのだ！
 			fullPath := publisher.ResolveFullPath(baseURL, refPath)
-			slog.Info("パス解決の実行", "before", refPath, "after", fullPath)
+
+			slog.Info("パス解決の実行",
+				"assetRoot", baseURL,
+				"rawRef", refPath,
+				"resolvedFull", fullPath,
+			)
 
 			currentPage = &domain.MangaPage{
 				Page:         len(manga.Pages) + 1,
@@ -76,7 +89,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			continue
 		}
 
-		// フィールド行の解析 (speaker: ..., text: ..., action: ...)
+		// フィールド行の解析 (speaker, text, action)
 		if currentPage != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
