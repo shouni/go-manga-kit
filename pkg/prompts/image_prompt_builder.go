@@ -49,12 +49,15 @@ func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []dom
 		bigPanelIndex = rand.IntN(numPanels)
 	}
 
-	slog.Info("Building generation prompt",
+	logArgs := []any{
 		"manga_title", mangaTitle,
 		"style_suffix", pb.defaultSuffix,
 		"panel_count", numPanels,
-		"big_panel", bigPanelIndex+1,
-	)
+	}
+	if bigPanelIndex != -1 {
+		logArgs = append(logArgs, "big_panel", bigPanelIndex+1)
+	}
+	slog.Info("Building generation prompt", logArgs...)
 
 	// 5. 各パネルの指示
 	for i, page := range pages {
