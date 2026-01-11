@@ -3,7 +3,6 @@ package runner
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/config"
@@ -19,8 +18,8 @@ type MangaPanelImageRunner struct {
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
 // config.DefaultRateLimit などの具体的な値は builder から渡されることを想定しているのだ。
-func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerator, styleSuffix string, interval time.Duration) *MangaPanelImageRunner {
-	groupGen := generator.NewGroupGenerator(mangaGen, styleSuffix, interval)
+func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerator) *MangaPanelImageRunner {
+	groupGen := generator.NewGroupGenerator(mangaGen, cfg.StyleSuffix, cfg.RateInterval)
 
 	return &MangaPanelImageRunner{
 		cfg:      cfg,

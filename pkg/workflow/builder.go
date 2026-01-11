@@ -103,14 +103,14 @@ func (b *Builder) BuildDesignRunner() DesignRunner {
 
 // BuildPanelImageRunner はパネル並列生成を担当する Runner を作成するのだ。
 func (b *Builder) BuildPanelImageRunner() PanelImageRunner {
-	return runner.NewMangaPanelImageRunner(b.cfg, b.mangaGen, b.cfg.StyleSuffix, b.cfg.RateInterval)
+	return runner.NewMangaPanelImageRunner(b.cfg, b.mangaGen)
 }
 
 // BuildPageImageRunner は Markdown からの一括生成を担当する Runner を作成するのだ。
 func (b *Builder) BuildPageImageRunner() PageImageRunner {
 	mkParser := parser.NewMarkdownParser()
 
-	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen, b.cfg.StyleSuffix)
+	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen)
 }
 
 // BuildPublishRunner は成果物のパブリッシュを担当する Runner を作成するのだ。
