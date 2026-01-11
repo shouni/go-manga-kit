@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"log/slog"
+	"net/url"
 	"path"
 	"strings"
 
@@ -16,29 +17,39 @@ const (
 	fieldKeyAction  = "action"
 )
 
-// Parser は解析するためのインターフェースなのだ。
+// Parser は解析するためのインターフェースを定義します。
 type Parser interface {
 	Parse(scriptURL string, input string) (*domain.MangaResponse, error)
 }
 
+// MarkdownParser は Markdown 形式の台本を解析する構造体です。
 type MarkdownParser struct{}
 
+// NewMarkdownParser は新しい MarkdownParser インスタンスを生成します。
 func NewMarkdownParser() *MarkdownParser {
 	return &MarkdownParser{}
 }
 
+// Parse は指定された scriptURL を基に参照パスを解決し、Markdown テキストを解析して
+// domain.MangaResponse 構造体に変換します。
 func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaResponse, error) {
-	// 1. scriptURL (gs://.../manga.md) からディレクトリ部分を抽出する
-	// path.Dir を使うことで、ファイル名を除いたベース部分が取得できるのだ
 	baseURL := ""
-	if scriptURL != "" && strings.Contains(scriptURL, "://") {
-		baseURL = path.Dir(scriptURL)
+	if scriptURL != "" {
+		if u, err := url.Parse(scriptURL); err == nil && u.Scheme != "" {
+			// URL のパス部分に対してのみ path.Dir を適用し、スキーマを維持したままディレクトリを特定します
+			u.Path = path.Dir(u.Path)
+			baseURL = u.String()
+		} else {
+			// スキーマがない場合は、単純なファイルパスとして path.Dir を適用します
+			baseURL = path.Dir(scriptURL)
+		}
 	}
 
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
 	var currentPage *domain.MangaPage
 
+	// 前のページを結果リストに追加するヘルパー関数
 	addPreviousPage := func() {
 		if currentPage != nil && hasContent(currentPage) {
 			manga.Pages = append(manga.Pages, *currentPage)
@@ -51,7 +62,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			continue
 		}
 
-		// タイトル解析
+		// タイトル解析 (# Title)
 		if m := TitleRegex.FindStringSubmatch(trimmedLine); m != nil {
 			manga.Title = strings.TrimSpace(m[1])
 			continue
@@ -65,6 +76,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			if len(m) > 1 {
 				refPath = strings.TrimSpace(m[1])
 			}
+			// baseURL を基に、相対パスを絶対 URL に変換します
 			fullPath := publisher.ResolveFullPath(baseURL, refPath)
 
 			currentPage = &domain.MangaPage{
@@ -74,7 +86,6 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			continue
 		}
 
-		// フィールド行の解析
 		if currentPage != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
@@ -92,6 +103,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 		}
 	}
 
+	// 最後のページを追加
 	addPreviousPage()
 
 	if len(manga.Pages) == 0 {
@@ -101,6 +113,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 	return manga, nil
 }
 
+// hasContent はページが有効な情報（画像、台詞、またはアクション）を保持しているか判定します。
 func hasContent(page *domain.MangaPage) bool {
 	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
 }
