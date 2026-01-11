@@ -67,6 +67,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 			}
 			// ResolveFullPath は内部で url.JoinPath を使い、安全に結合します
 			fullPath := publisher.ResolveFullPath(baseURL, refPath)
+			slog.Info("パス解決の実行", "before", refPath, "after", fullPath)
 
 			currentPage = &domain.MangaPage{
 				Page:         len(manga.Pages) + 1,

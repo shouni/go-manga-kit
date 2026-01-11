@@ -46,19 +46,29 @@ func ResolveFullPath(baseURL string, refPath string) string {
 	if baseURL != "" {
 		base, err := url.Parse(baseURL)
 		if err != nil {
-			// ✨ Minor指摘反映: フォールバックのリスクをコメントとログに明記
-			slog.Warn("無効なベースURLのため、単純結合にフォールバックします。注意: ../ 等は解決されません。", "baseURL", baseURL, "error", err)
+			slog.Warn("無効なベースURLのため、単純結合にフォールバックします", "baseURL", baseURL, "error", err)
 			return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
+		}
+
+		// パスがスラッシュで終わっていない場合、かつ拡張子のようなドットがある場合は
+		// path.Dir でディレクトリに落とし込み、末尾スラッシュを付与します。
+		if !strings.HasSuffix(base.Path, "/") {
+			base.Path = path.Dir(base.Path)
+			if !strings.HasSuffix(base.Path, "/") {
+				base.Path += "/"
+			}
 		}
 
 		ref, err := url.Parse(refPath)
 		if err != nil {
-			slog.Warn("無効な参照パスのため、単純結合にフォールバックします。注意: ../ 等は解決されません。", "refPath", refPath, "error", err)
+			slog.Warn("無効な参照パスのため、単純結合にフォールバックします", "refPath", refPath, "error", err)
 			return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
 		}
 
-		// ResolveReference により、../ や絶対パス (/) も RFC 3986 に基づき適切に処理されます。
-		return base.ResolveReference(ref).String()
+		// ResolveReference により、正確に絶対URLを構築します
+		resolved := base.ResolveReference(ref).String()
+		slog.Debug("Path resolved", "base", baseURL, "ref", refPath, "result", resolved)
+		return resolved
 	}
 
 	return refPath
