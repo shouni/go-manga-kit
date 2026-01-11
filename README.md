@@ -55,6 +55,7 @@
 
 | パッケージ | 役割 |
 | --- | --- |
+| **`pkg/asset`** | GCSやローカルパスなど、異なるストレージ間でのパス解決（resolver）を担う。 |
 | **`pkg/domain`** | `Character`, `Panel`, `Manga` 等の基底モデル。DNA情報やコアとなるデータ構造を定義。 |
 | **`pkg/generator`** | **中核機能**。`PageGenerator` や `GroupGenerator` による作画・レイアウト制御を担当。 |
 | **`pkg/parser`** | Markdown や正規表現を用いて、ソーステキストをネーム（台本）へ解析・変換。 |
@@ -70,6 +71,7 @@
 ```text
 go-manga-kit/
 └── pkg/             # 公開ライブラリパッケージ
+    ├── asset/       # アセット管理 (パス解決、リソース管理)
     ├── config/      # 環境変数管理
     ├── domain/      # ドメインモデル (character.go, manga.go)
     ├── generator/   # 生成戦略 (builder.go, page/group_generator.go)
