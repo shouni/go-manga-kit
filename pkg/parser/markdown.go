@@ -1,12 +1,16 @@
 package parser
 
 import (
+	"bytes"
+	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 const (
@@ -17,35 +21,46 @@ const (
 
 // Parser は解析するためのインターフェースを定義します。
 type Parser interface {
-	// Parse は input（Markdown）を解析し、baseAssetURL を起点として画像パスを解決します。
-	Parse(baseAssetURL string, input string) (*domain.MangaResponse, error)
+	ParseFromPath(ctx context.Context, fullPath string) (*domain.MangaResponse, error)
+	Parse(input string, baseDir string) (*domain.MangaResponse, error)
 }
 
 // MarkdownParser は Markdown 形式の台本を解析する構造体です。
-type MarkdownParser struct{}
-
-// NewMarkdownParser は新しい MarkdownParser インスタンスを生成します。
-func NewMarkdownParser() *MarkdownParser {
-	return &MarkdownParser{}
+type MarkdownParser struct {
+	reader remoteio.InputReader
 }
 
-// Parse は指定された baseAssetURL を基に参照パスを解決し、Markdown テキストを解析して
-// domain.MangaResponse 構造体に変換します。
-func (p *MarkdownParser) Parse(baseAssetURL string, input string) (*domain.MangaResponse, error) {
-	// baseAssetURL (ファイルパス or URL) から、ディレクトリ部分を抽出するのだ。
-	// これが相対パス解決の「絶対的な起点」になるのだ！
-	baseURL := publisher.ResolveBaseURL(baseAssetURL)
+// NewMarkdownParser は新しい MarkdownParser インスタンスを生成します。
+func NewMarkdownParser(r remoteio.InputReader) *MarkdownParser {
+	return &MarkdownParser{reader: r}
+}
 
-	slog.Info("Markdownパース開始",
-		"baseAssetURL", baseAssetURL,
-		"resolvedAssetRoot", baseURL,
-	)
+// ParseFromPath は fullPath（GCS URIやローカルパス）から直接読み込みと解析を行うのだ。
+func (p *MarkdownParser) ParseFromPath(ctx context.Context, fullPath string) (*domain.MangaResponse, error) {
+	rc, err := p.reader.Open(ctx, fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("台本ソースの読み込みに失敗したのだ (%s): %w", fullPath, err)
+	}
+	defer rc.Close()
 
+	// 文字列としてバッファに読み出すのだ
+	buf := new(bytes.Buffer)
+	if _, err := io.Copy(buf, rc); err != nil {
+		return nil, fmt.Errorf("読み込み中のコピーに失敗したのだ: %w", err)
+	}
+
+	// fullPath からディレクトリ部分（baseDir）を割り出すのだ
+	baseDir := publisher.ResolveBaseURL(fullPath)
+
+	return p.Parse(buf.String(), baseDir)
+}
+
+// Parse は指定された Markdown テキストを解析します。
+func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaResponse, error) {
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
 	var currentPage *domain.MangaPage
 
-	// 前のページを結果リストに追加するヘルパー関数
 	addPreviousPage := func() {
 		if currentPage != nil && hasContent(currentPage) {
 			manga.Pages = append(manga.Pages, *currentPage)
@@ -64,7 +79,7 @@ func (p *MarkdownParser) Parse(baseAssetURL string, input string) (*domain.Manga
 			continue
 		}
 
-		// パネル解析 (## Panel: images/panel_1.png)
+		// パネル解析 (## Panel: path/to/image.png)
 		if m := PanelRegex.FindStringSubmatch(trimmedLine); m != nil {
 			addPreviousPage()
 
@@ -73,23 +88,22 @@ func (p *MarkdownParser) Parse(baseAssetURL string, input string) (*domain.Manga
 				refPath = strings.TrimSpace(m[1])
 			}
 
-			// 起点となる baseURL と Markdown内の相対パスをガッチャンコするのだ！
-			fullPath := publisher.ResolveFullPath(baseURL, refPath)
+			resolvedFullPath := publisher.ResolveFullPath(baseDir, refPath)
 
 			slog.Info("パス解決の実行",
-				"assetRoot", baseURL,
+				"assetRoot", baseDir,
 				"rawRef", refPath,
-				"resolvedFull", fullPath,
+				"resolvedFull", resolvedFullPath,
 			)
 
 			currentPage = &domain.MangaPage{
 				Page:         len(manga.Pages) + 1,
-				ReferenceURL: fullPath,
+				ReferenceURL: resolvedFullPath,
 			}
 			continue
 		}
 
-		// フィールド行の解析 (speaker, text, action)
+		// フィールド行の解析
 		if currentPage != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
@@ -100,14 +114,11 @@ func (p *MarkdownParser) Parse(baseAssetURL string, input string) (*domain.Manga
 					currentPage.Dialogue = val
 				case fieldKeyAction:
 					currentPage.VisualAnchor = val
-				default:
-					slog.Debug("Markdown内に未知のフィールドキーが見つかりました", "key", key)
 				}
 			}
 		}
 	}
 
-	// 最後のページを追加
 	addPreviousPage()
 
 	if len(manga.Pages) == 0 {
@@ -117,7 +128,7 @@ func (p *MarkdownParser) Parse(baseAssetURL string, input string) (*domain.Manga
 	return manga, nil
 }
 
-// hasContent はページが有効な情報（画像、台詞、またはアクション）を保持しているか判定します。
+// hasContent はページが有効な情報を保持しているか判定します。
 func hasContent(page *domain.MangaPage) bool {
 	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
 }
