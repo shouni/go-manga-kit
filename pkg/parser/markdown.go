@@ -43,7 +43,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 
 	// 前のページを確定して追加するヘルパー関数
 	addPreviousPage := func() {
-		if currentPage != nil && p.hasContent(currentPage) {
+		if currentPage != nil && hasContent(currentPage) {
 			manga.Pages = append(manga.Pages, *currentPage)
 		}
 	}
@@ -67,7 +67,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 				refPath = strings.TrimSpace(m[1])
 			}
 			// baseURL を渡して絶対パスを解決するのだ
-			fullPath := p.resolveFullPath(baseURL, refPath)
+			fullPath := resolveFullPath(baseURL, refPath)
 
 			currentPage = &domain.MangaPage{
 				Page:         len(manga.Pages) + 1,
@@ -82,6 +82,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
 				switch key {
 				case fieldKeySpeaker:
+					// SpeakerIDはシステム内で一意に扱うため、小文字に正規化する
 					currentPage.SpeakerID = strings.ToLower(val)
 				case fieldKeyText:
 					currentPage.Dialogue = val
@@ -97,7 +98,7 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 	}
 
 	// 最後のパネルの追加
-	if currentPage != nil && p.hasContent(currentPage) {
+	if currentPage != nil && hasContent(currentPage) {
 		manga.Pages = append(manga.Pages, *currentPage)
 	}
 
@@ -108,13 +109,8 @@ func (p *MarkdownParser) Parse(scriptURL string, input string) (*domain.MangaRes
 	return manga, nil
 }
 
-// hasContent はパネルに有効な情報が含まれているか判定します。
-func (p *MarkdownParser) hasContent(page *domain.MangaPage) bool {
-	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
-}
-
 // resolveFullPath はベースURLと相対パスから絶対URLを構築するのだ。
-func (p *MarkdownParser) resolveFullPath(baseURL string, refPath string) string {
+func resolveFullPath(baseURL string, refPath string) string {
 	if refPath == "" {
 		return ""
 	}
@@ -126,4 +122,9 @@ func (p *MarkdownParser) resolveFullPath(baseURL string, refPath string) string 
 	}
 
 	return baseURL + refPath
+}
+
+// hasContent はパネルに有効な情報が含まれているか判定します。
+func hasContent(page *domain.MangaPage) bool {
+	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
 }
