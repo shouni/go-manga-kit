@@ -36,10 +36,10 @@ func NewMarkdownParser(r remoteio.InputReader) *MarkdownParser {
 }
 
 // ParseFromPath は assetPath（GCS URIやローカルファイルパスなど）からコンテンツを読み込み、解析します。
-func (p *MarkdownParser) ParseFromPath(ctx context.Context, assetPath string) (*domain.MangaResponse, error) {
-	rc, err := p.reader.Open(ctx, assetPath)
+func (p *MarkdownParser) ParseFromPath(ctx context.Context, markdownAssetPath string) (*domain.MangaResponse, error) {
+	rc, err := p.reader.Open(ctx, markdownAssetPath)
 	if err != nil {
-		return nil, fmt.Errorf("台本ソースの読み込みに失敗しました (%s): %w", assetPath, err)
+		return nil, fmt.Errorf("台本ソースの読み込みに失敗しました (%s): %w", markdownAssetPath, err)
 	}
 	defer rc.Close()
 
@@ -50,7 +50,7 @@ func (p *MarkdownParser) ParseFromPath(ctx context.Context, assetPath string) (*
 	}
 
 	// fullPath からディレクトリ部分（baseDir）を割り出すのだ
-	baseDir := asset.ResolveBaseURL(assetPath)
+	baseDir := asset.ResolveBaseURL(markdownAssetPath)
 
 	return p.Parse(buf.String(), baseDir)
 }
