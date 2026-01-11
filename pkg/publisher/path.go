@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
@@ -23,4 +24,27 @@ func ResolveOutputPath(baseDir, fileName string) (string, error) {
 		return u.String(), nil
 	}
 	return filepath.Join(baseDir, fileName), nil
+}
+
+// ResolveFullPath は、絶対URLの作成
+func ResolveFullPath(baseURL string, refPath string) string {
+	if refPath == "" {
+		return ""
+	}
+
+	// 1. 既に完全なURL（http, https, gs）ならそのまま返す
+	if strings.HasPrefix(refPath, "http://") ||
+		strings.HasPrefix(refPath, "https://") ||
+		strings.HasPrefix(refPath, "gs://") {
+		return refPath
+	}
+
+	// 2. 相対パス（images/など）を、ベースURL（gs://.../）と結合する
+	// これにより、相対パスが「gs://bucket/path/images/panel_1.png」に昇格するのだ！
+	if baseURL != "" {
+		// strings.TrimPrefix を使って、スラッシュの重複を防ぐのがコツなのだ
+		return strings.TrimSuffix(baseURL, "/") + "/" + strings.TrimPrefix(refPath, "/")
+	}
+
+	return refPath
 }
