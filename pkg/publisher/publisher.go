@@ -24,7 +24,15 @@ type Options struct {
 	OutputDir string
 }
 
+// PublishResult はパブリッシュ処理の結果として生成されたファイルの情報を保持します。
+type PublishResult struct {
+	MarkdownPath string   // 生成された manga_plot.md のパス
+	HTMLPath     string   // 生成された HTML のパス
+	ImagePaths   []string // 保存された全画像のパスリスト
+}
+
 const (
+	defaultMangaPlotName = "manga_plot.md"
 	defaultImageDirName  = "images"
 	placeholder          = "placeholder.png"
 	evenPanelTail        = "top"
@@ -52,56 +60,65 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 	}
 }
 
-// Publish は画像の保存、Markdownの構築、HTML変換を一括して実行します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) error {
-	markdown, err := ResolveOutputPath(opts.OutputDir, "manga.md")
+// Publish は画像の保存、Markdownの構築、HTML変換を一括して実行し、生成されたファイル情報を返却するのだ！
+func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) (PublishResult, error) {
+	result := PublishResult{}
+
+	// 1. 出力パスの解決
+	markdown, err := ResolveOutputPath(opts.OutputDir, defaultMangaPlotName)
 	if err != nil {
-		return err
+		return result, err
 	}
+	result.MarkdownPath = markdown
+
 	// 画像ディレクトリのベースパスを作成
 	imgDir, err := ResolveOutputPath(opts.OutputDir, defaultImageDirName)
 	if err != nil {
-		return err
+		return result, err
 	}
 
-	// 1. 画像の保存
+	// 2. 画像の保存
 	savedPaths, err := p.saveImages(ctx, images, imgDir)
 	if err != nil {
-		return fmt.Errorf("failed to save images: %w", err)
+		return result, fmt.Errorf("画像の書き込みに失敗しました: %w", err)
 	}
+	result.ImagePaths = savedPaths
 
-	// 2. Markdown用相対パスの作成
+	// 3. Markdown用相対パスの作成
 	relativePaths := make([]string, 0, len(savedPaths))
 	for _, pathStr := range savedPaths {
 		relPath := path.Join(defaultImageDirName, filepath.Base(pathStr))
 		relativePaths = append(relativePaths, relPath)
 	}
 
-	// 3. Markdownテキストの構築
+	// 4. Markdownテキストの構築
 	content := p.buildMarkdown(manga, relativePaths)
 
-	// 4. Markdownファイルの書き出し
+	// 5. Markdownファイルの書き出し
 	if err := p.writer.Write(ctx, markdown, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
-		return fmt.Errorf("failed to write markdown: %w", err)
+		return result, fmt.Errorf("markdownファイルの書き込みに失敗しました: %w", err)
 	}
 
-	// 5. HTML変換と保存
+	// 6. HTML変換と保存
 	if p.htmlRunner != nil {
 		slog.Info("Converting to Webtoon HTML", "title", manga.Title)
 		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
 		if err != nil {
-			return fmt.Errorf("failed to convert HTML: %w", err)
+			return result, fmt.Errorf("HTMLの変換に失敗しました: %w", err)
 		}
+
+		// Markdownの拡張子を置換してHTMLパスを生成するのだ
 		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
-			return fmt.Errorf("failed to write HTML: %w", err)
+			return result, fmt.Errorf("markdownファイルの書き込みに失敗しました: : %w", err)
 		}
+		result.HTMLPath = htmlPath
 	}
 
-	return nil
+	return result, nil
 }
 
-// SaveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
+// saveImages saves image data to the specified directory or remote storage (e.g., GCS) and returns their paths.
 func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
 	var paths []string
 	for i, img := range images {
@@ -122,7 +139,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 	return paths, nil
 }
 
-// BuildMarkdown returns the Markdown content for the specified manga.
+// buildMarkdown returns the Markdown content for the specified manga.
 func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
@@ -159,7 +176,7 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 	return sb.String()
 }
 
-// getDialogueStyle returns the style for the specified panel's dialogue.'
+// getDialogueStyle returns the style for the specified panel's dialogue.
 func (p *MangaPublisher) getDialogueStyle(idx int) string {
 	if idx%2 == 0 {
 		return fmt.Sprintf("- tail: %s\n- bottom: %s\n- left: %s\n", evenPanelTail, evenPanelBottom, evenPanelLeft)
