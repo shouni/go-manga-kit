@@ -9,17 +9,17 @@
 
 **Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
-[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルで自動分割を行います。複数枚の作画として出力できるハイエンドなツールキットです。
+[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルで自動分割を行います。GCS (Google Cloud Storage) とシームレスに連携し、クラウド上のリソースを最大限に活用した漫画制作を実現するハイエンドなツールキットです。
 
 ---
 
 ## ✨ コア・コンセプト (Core Concepts)
 
-* **🧬 Character DNA System**: `domain.Character` に定義したSeed値と視覚特徴をプロンプトへ動的に注入します。全ページを通じてキャラクターの外見を一貫させることが可能です。
-* **📑 Auto-Chunk Pagination**: パネル数が上限を超えると自動でページをスライスします。AIの描画限界を回避し、複数枚構成の漫画を安定して生成します。
-* **📖 Script-to-Manga Generator**: Markdown等のソースを `parser` が解析し、演出指示を含む構造化データへ変換します。これを `generator` が受け取り、一括で作画を行う一気通貫の設計です。
-* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定します。単調なコマ割りを防ぎ、ドラマチックな演出を自動生成します。
-* **🛡️ Resilience & Rate Control**: **30s/req (2 RPM)** の厳格なレートリミット制御と、参照画像のTTL付きキャッシュにより、APIクォータを尊重しつつ安定した作画を継続します。
+* **🧬 Character DNA System**: `domain.Character` に定義したSeed値と視覚特徴をプロンプトへ動的に注入。全ページを通じてキャラクターの外見を一貫させることが可能です。
+* **📑 Auto-Chunk Pagination**: パネル数が上限を超えると自動でページをスライス。AIの描画限界を回避し、複数枚構成の漫画を安定して生成します。
+* **📖 Script-to-Manga Generator**: Markdown等のソースを `parser` が解析。`net/url` を基盤とした解析により、クラウド上の相対パスを正確な絶対URL（`gs://...`）へ解決します。
+* **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定。単調なコマ割りを防ぎ、ドラマチックな演出を自動生成します。
+* **🛡️ Robust Path Resolution**: `url.ResolveReference` を採用。`../` などの相対参照も標準プロトコルに従って安全に解決し、GCSやHTTPのスキームを破壊することなくアセットを特定します。
 
 ---
 
