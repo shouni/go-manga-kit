@@ -88,7 +88,7 @@ go-manga-kit/
 
 ```mermaid
 sequenceDiagram
-    participant CLI as CLI Application
+    participant APP as Application
     participant Gen as manga-kit.MangaGenerator
     participant Kit_Gen as gemini-image-kit.GeminiGenerator
     participant Kit_Core as gemini-image-kit.GeminiImageCore
@@ -96,12 +96,12 @@ sequenceDiagram
     participant HTTP as HTTP Client (Web)
     participant API as Gemini API (Nano Banana)
 
-    Note over CLI, Kit_Gen: 1. 初期化フェーズ
-    CLI->>Kit_Core: NewGeminiImageCore(reader, client, cache)
-    CLI->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
+    Note over APP, Kit_Gen: 1. 初期化フェーズ
+    APP->>Kit_Core: NewGeminiImageCore(reader, client, cache)
+    APP->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
 
-    Note over CLI, API: 2. 生成フェーズ (Execution)
-    CLI->>Gen: ExecuteMangaPages
+    Note over APP, API: 2. 生成フェーズ (Execution)
+    APP->>Gen: ExecuteMangaPages
     Gen->>Kit_Gen: GenerateMangaPage(req)
 
     loop 各 ReferenceURL の処理 (Core Pipeline)
@@ -138,7 +138,7 @@ sequenceDiagram
     API-->>Kit_Gen: Candidate Image Data
     Kit_Gen->>Kit_Core: parseToResponse (抽出・正規化)
     Kit_Gen-->>Gen: domain.ImageResponse
-    Gen-->>CLI: 生成完了通知
+    Gen-->>APP: 生成完了通知
 
 ```
 
