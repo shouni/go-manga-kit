@@ -5,7 +5,7 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🚀 概要 (About) - 自動ページ分割対応・漫画制作Workflow
+## 🚀 概要 (About) - 自動ページ分割対応・漫画制作Workflowライブラリ
 
 **Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
