@@ -27,7 +27,7 @@ const (
 	defaultTTL             = 5 * time.Minute
 )
 
-// Builder はワークフローの各工程を担う Runner 群を構築・管理するのだ。
+// Builder は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type Builder struct {
 	cfg        config.Config
 	chars      domain.CharactersMap
@@ -39,7 +39,7 @@ type Builder struct {
 	mangaGen   generator.MangaGenerator
 }
 
-// NewBuilder は Config と必要なキャラクター定義を基に新しい Builder を作成するのだ。
+// NewBuilder は、設定とキャラクター定義を基に新しい Builder を初期化します。
 func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Builder, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
@@ -54,14 +54,16 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		return nil, fmt.Errorf("writer は必須です")
 	}
 
-	// 1. キャラクターデータのパース
+	// 1. キャラクターデータの解析
 	chars, err := domain.GetCharacters(charData)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load characters: %w", err)
+		return nil, fmt.Errorf("キャラクターデータの解析に失敗しました: %w", err)
 	}
+
+	// 2. 画像生成エンジンの初期化
 	imgGen, err := initializeImageGenerator(reader, httpClient, aiClient, cfg.ImageModel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load characters: %w", err)
+		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
 	mangaGen := generator.MangaGenerator{
@@ -81,39 +83,38 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	}, nil
 }
 
-// BuildScriptRunner は台本生成を担当する Runner を作成するのだ。
+// BuildScriptRunner は、台本生成を担当する Runner を作成します。
 func (b *Builder) BuildScriptRunner() (ScriptRunner, error) {
 	extractor, err := extract.NewExtractor(b.httpClient)
 	if err != nil {
-		return nil, fmt.Errorf("エクストラクタの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
 	}
 
 	pb, err := prompts.NewTextPromptBuilder()
 	if err != nil {
-		return nil, fmt.Errorf("プロンプトビルダーの作成に失敗しました: %w", err)
+		return nil, fmt.Errorf("prompt builder の作成に失敗しました: %w", err)
 	}
 
 	return runner.NewMangaScriptRunner(b.cfg, extractor, pb, b.aiClient, b.reader), nil
 }
 
-// BuildDesignRunner はキャラクターデザインを担当する Runner を作成するのだ。
-func (b *Builder) BuildDesignRunner() DesignRunner {
-	return runner.NewMangaDesignRunner(b.cfg, b.mangaGen, b.writer)
+// BuildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
+func (b *Builder) BuildDesignRunner() (DesignRunner, error) {
+	return runner.NewMangaDesignRunner(b.cfg, b.mangaGen, b.writer), nil
 }
 
-// BuildPanelImageRunner はパネル並列生成を担当する Runner を作成するのだ。
-func (b *Builder) BuildPanelImageRunner() PanelImageRunner {
-	return runner.NewMangaPanelImageRunner(b.cfg, b.mangaGen)
+// BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
+func (b *Builder) BuildPanelImageRunner() (PanelImageRunner, error) {
+	return runner.NewMangaPanelImageRunner(b.cfg, b.mangaGen), nil
 }
 
-// BuildPageImageRunner は Markdown からの一括生成を担当する Runner を作成するのだ。
-func (b *Builder) BuildPageImageRunner() PageImageRunner {
+// BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
+func (b *Builder) BuildPageImageRunner() (PageImageRunner, error) {
 	mkParser := parser.NewMarkdownParser(b.reader)
-
-	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen)
+	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen), nil
 }
 
-// BuildPublishRunner は成果物のパブリッシュを担当する Runner を作成するのだ。
+// BuildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
 func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 	htmlCfg := builder.BuilderConfig{
 		EnableHardWraps: true,
@@ -121,19 +122,18 @@ func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 	}
 	md2htmlBuilder, err := builder.NewBuilder(htmlCfg)
 	if err != nil {
-		return nil, fmt.Errorf("md2htmlBuilderの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("md2htmlBuilder の初期化に失敗しました: %w", err)
 	}
 	md2htmlRunner, err := md2htmlBuilder.BuildRunner()
 	if err != nil {
-		return nil, fmt.Errorf("md2htmlrunnerの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("md2htmlRunner の初期化に失敗しました: %w", err)
 	}
 
 	pub := publisher.NewMangaPublisher(b.writer, md2htmlRunner)
-
 	return runner.NewDefaultPublisherRunner(b.cfg, pub), nil
 }
 
-// initializeImageGenerator は ImageGeneratorを初期化します。
+// initializeImageGenerator は、画像キャッシュを含む ImageGenerator を初期化します。
 func initializeImageGenerator(reader remoteio.InputReader, httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model string) (imageKit.ImageGenerator, error) {
 	imgCache := cache.New(defaultCacheExpiration, cacheCleanupInterval)
 	core, err := imageKit.NewGeminiImageCore(
@@ -143,7 +143,7 @@ func initializeImageGenerator(reader remoteio.InputReader, httpClient httpkit.Cl
 		defaultTTL,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("GeminiImageCoreの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("GeminiImageCore の初期化に失敗しました: %w", err)
 	}
 
 	imgGen, err := imageKit.NewGeminiGenerator(
@@ -152,7 +152,7 @@ func initializeImageGenerator(reader remoteio.InputReader, httpClient httpkit.Cl
 		model,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("GeminiGenerator の初期化に失敗しました: %w", err)
 	}
 
 	return imgGen, nil

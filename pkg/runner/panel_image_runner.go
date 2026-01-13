@@ -17,7 +17,6 @@ type MangaPanelImageRunner struct {
 }
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
-// config.DefaultRateLimit などの具体的な値は builder から渡されることを想定しているのだ。
 func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerator) *MangaPanelImageRunner {
 	groupGen := generator.NewGroupGenerator(mangaGen, cfg.StyleSuffix, cfg.RateInterval)
 
@@ -58,7 +57,7 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 		"total_count", len(allPages),
 	)
 
-	// 2. 既存の manga-kit のロジック（GroupGenerator）に委譲するのだ
+	// 2. GroupGeneratorに委譲するのだ
 	images, err := r.groupGen.ExecutePanelGroup(ctx, targetPages)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)

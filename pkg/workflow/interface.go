@@ -6,17 +6,25 @@ import (
 	// package imagedom は画像生成サービスに関連するドメインモデルを扱います。
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	// package mangadom は漫画制作キット自体のドメインモデルを扱います。
-	// 'domain' パッケージ名の衝突を避けるため、エイリアスを使用しています。
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
-// DesignRunner はキャラクターIDに基づいてデザインシートを生成し、Seed値を特定するのだ。
+// WorkflowBuilder は、さまざまな漫画処理ランナー（実行環境）を構築するためのビルダー・インターフェースを定義します。
+type WorkflowBuilder interface {
+	BuildDesignRunner() (DesignRunner, error)
+	BuildScriptRunner() (ScriptRunner, error)
+	BuildPanelImageRunner() (PanelImageRunner, error)
+	BuildPageImageRunner() (PageImageRunner, error)
+	BuildPublishRunner() (PublishRunner, error)
+}
+
+// DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。
 type DesignRunner interface {
 	Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error)
 }
 
-// ScriptRunner はソース（URLやテキスト）を解析し、構造化された漫画台本を生成するのだ。
+// ScriptRunner は、ソース（URLやテキスト）を解析し、構造化された漫画台本を生成する責務を持ちます。
 type ScriptRunner interface {
 	Run(ctx context.Context, scriptURL string, mode string) (mangadom.MangaResponse, error)
 }
