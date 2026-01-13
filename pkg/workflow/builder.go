@@ -57,7 +57,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	// 1. キャラクターデータの解析
 	chars, err := domain.GetCharacters(charData)
 	if err != nil {
-		return nil, fmt.Errorf("キャラクターデータの読み込みに失敗しました: %w", err)
+		return nil, fmt.Errorf("キャラクターデータの解析に失敗しました: %w", err)
 	}
 
 	// 2. 画像生成エンジンの初期化
@@ -95,7 +95,6 @@ func (b *Builder) BuildScriptRunner() (ScriptRunner, error) {
 		return nil, fmt.Errorf("prompt builder の作成に失敗しました: %w", err)
 	}
 
-	// 以前の情報を元に pb を含めて生成
 	return runner.NewMangaScriptRunner(b.cfg, extractor, pb, b.aiClient, b.reader), nil
 }
 
