@@ -22,59 +22,6 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 	}
 }
 
-// BuildFullPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (string, string) {
-	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
-	var ss strings.Builder
-	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
-	ss.WriteString(mangaSystemInstruction)
-	ss.WriteString("\n\n")
-	ss.WriteString(MangaStructureHeader)
-	ss.WriteString("\n\n")
-	ss.WriteString(RenderingStyle)
-	ss.WriteString("\n\n")
-	if pb.defaultSuffix != "" {
-		ss.WriteString(fmt.Sprintf("\n- GLOBAL_STYLE_DNA: %s\n", pb.defaultSuffix))
-	}
-	systemPrompt := ss.String()
-
-	// --- 2. User Prompt の構築 (具体的なページの内容) ---
-	var us strings.Builder
-	us.WriteString(fmt.Sprintf("### TITLE: %s ###\n", mangaTitle))
-	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(pages)))
-
-	// キャラクター定義セクション
-	us.WriteString(BuildCharacterIdentitySection(pb.characterMap))
-
-	// 大ゴマの決定
-	numPanels := len(pages)
-	bigPanelIndex := -1
-	if numPanels > 0 {
-		bigPanelIndex = rand.IntN(numPanels)
-	}
-
-	// 各パネルの指示
-	for i, page := range pages {
-		panelNum := i + 1
-		isBig := (i == bigPanelIndex)
-
-		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
-
-		// 参照画像のインデックス指定
-		if i < len(refURLs) {
-			us.WriteString(fmt.Sprintf("- REFERENCE: See input_file_%d for visual guidance.\n", panelNum))
-		}
-
-		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", page.VisualAnchor))
-		if page.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", page.SpeakerID, page.Dialogue))
-		}
-		us.WriteString("\n")
-	}
-
-	return us.String(), systemPrompt
-}
-
 // BuildUnifiedPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
 func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
@@ -127,4 +74,57 @@ func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerI
 	prompt := strings.Join(cleanParts, ", ")
 
 	return prompt, systemPrompt, targetSeed
+}
+
+// BuildFullPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
+func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (string, string) {
+	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
+	var ss strings.Builder
+	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
+	ss.WriteString(mangaSystemInstruction)
+	ss.WriteString("\n\n")
+	ss.WriteString(MangaStructureHeader)
+	ss.WriteString("\n\n")
+	ss.WriteString(RenderingStyle)
+	ss.WriteString("\n\n")
+	if pb.defaultSuffix != "" {
+		ss.WriteString(fmt.Sprintf("\n- GLOBAL_STYLE_DNA: %s\n", pb.defaultSuffix))
+	}
+	systemPrompt := ss.String()
+
+	// --- 2. User Prompt の構築 (具体的なページの内容) ---
+	var us strings.Builder
+	us.WriteString(fmt.Sprintf("### TITLE: %s ###\n", mangaTitle))
+	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(pages)))
+
+	// キャラクター定義セクション
+	us.WriteString(BuildCharacterIdentitySection(pb.characterMap))
+
+	// 大ゴマの決定
+	numPanels := len(pages)
+	bigPanelIndex := -1
+	if numPanels > 0 {
+		bigPanelIndex = rand.IntN(numPanels)
+	}
+
+	// 各パネルの指示
+	for i, page := range pages {
+		panelNum := i + 1
+		isBig := (i == bigPanelIndex)
+
+		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
+
+		// 参照画像のインデックス指定
+		if i < len(refURLs) {
+			us.WriteString(fmt.Sprintf("- REFERENCE: See input_file_%d for visual guidance.\n", panelNum))
+		}
+
+		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", page.VisualAnchor))
+		if page.Dialogue != "" {
+			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", page.SpeakerID, page.Dialogue))
+		}
+		us.WriteString("\n")
+	}
+
+	return us.String(), systemPrompt
 }

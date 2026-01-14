@@ -13,8 +13,8 @@ const (
 
 	// DefaultNegativePanelPrompt は、パネル用のネガティブプロンプトです。
 	DefaultNegativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
-	// DefaultNegativeMangePagePrompt はページ用のネガティブプロンプトです。
-	DefaultNegativeMangePagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
+	// DefaultNegativeMangaPagePrompt は、ページ用のネガティブプロンプトです。
+	DefaultNegativeMangaPagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
 
 	// MangaStructureHeader は作画の全体構造を定義します。
 	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###

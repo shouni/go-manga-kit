@@ -112,7 +112,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         fullPrompt,
-		NegativePrompt: prompts.DefaultNegativeMangePagePrompt,
+		NegativePrompt: prompts.DefaultNegativeMangaPagePrompt,
 		SystemPrompt:   fullSystemPrompt,
 		AspectRatio:    "3:4",
 		Seed:           defaultSeed,
