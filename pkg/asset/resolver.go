@@ -3,7 +3,6 @@ package asset
 import (
 	"fmt"
 	"net/url"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -72,7 +71,7 @@ func ResolveBaseURL(rawPath string) string {
 // 新しいパス文字列を生成します。
 // 例: "path/to/image.png", 1 -> "path/to/image_1.png"
 func GenerateIndexedPath(basePath string, index int) string {
-	ext := path.Ext(basePath)
+	ext := filepath.Ext(basePath) // path.Ext -> filepath.Ext
 	base := strings.TrimSuffix(basePath, ext)
 	return fmt.Sprintf("%s_%d%s", base, index, ext)
 }
