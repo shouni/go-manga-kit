@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/parser"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
@@ -71,7 +72,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownPath string, e
 	}
 
 	// 2. ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）
-	basePath, err := asset.ResolveOutputPath(targetDir, asset.DefaultPageFileName)
+	basePath, err := asset.ResolveOutputPath(targetDir, config.DefaultPageFileName)
 	if err != nil {
 		return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
 	}

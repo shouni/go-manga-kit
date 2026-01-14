@@ -9,9 +9,6 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
-// DefaultPageFileName は共通のベースファイル名
-const DefaultPageFileName = "manga_page.png"
-
 // ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
 // GCS/ローカルを考慮した最終的な出力パスを生成します。
 func ResolveOutputPath(baseDir, fileName string) (string, error) {
@@ -30,7 +27,8 @@ func ResolveOutputPath(baseDir, fileName string) (string, error) {
 	return filepath.Join(baseDir, fileName), nil
 }
 
-// ResolveBaseURL は path からディレクトリ部分（ベースURL）を安全に抽出します。
+// ResolveBaseURL は、入力パス（URLまたはローカルパス）から
+// 親ディレクトリのパスを解決し、末尾がセパレータで終わるように正規化します。
 func ResolveBaseURL(rawPath string) string {
 	if rawPath == "" {
 		return ""
@@ -38,15 +36,18 @@ func ResolveBaseURL(rawPath string) string {
 
 	u, err := url.Parse(rawPath)
 	if err == nil && u.IsAbs() {
+		// URL形式の場合、"." への参照を解決することで親ディレクトリのURLを取得
 		dotRef, _ := url.Parse(".")
 		baseURL := u.ResolveReference(dotRef).String()
 
+		// ディレクトリパスであることを保証するため、末尾に "/" を追加
 		if !strings.HasSuffix(baseURL, "/") {
 			baseURL += "/"
 		}
 		return baseURL
 	}
 
+	// URLスキームがない場合はローカルファイルパスとして扱う
 	baseDir := filepath.Dir(rawPath)
 	if baseDir == "." {
 		return "./"
