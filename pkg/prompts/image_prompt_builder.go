@@ -22,8 +22,8 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 	}
 }
 
-// BuildUnifiedPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
+// BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
+func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
 	// 単体パネル生成では、1枚の高品質なイラストとしての役割と画風を定義します。
 	var ss strings.Builder
@@ -76,8 +76,8 @@ func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerI
 	return prompt, systemPrompt, targetSeed
 }
 
-// BuildFullPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (string, string) {
+// BuildMangaPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (string, string) {
 	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
 	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "

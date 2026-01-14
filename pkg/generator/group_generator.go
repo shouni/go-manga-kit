@@ -77,7 +77,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 			char := gg.resolveAndGetCharacter(page, gg.mangaGenerator.Characters)
 
 			// 2. プロンプト構築
-			fullPrompt, fullSystemPrompt, finalSeed := pb.BuildUnifiedPrompt(page, char.ID)
+			fullPrompt, fullSystemPrompt, finalSeed := pb.BuildPanelPrompt(page, char.ID)
 
 			slog.Info("パネル生成開始",
 				"panel_index", i+1,

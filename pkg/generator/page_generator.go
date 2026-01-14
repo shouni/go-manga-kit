@@ -86,7 +86,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
 
 	// ページ全体のプロンプトを構築
-	fullPrompt, fullSystemPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
+	fullPrompt, fullSystemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Pages, refURLs)
 
 	var defaultSeed *int64
 
