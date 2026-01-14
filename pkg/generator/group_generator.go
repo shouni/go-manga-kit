@@ -77,20 +77,19 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 			char := gg.resolveAndGetCharacter(page, gg.mangaGenerator.Characters)
 
 			// 2. プロンプト構築
-			fullPrompt, fullSystemPrompt, finalSeed := pb.BuildPanelPrompt(page, char.ID)
+			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(page, char.ID)
 
 			slog.Info("パネル生成開始",
 				"panel_index", i+1,
-				"character", char.Name,
-				"seed", finalSeed,
-			)
+				"character_id", char.ID,
+				"seed", finalSeed)
 
 			// 3. アダプター呼び出し
 			startTime := time.Now()
 			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
-				Prompt:         fullPrompt,
+				Prompt:         userPrompt,
 				NegativePrompt: prompts.DefaultNegativePanelPrompt,
-				SystemPrompt:   fullSystemPrompt,
+				SystemPrompt:   systemPrompt,
 				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,
 				AspectRatio:    PanelAspectRatio,

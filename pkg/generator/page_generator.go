@@ -81,7 +81,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
 
 	// ページ全体のプロンプトを構築
-	fullPrompt, fullSystemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Pages, refURLs)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Pages, refURLs)
 
 	var defaultSeed *int64
 
@@ -106,9 +106,9 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 
 	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
-		Prompt:         fullPrompt,
+		Prompt:         userPrompt,
 		NegativePrompt: prompts.DefaultNegativeMangaPagePrompt,
-		SystemPrompt:   fullSystemPrompt,
+		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		Seed:           defaultSeed,
 		ReferenceURLs:  refURLs,

@@ -78,7 +78,7 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 }
 
 // BuildMangaPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (string, string) {
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (userPrompt string, systemPrompt string) {
 	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
 	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
@@ -91,7 +91,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	if pb.defaultSuffix != "" {
 		ss.WriteString(fmt.Sprintf("\n- GLOBAL_STYLE_DNA: %s\n", pb.defaultSuffix))
 	}
-	systemPrompt := ss.String()
+	systemPrompt = ss.String()
 
 	// --- 2. User Prompt の構築 (具体的なページの内容) ---
 	var us strings.Builder
@@ -137,6 +137,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 		}
 		us.WriteString("\n")
 	}
+	userPrompt = us.String()
 
-	return us.String(), systemPrompt
+	return userPrompt, systemPrompt
 }
