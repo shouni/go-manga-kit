@@ -68,8 +68,9 @@ func ResolveBaseURL(rawPath string) string {
 	return baseDir
 }
 
-// GenerateIndexedPath はベースパスに連番を挿入するのだ。
-// 例: manga_page.png -> manga_page_1.png
+// GenerateIndexedPath は、指定されたベースパスの拡張子の前に連番を挿入し、
+// 新しいパス文字列を生成します。
+// 例: "path/to/image.png", 1 -> "path/to/image_1.png"
 func GenerateIndexedPath(basePath string, index int) string {
 	ext := path.Ext(basePath)
 	base := strings.TrimSuffix(basePath, ext)
