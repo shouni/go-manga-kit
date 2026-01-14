@@ -91,7 +91,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 
 	// --- 2. User Prompt の構築 (具体的なページの内容) ---
 	var us strings.Builder
-	// タイトルは現時点では出力しない
+	// TODO::ページ単位でのタイトルは現時点では出力しない
 	//	us.WriteString(fmt.Sprintf("### TITLE: %s ###\n", mangaTitle))
 	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(pages)))
 
