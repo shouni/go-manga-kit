@@ -30,6 +30,9 @@ func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []dom
 	ss.WriteString(mangaSystemInstruction)
 	ss.WriteString("\n\n")
 	ss.WriteString(MangaStructureHeader)
+	ss.WriteString("\n\n")
+	ss.WriteString(RenderingStyle)
+	ss.WriteString("\n\n")
 	if pb.defaultSuffix != "" {
 		ss.WriteString(fmt.Sprintf("\n- GLOBAL_STYLE_DNA: %s\n", pb.defaultSuffix))
 	}
@@ -79,6 +82,9 @@ func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerI
 	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene."
 	ss.WriteString(mangaSystemInstruction)
+	ss.WriteString("\n\n")
+	ss.WriteString(RenderingStyle)
+	ss.WriteString("\n\n")
 	if pb.defaultSuffix != "" {
 		ss.WriteString("\n\n")
 		ss.WriteString(fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix))
