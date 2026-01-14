@@ -33,8 +33,6 @@ type PublishResult struct {
 }
 
 const (
-	defaultMangaPlotName = "manga_plot.md"
-	defaultImageDirName  = "images"
 	placeholder          = "placeholder.png"
 	evenPanelTail        = "top"
 	evenPanelBottom      = "10%"
@@ -66,14 +64,14 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	result := PublishResult{}
 
 	// 1. 出力パスの解決
-	markdown, err := asset.ResolveOutputPath(opts.OutputDir, defaultMangaPlotName)
+	markdown, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultMangaPlotName)
 	if err != nil {
 		return result, err
 	}
 	result.MarkdownPath = markdown
 
 	// 画像ディレクトリのベースパスを作成
-	imgDir, err := asset.ResolveOutputPath(opts.OutputDir, defaultImageDirName)
+	imgDir, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultImageDir)
 	if err != nil {
 		return result, err
 	}
@@ -88,7 +86,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	// 3. Markdown用相対パスの作成
 	relativePaths := make([]string, 0, len(savedPaths))
 	for _, pathStr := range savedPaths {
-		relPath := path.Join(defaultImageDirName, filepath.Base(pathStr))
+		relPath := path.Join(asset.DefaultImageDir, filepath.Base(pathStr))
 		relativePaths = append(relativePaths, relPath)
 	}
 
@@ -126,7 +124,10 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 		if img == nil || len(img.Data) == 0 {
 			continue
 		}
-		name := fmt.Sprintf("panel_%d.png", i+1)
+		name, err := asset.GenerateIndexedPath(asset.DefaultPanelFileName, i+1)
+		if err != nil {
+			return nil, fmt.Errorf("パネル画像名の解決に失敗しました: %w", err)
+		}
 		fullPath, err := asset.ResolveOutputPath(baseDir, name)
 		if err != nil {
 			return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
