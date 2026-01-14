@@ -26,12 +26,13 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 // BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
 func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
-	// 単体パネル生成では、1枚の高品質なイラストとしての役割と画風を定義します。
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene."
 
+	// CinematicTags を System Prompt に移動し、全体的な画風としての責務を一貫させます
 	systemParts := []string{
 		mangaSystemInstruction,
 		RenderingStyle,
+		CinematicTags,
 	}
 	if pb.defaultSuffix != "" {
 		styleDNA := fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix)
@@ -43,15 +44,12 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 	var visualParts []string
 	var targetSeed int64
 	if char, ok := pb.characterMap[speakerID]; ok {
-		// 登録済みキャラクターの場合、そのDNA（VisualCuesとSeed）を完全に継承します
 		if len(char.VisualCues) > 0 {
 			visualParts = append(visualParts, char.VisualCues...)
 		}
 		targetSeed = char.Seed
 	} else {
-		// 登録がない場合は、名前から決定論的にシード値を生成します
 		targetSeed = domain.GetSeedFromName(speakerID, pb.characterMap)
-
 		if speakerID != "" {
 			visualParts = append(visualParts, speakerID)
 		}
@@ -61,9 +59,6 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 	if page.VisualAnchor != "" {
 		visualParts = append(visualParts, page.VisualAnchor)
 	}
-
-	// クオリティ向上タグの追加
-	visualParts = append(visualParts, CinematicTags)
 
 	// --- 3. プロンプトのクリーンな結合 ---
 	var cleanParts []string
@@ -88,6 +83,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	ss.WriteString("\n\n")
 	ss.WriteString(RenderingStyle)
 	ss.WriteString("\n\n")
+	ss.WriteString(CinematicTags)
 	if pb.defaultSuffix != "" {
 		ss.WriteString(fmt.Sprintf("\n- GLOBAL_STYLE_DNA: %s\n", pb.defaultSuffix))
 	}
@@ -108,16 +104,16 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 		bigPanelIndex = rand.IntN(numPanels)
 	}
 
-	logArgs := []any{
+	// slog.With を利用した宣言的なロギング
+	logger := slog.With(
 		"manga_title", mangaTitle,
 		"style_suffix", pb.defaultSuffix,
 		"panel_count", numPanels,
-	}
+	)
 	if bigPanelIndex != -1 {
-		// 0-indexedのままログ出力することで技術的な正確性を保つ
-		logArgs = append(logArgs, "big_panel_index", bigPanelIndex)
+		logger = logger.With("big_panel_index", bigPanelIndex)
 	}
-	slog.Info("Building manga page prompt", logArgs...)
+	logger.Info("Building manga page prompt")
 
 	// 各パネルの指示
 	for i, page := range pages {
@@ -126,9 +122,9 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 
 		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
 
-		// 参照画像のインデックス指定
+		// 参照指示を具体化: "posing and layout" を明示してAIの精度を向上させます
 		if i < len(refURLs) {
-			us.WriteString(fmt.Sprintf("- REFERENCE: See input_file_%d for visual guidance.\n", panelNum))
+			us.WriteString(fmt.Sprintf("- REFERENCE: Use input_file_%d for visual guidance on posing and layout.\n", panelNum))
 		}
 
 		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", page.VisualAnchor))
