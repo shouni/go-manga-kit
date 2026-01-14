@@ -88,7 +88,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownPath string, e
 		// manga_page.png -> manga_page_1.png のように変換する
 		pagePath, err := asset.GenerateIndexedPath(basePath, i+1)
 		if err != nil {
-			return nil, fmt.Errorf("ページ画像を保存に失敗しました: %w", err)
+			return nil, fmt.Errorf("ページ %d の出力パス生成に失敗しました: %w", i+1, err)
 		}
 
 		slog.InfoContext(ctx, "ページ画像を保存しています",
@@ -98,7 +98,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownPath string, e
 
 		if err := r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
 			// エラー発生時は、それまでの成果物は返さず、nilとエラーを返す
-			return nil, fmt.Errorf("第 %d ページの保存に失敗しました: %w", i+1, err)
+			return nil, fmt.Errorf("第 %d ページの保存に失敗しました (path: %s): %w", i+1, pagePath, err)
 		}
 		savedPaths = append(savedPaths, pagePath)
 	}
