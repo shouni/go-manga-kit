@@ -4,6 +4,15 @@ import (
 	"github.com/shouni/go-utils/urlpath"
 )
 
+const (
+	DefaultImageDir      = "images"
+	DefaultMangaPlotName = "manga_plot.md"
+	// DefaultPanelFileName はパネル画像の共通のベースファイル名
+	DefaultPanelFileName = "panel.png"
+	// DefaultPageFileName はページ画像の共通のベースファイル名
+	DefaultPageFileName = "manga_page.png"
+)
+
 // ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
 // GCS/ローカルを考慮した最終的な出力パスを生成します。
 func ResolveOutputPath(baseDir, fileName string) (string, error) {
