@@ -126,7 +126,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 		}
 		name, err := asset.GenerateIndexedPath(asset.DefaultPanelFileName, i+1)
 		if err != nil {
-			return nil, fmt.Errorf("パネル画像名の解決に失敗しました: %w", err)
+			return nil, fmt.Errorf("パネル画像名の生成に失敗しました: %w", err)
 		}
 		fullPath, err := asset.ResolveOutputPath(baseDir, name)
 		if err != nil {
