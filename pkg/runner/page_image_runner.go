@@ -38,8 +38,8 @@ func NewMangaPageRunner(
 }
 
 // Run は、指定されたパスの Markdown コンテンツを解析し、漫画ページ画像（バイナリデータ）のリストを生成します。
-func (r *MangaPageRunner) Run(ctx context.Context, markdownAssetPath string) ([]*imagedom.ImageResponse, error) {
-	manga, err := r.mkParser.ParseFromPath(ctx, markdownAssetPath)
+func (r *MangaPageRunner) Run(ctx context.Context, markdownPath string) ([]*imagedom.ImageResponse, error) {
+	manga, err := r.mkParser.ParseFromPath(ctx, markdownPath)
 	if err != nil {
 		return nil, fmt.Errorf("markdown コンテンツの解析に失敗しました: %w", err)
 	}
@@ -48,7 +48,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownAssetPath string) ([]
 	}
 
 	slog.InfoContext(ctx, "MangaPageRunner: 解析完了",
-		"path", markdownAssetPath,
+		"path", markdownPath,
 		"title", manga.Title,
 		"panelCount", len(manga.Pages),
 	)
@@ -58,15 +58,15 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownAssetPath string) ([]
 }
 
 // RunAndSave は、画像の生成から指定ディレクトリへの保存までを一括で行います。
-func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownAssetPath string, explicitOutputDir string) ([]string, error) {
+func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownPath string, explicitOutputDir string) ([]string, error) {
 	// 1. 保存先ディレクトリの決定
 	targetDir := explicitOutputDir
 	if targetDir == "" {
 		// 明示的な出力ディレクトリが指定されていない場合、
 		// 入力されたMarkdownファイルと同じディレクトリを保存先とします。
-		targetDir = asset.ResolveBaseURL(markdownAssetPath)
+		targetDir = asset.ResolveBaseURL(markdownPath)
 		if targetDir == "" {
-			return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", markdownAssetPath)
+			return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", markdownPath)
 		}
 	}
 
@@ -77,7 +77,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownAssetPath stri
 	}
 
 	// 3. 画像の生成
-	resps, err := r.Run(ctx, markdownAssetPath)
+	resps, err := r.Run(ctx, markdownPath)
 	if err != nil {
 		return nil, err // Run 内部でエラーラップされているためそのまま返す
 	}

@@ -41,6 +41,6 @@ type PublishRunner interface {
 
 // PageImageRunner は、指定されたパスのMarkdownコンテンツから漫画のページ画像を生成する責務を持ちます。
 type PageImageRunner interface {
-	Run(ctx context.Context, markdownAssetPath string) ([]*imagedom.ImageResponse, error)
-	RunAndSave(ctx context.Context, markdownAssetPath string, explicitOutputDir string) ([]string, error)
+	Run(ctx context.Context, markdownPath string) ([]*imagedom.ImageResponse, error)
+	RunAndSave(ctx context.Context, markdownPath string, explicitOutputDir string) ([]string, error)
 }
