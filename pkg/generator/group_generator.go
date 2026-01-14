@@ -93,7 +93,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 				SystemPrompt:   fullSystemPrompt,
 				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,
-				AspectRatio:    "16:9",
+				AspectRatio:    PanelAspectRatio,
 			})
 			if err != nil {
 				return fmt.Errorf("パネル %d (キャラ: %s) の生成に失敗しました: %w", i+1, char.Name, err)

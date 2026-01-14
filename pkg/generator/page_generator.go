@@ -15,11 +15,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-const (
-	// MaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数です。
-	MaxPanelsPerPage = 6
-)
-
 // PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
 type PageGenerator struct {
 	mangaGenerator MangaGenerator
@@ -114,7 +109,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 		Prompt:         fullPrompt,
 		NegativePrompt: prompts.DefaultNegativeMangaPagePrompt,
 		SystemPrompt:   fullSystemPrompt,
-		AspectRatio:    "3:4",
+		AspectRatio:    PageAspectRatio,
 		Seed:           defaultSeed,
 		ReferenceURLs:  refURLs,
 	}
