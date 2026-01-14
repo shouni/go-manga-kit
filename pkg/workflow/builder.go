@@ -111,7 +111,7 @@ func (b *Builder) BuildPanelImageRunner() (PanelImageRunner, error) {
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (b *Builder) BuildPageImageRunner() (PageImageRunner, error) {
 	mkParser := parser.NewMarkdownParser(b.reader)
-	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen), nil
+	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen, b.writer), nil
 }
 
 // BuildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
