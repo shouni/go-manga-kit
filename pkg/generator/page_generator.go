@@ -15,16 +15,22 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// MaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数
-const MaxPanelsPerPage = 6
+const (
+	// MaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数です。
+	MaxPanelsPerPage = 6
 
-// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成する汎用部品なのだ。
+	// defaultNegativePrompt は生成品質を維持するための共通のネガティブプロンプトです。
+	defaultNegativePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
+)
+
+// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
 type PageGenerator struct {
 	mangaGenerator MangaGenerator
 	styleSuffix    string
 	limiter        *rate.Limiter
 }
 
+// NewPageGenerator は PageGenerator の新しいインスタンスを初期化します。
 func NewPageGenerator(mangaGenerator MangaGenerator, styleSuffix string) *PageGenerator {
 	return &PageGenerator{
 		mangaGenerator: mangaGenerator,
@@ -33,7 +39,7 @@ func NewPageGenerator(mangaGenerator MangaGenerator, styleSuffix string) *PageGe
 	}
 }
 
-// ExecuteMangaPages は複数ページをチャンクして生成するエントリーポイントなのだ
+// ExecuteMangaPages は全ページを適切なチャンクに分割し、順次生成処理を実行します。
 func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	var allResponses []*imagedom.ImageResponse
 
@@ -44,14 +50,12 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 	totalPages := (len(manga.Pages) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
 
 	for i := 0; i < len(manga.Pages); i += MaxPanelsPerPage {
-		slog.Info("APIリミッターのトークンを待機中なのだ...",
-			slog.Int("current_idx", i),
-		)
+		slog.Info("APIレート制限を確認中...", slog.Int("current_idx", i))
+
 		if err := pg.limiter.Wait(ctx); err != nil {
-			return nil, fmt.Errorf("リミッターの待機中にエラーが発生したのだ: %w", err)
+			return nil, fmt.Errorf("リミッター待機中にエラーが発生しました: %w", err)
 		}
 
-		// --- チャンク処理 ---
 		end := i + MaxPanelsPerPage
 		if end > len(manga.Pages) {
 			end = len(manga.Pages)
@@ -64,11 +68,11 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 			Pages:       manga.Pages[i:end],
 		}
 
-		slog.Info("生成リクエストを送信するのだ", slog.Int("page", currentPage))
+		slog.Info("ページ生成リクエストを送信します", slog.Int("page", currentPage))
 
 		res, err := pg.ExecuteMangaPage(ctx, subManga)
 		if err != nil {
-			return nil, fmt.Errorf("failed page %d: %w", currentPage-1, err)
+			return nil, fmt.Errorf("ページ %d の生成に失敗しました: %w", currentPage, err)
 		}
 		allResponses = append(allResponses, res)
 	}
@@ -76,31 +80,30 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 	return allResponses, nil
 }
 
-// ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成する
+// ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成します。
 func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
-	// 共通のスタイルサフィックス（anime styleなど）を注入して生成するのだ
+	// 共通のスタイルサフィックスを使用してプロンプトビルダーを初期化
 	pb := prompts.NewImagePromptBuilder(pg.mangaGenerator.Characters, pg.styleSuffix)
 
 	// 参照URLの収集
 	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
 
-	// 巨大な統合プロンプトの構築
+	// ページ全体のプロンプトを構築
 	fullPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
 
 	var defaultSeed *int64
 
-	// 1. まずはページ内の全パネルを走査して、IsPrimaryなキャラ（二人組など）がいるか確認するのだ
+	// 優先度の高いキャラクターのSeed値を探索
 	for _, p := range manga.Pages {
 		char := pg.findCharacter(p.SpeakerID, pg.mangaGenerator.Characters)
 		if char != nil && char.IsPrimary && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
-
-			break // 最優先キャラが見つかったら、即座に採用してループを抜けるのだ
+			break
 		}
 	}
 
-	// 2. もしIsPrimaryなキャラがいなかったら、従来通り最初のパネルの話者のSeedを使うのだ
+	// 優先キャラがいない場合、最初の話者のSeedをフォールバックとして使用
 	if defaultSeed == nil && len(manga.Pages) > 0 {
 		char := pg.findCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
 		if char != nil && char.Seed > 0 {
@@ -109,9 +112,11 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 		}
 	}
 
+	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         fullPrompt,
-		NegativePrompt: "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy",
+		NegativePrompt: defaultNegativePrompt,
+		SystemPrompt:   pg.styleSuffix, // ★画風指定を SystemPrompt に集約
 		AspectRatio:    "3:4",
 		Seed:           defaultSeed,
 		ReferenceURLs:  refURLs,
@@ -120,7 +125,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	return pg.mangaGenerator.ImgGen.GenerateMangaPage(ctx, req)
 }
 
-// findCharacter は SpeakerID（名前またはハッシュ化ID）からキャラを特定するのだ
+// findCharacter は SpeakerID からキャラクター情報を特定します。
 func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]domain.Character) *domain.Character {
 	sid := strings.ToLower(speakerID)
 	h := sha256.New()
@@ -139,10 +144,12 @@ func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]d
 	return nil
 }
 
-// collectReferences は必要な全ての画像URLを重複なく収集するのだ
+// collectReferences は必要な全ての画像URLを重複なく収集します。
 func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
+
+	// キャラクターの参照URL
 	for _, p := range pages {
 		if char := pg.findCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
 			if _, exists := urlMap[char.ReferenceURL]; !exists {
@@ -151,6 +158,8 @@ func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters 
 			}
 		}
 	}
+
+	// ページごとの個別参照URL
 	for _, p := range pages {
 		if p.ReferenceURL != "" {
 			if _, exists := urlMap[p.ReferenceURL]; !exists {
