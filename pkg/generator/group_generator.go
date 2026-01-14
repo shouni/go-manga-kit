@@ -95,7 +95,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 				AspectRatio:    PanelAspectRatio,
 			})
 			if err != nil {
-				return fmt.Errorf("パネル %d (キャラ: %s) の生成に失敗しました: %w", i+1, char.Name, err)
+				return fmt.Errorf("パネル %d (キャラID: %s, 名前: %s) の生成に失敗しました: %w", i+1, char.ID, char.Name, err)
 			}
 
 			slog.Info("パネル生成完了",
