@@ -12,11 +12,11 @@ import (
 
 // WorkflowBuilder は、さまざまな漫画処理ランナー（実行環境）を構築するためのビルダー・インターフェースを定義します。
 type WorkflowBuilder interface {
-	BuildDesignRunner() (DesignRunner, error)
-	BuildScriptRunner() (ScriptRunner, error)
-	BuildPanelImageRunner() (PanelImageRunner, error)
-	BuildPageImageRunner() (PageImageRunner, error)
-	BuildPublishRunner() (PublishRunner, error)
+	BuildDesignRunner(DesignRunner, error)
+	BuildScriptRunner(ScriptRunner, error)
+	BuildPanelImageRunner(PanelImageRunner, error)
+	BuildPageImageRunner(PageImageRunner, error)
+	BuildPublishRunner(PublishRunner, error)
 }
 
 // DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。
