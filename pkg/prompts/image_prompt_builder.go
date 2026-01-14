@@ -66,13 +66,14 @@ func (pb *ImagePromptBuilder) BuildFullPagePrompt(mangaTitle string, pages []dom
 		if page.Dialogue != "" {
 			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", page.SpeakerID, page.Dialogue))
 		}
+		us.WriteString("\n")
 	}
 
 	return us.String(), systemPrompt
 }
 
 // BuildUnifiedPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (prompt, systemPrompt string, targetSeed int64) {
+func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
 	// 単体パネル生成では、1枚の高品質なイラストとしての役割と画風を定義します。
 	var ss strings.Builder
@@ -82,11 +83,11 @@ func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerI
 		ss.WriteString("\n\n")
 		ss.WriteString(fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix))
 	}
-	systemPrompt = ss.String()
+	systemPrompt := ss.String()
 
 	// --- 2. キャラクター設定とビジュアルアンカーの収集 (User Prompt) ---
 	var visualParts []string
-
+	var targetSeed int64
 	if char, ok := pb.characterMap[speakerID]; ok {
 		// 登録済みキャラクターの場合、そのDNA（VisualCuesとSeed）を完全に継承します
 		if len(char.VisualCues) > 0 {
@@ -117,7 +118,7 @@ func (pb *ImagePromptBuilder) BuildUnifiedPrompt(page domain.MangaPage, speakerI
 			cleanParts = append(cleanParts, s)
 		}
 	}
-	prompt = strings.Join(cleanParts, ", ")
+	prompt := strings.Join(cleanParts, ", ")
 
 	return prompt, systemPrompt, targetSeed
 }
