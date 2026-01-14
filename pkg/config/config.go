@@ -11,8 +11,6 @@ const (
 	DefaultRateInterval   = 30 * time.Second
 	DefaultStyleSuffix    = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
 	DefaultRequestTimeout = 5 * time.Minute
-	// DefaultPageFileName は共通のベースファイル名
-	DefaultPageFileName = "manga_page.png"
 )
 
 // Config は Go Manga Kit の各 Runner を動作させるための基本設定なのだ。
