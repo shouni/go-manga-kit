@@ -62,6 +62,8 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownAssetPath stri
 	// 1. 保存先ディレクトリの決定
 	targetDir := explicitOutputDir
 	if targetDir == "" {
+		// 明示的な出力ディレクトリが指定されていない場合、
+		// 入力されたMarkdownファイルと同じディレクトリを保存先とします。
 		targetDir = asset.ResolveBaseURL(markdownAssetPath)
 		if targetDir == "" {
 			return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", markdownAssetPath)
@@ -84,7 +86,10 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownAssetPath stri
 	var savedPaths []string
 	for i, resp := range resps {
 		// manga_page.png -> manga_page_1.png のように変換する
-		pagePath := asset.GenerateIndexedPath(basePath, i+1)
+		pagePath, err := asset.GenerateIndexedPath(basePath, i+1)
+		if err != nil {
+			return nil, fmt.Errorf("ページ画像を保存に失敗しました: %w", err)
+		}
 
 		slog.InfoContext(ctx, "ページ画像を保存しています",
 			"index", i+1,

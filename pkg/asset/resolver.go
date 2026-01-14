@@ -38,28 +38,20 @@ func ResolveBaseURL(rawPath string) string {
 
 	u, err := url.Parse(rawPath)
 	if err == nil && u.IsAbs() {
-		// URL形式の場合は ResolveReference(".") を使って親ディレクトリを取得するのだ
 		dotRef, _ := url.Parse(".")
 		baseURL := u.ResolveReference(dotRef).String()
 
-		// ディレクトリであることを保証するために末尾を "/" にするのだ
 		if !strings.HasSuffix(baseURL, "/") {
 			baseURL += "/"
 		}
 		return baseURL
 	}
 
-	// 2. スキームがない場合は、ローカルのファイルパスとして扱うのだ
-	// filepath.Dir を使ってディレクトリ部分を取り出すのだ
 	baseDir := filepath.Dir(rawPath)
-
-	// Windows環境などで "." (カレントディレクトリ) が返ってきた場合や
-	// スラッシュで終わっていない場合は、末尾を整えるのだ
 	if baseDir == "." {
 		return "./"
 	}
 
-	// ローカルパスの区切り文字（OS依存）を末尾に付与するのだ
 	if !strings.HasSuffix(baseDir, string(filepath.Separator)) {
 		baseDir += string(filepath.Separator)
 	}
@@ -68,10 +60,13 @@ func ResolveBaseURL(rawPath string) string {
 }
 
 // GenerateIndexedPath は、指定されたベースパスの拡張子の前に連番を挿入し、
-// 新しいパス文字列を生成します。
+// 新しいパス文字列を生成します。index は1以上の整数である必要があります。
 // 例: "path/to/image.png", 1 -> "path/to/image_1.png"
-func GenerateIndexedPath(basePath string, index int) string {
-	ext := filepath.Ext(basePath) // path.Ext -> filepath.Ext
+func GenerateIndexedPath(basePath string, index int) (string, error) {
+	if index <= 0 {
+		return "", fmt.Errorf("index must be a positive integer, but got %d", index)
+	}
+	ext := filepath.Ext(basePath)
 	base := strings.TrimSuffix(basePath, ext)
-	return fmt.Sprintf("%s_%d%s", base, index, ext)
+	return fmt.Sprintf("%s_%d%s", base, index, ext), nil
 }
