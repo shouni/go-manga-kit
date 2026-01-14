@@ -18,9 +18,6 @@ import (
 const (
 	// MaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数です。
 	MaxPanelsPerPage = 6
-
-	// defaultNegativePrompt は生成品質を維持するための共通のネガティブプロンプトです。
-	defaultNegativePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
 )
 
 // PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
@@ -89,7 +86,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
 
 	// ページ全体のプロンプトを構築
-	fullPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
+	fullPrompt, fullSystemPrompt := pb.BuildFullPagePrompt(manga.Title, manga.Pages, refURLs)
 
 	var defaultSeed *int64
 
@@ -115,8 +112,8 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         fullPrompt,
-		NegativePrompt: defaultNegativePrompt,
-		SystemPrompt:   pg.styleSuffix, // ★画風指定を SystemPrompt に集約
+		NegativePrompt: prompts.DefaultNegativeMangePagePrompt,
+		SystemPrompt:   fullSystemPrompt,
 		AspectRatio:    "3:4",
 		Seed:           defaultSeed,
 		ReferenceURLs:  refURLs,
