@@ -2,6 +2,7 @@ package prompts
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand/v2"
 	"strings"
 
@@ -26,17 +27,17 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
 	// 単体パネル生成では、1枚の高品質なイラストとしての役割と画風を定義します。
-	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene."
-	ss.WriteString(mangaSystemInstruction)
-	ss.WriteString("\n\n")
-	ss.WriteString(RenderingStyle)
-	ss.WriteString("\n\n")
-	if pb.defaultSuffix != "" {
-		ss.WriteString("\n\n")
-		ss.WriteString(fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix))
+
+	systemParts := []string{
+		mangaSystemInstruction,
+		RenderingStyle,
 	}
-	systemPrompt := ss.String()
+	if pb.defaultSuffix != "" {
+		styleDNA := fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix)
+		systemParts = append(systemParts, styleDNA)
+	}
+	systemPrompt := strings.Join(systemParts, "\n\n")
 
 	// --- 2. キャラクター設定とビジュアルアンカーの収集 (User Prompt) ---
 	var visualParts []string
@@ -106,6 +107,17 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
 	}
+
+	logArgs := []any{
+		"manga_title", mangaTitle,
+		"style_suffix", pb.defaultSuffix,
+		"panel_count", numPanels,
+	}
+	if bigPanelIndex != -1 {
+		// 0-indexedのままログ出力することで技術的な正確性を保つ
+		logArgs = append(logArgs, "big_panel_index", bigPanelIndex)
+	}
+	slog.Info("Building manga page prompt", logArgs...)
 
 	// 各パネルの指示
 	for i, page := range pages {
