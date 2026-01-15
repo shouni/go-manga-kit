@@ -43,15 +43,19 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 	// --- 2. キャラクター設定とビジュアルアンカーの収集 (User Prompt) ---
 	var visualParts []string
 	var targetSeed int64
+
 	if char, ok := pb.characterMap[speakerID]; ok {
 		if len(char.VisualCues) > 0 {
 			visualParts = append(visualParts, char.VisualCues...)
 		}
 		targetSeed = char.Seed
 	} else {
-		targetSeed = domain.GetSeedFromName(speakerID, pb.characterMap)
-		if speakerID != "" {
-			visualParts = append(visualParts, speakerID)
+		primary := pb.characterMap.GetPrimary()
+		if primary != nil {
+			if len(primary.VisualCues) > 0 {
+				visualParts = append(visualParts, primary.VisualCues...)
+			}
+			targetSeed = primary.Seed
 		}
 	}
 

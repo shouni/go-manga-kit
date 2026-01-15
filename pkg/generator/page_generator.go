@@ -73,7 +73,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	pb := pg.mangaGenerator.PromptBuilder
 
 	// 参照URLの収集
-	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
+	refURLs := pg.collectReferences(manga.Pages)
 
 	// ページ全体のプロンプトを構築
 	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Pages, refURLs)
@@ -82,7 +82,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 
 	// 優先度の高いキャラクターのSeed値を探索
 	for _, p := range manga.Pages {
-		char := domain.FindCharacter(p.SpeakerID, pg.mangaGenerator.Characters)
+		char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
 		if char != nil && char.IsPrimary && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -92,7 +92,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 
 	// 優先キャラがいない場合、最初の話者のSeedをフォールバックとして使用
 	if defaultSeed == nil && len(manga.Pages) > 0 {
-		char := domain.FindCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
+		char := pg.mangaGenerator.Characters.FindCharacter(manga.Pages[0].SpeakerID)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -113,13 +113,13 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 }
 
 // collectReferences は必要な全ての画像URLを重複なく収集します。
-func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
+func (pg *PageGenerator) collectReferences(pages []domain.MangaPage) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
 
 	// キャラクターの参照URL
 	for _, p := range pages {
-		if char := domain.FindCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
+		if char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID); char != nil && char.ReferenceURL != "" {
 			if _, exists := urlMap[char.ReferenceURL]; !exists {
 				urlMap[char.ReferenceURL] = struct{}{}
 				urls = append(urls, char.ReferenceURL)
