@@ -148,16 +148,13 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-	//	h := sha256.New()
-
 	for i, page := range manga.Pages {
 		img := placeholder
 		if i < len(imagePaths) {
 			img = imagePaths[i]
 		}
-
-		sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
 		if page.Dialogue != "" {
+			sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
 			character := p.characters.FindCharacter(page.SpeakerID)
 			var speakerID string
 			if character != nil {
@@ -168,9 +165,9 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 				}
 			}
 
-			text := strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))
-			sb.WriteString(fmt.Sprintf("- speaker: %s\n", speakerID))
-			sb.WriteString(fmt.Sprintf("- text: %s\n", text))
+			sb.WriteString(fmt.Sprintf("- SpeakerID: %s\n", speakerID))
+			sb.WriteString(fmt.Sprintf("- Dialogue: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))))
+			sb.WriteString(fmt.Sprintf("- VisualAnchor: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.VisualAnchor, ""))))
 			//sb.WriteString("- layout: standard\n")
 			//h.Reset()
 			//h.Write([]byte(speakerID))
