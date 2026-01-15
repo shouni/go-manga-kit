@@ -2,12 +2,19 @@ package workflow
 
 import (
 	"context"
+	"time"
 
 	// package imagedom は画像生成サービスに関連するドメインモデルを扱います。
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	// package mangadom は漫画制作キット自体のドメインモデルを扱います。
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
+)
+
+const (
+	defaultCacheExpiration = 5 * time.Minute
+	cacheCleanupInterval   = 15 * time.Minute
+	defaultTTL             = 5 * time.Minute
 )
 
 // WorkflowBuilder は、さまざまな漫画処理ランナー（実行環境）を構築するためのビルダー・インターフェースを定義します。
