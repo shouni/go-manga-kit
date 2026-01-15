@@ -18,7 +18,6 @@ import (
 // GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type GroupGenerator struct {
 	mangaGenerator MangaGenerator
-	styleSuffix    string
 	interval       time.Duration
 	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
 	primaryChar    *domain.Character // 優先的にフォールバック先となる Primary キャラクター
@@ -26,7 +25,7 @@ type GroupGenerator struct {
 
 // NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
 // キャラクターマップの解析（ソート・Primary特定の事前計算）を行い、生成時のコストを最適化します。
-func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interval time.Duration) *GroupGenerator {
+func NewGroupGenerator(mangaGenerator MangaGenerator, interval time.Duration) *GroupGenerator {
 	keys := make([]string, 0, len(mangaGenerator.Characters))
 	for k := range mangaGenerator.Characters {
 		keys = append(keys, k)
@@ -44,7 +43,6 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
-		styleSuffix:    styleSuffix,
 		interval:       interval,
 		sortedCharKeys: keys,
 		primaryChar:    primary,
@@ -54,7 +52,7 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, styleSuffix string, interv
 // ExecutePanelGroup は、並列処理を用いてパネル群を生成します。
 func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.MangaPage) ([]*imagedom.ImageResponse, error) {
 	// プロンプトビルダーの初期化
-	pb := prompts.NewImagePromptBuilder(gg.mangaGenerator.Characters, gg.styleSuffix)
+	pb := gg.mangaGenerator.PromptBuilder
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 

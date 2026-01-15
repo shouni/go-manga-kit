@@ -33,7 +33,7 @@ func NewMangaPageRunner(
 	return &MangaPageRunner{
 		cfg:      cfg,
 		mkParser: mkParser,
-		pageGen:  generator.NewPageGenerator(mangaGen, cfg.StyleSuffix),
+		pageGen:  generator.NewPageGenerator(mangaGen),
 		writer:   writer,
 	}
 }

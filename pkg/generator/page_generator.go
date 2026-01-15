@@ -18,15 +18,13 @@ import (
 // PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
 type PageGenerator struct {
 	mangaGenerator MangaGenerator
-	styleSuffix    string
 	limiter        *rate.Limiter
 }
 
 // NewPageGenerator は PageGenerator の新しいインスタンスを初期化します。
-func NewPageGenerator(mangaGenerator MangaGenerator, styleSuffix string) *PageGenerator {
+func NewPageGenerator(mangaGenerator MangaGenerator) *PageGenerator {
 	return &PageGenerator{
 		mangaGenerator: mangaGenerator,
-		styleSuffix:    styleSuffix,
 		limiter:        rate.NewLimiter(rate.Every(30*time.Second), 1),
 	}
 }
@@ -75,7 +73,7 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成します。
 func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
 	// 共通のスタイルサフィックスを使用してプロンプトビルダーを初期化
-	pb := prompts.NewImagePromptBuilder(pg.mangaGenerator.Characters, pg.styleSuffix)
+	pb := pg.mangaGenerator.PromptBuilder
 
 	// 参照URLの収集
 	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)

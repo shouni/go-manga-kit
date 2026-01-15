@@ -66,9 +66,11 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
+	pb := prompts.NewImagePromptBuilder(chars, cfg.StyleSuffix)
 	mangaGen := generator.MangaGenerator{
-		ImgGen:     imgGen,
-		Characters: chars,
+		ImgGen:        imgGen,
+		PromptBuilder: pb,
+		Characters:    chars,
 	}
 
 	return &Builder{
