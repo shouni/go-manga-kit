@@ -46,9 +46,14 @@ func GenerateIndexedPath(basePath string, index int) (string, error) {
 	return urlpath.GenerateIndexedPath(basePath, index)
 }
 
-// 正規表現生成を共通化するためのヘルパー関数（非公開）
+// createIndexedRegex は、ファイル名に基づきインデックス付きファイル用の正規表現を生成します。
+// 例: "panel.png" -> ^panel_\d+\.png$
 func createIndexedRegex(fileName string) *regexp.Regexp {
-	baseName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
-	pattern := fmt.Sprintf(`^%s_\d+\.png$`, regexp.QuoteMeta(baseName))
+	ext := filepath.Ext(fileName)
+	baseName := strings.TrimSuffix(fileName, ext)
+
+	// baseName と ext の両方を QuoteMeta でエスケープすることで
+	// ドットや特殊文字が含まれていても正しくリテラルとしてマッチします。
+	pattern := fmt.Sprintf(`^%s_\d+%s$`, regexp.QuoteMeta(baseName), regexp.QuoteMeta(ext))
 	return regexp.MustCompile(pattern)
 }
