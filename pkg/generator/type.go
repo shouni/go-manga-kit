@@ -17,7 +17,13 @@ const (
 	PageAspectRatio = "3:4"
 )
 
+type ImagePromptBuilder interface {
+	BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64)
+	BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (userPrompt string, systemPrompt string)
+}
+
 type MangaGenerator struct {
-	ImgGen     generator.ImageGenerator
-	Characters map[string]domain.Character
+	ImgGen        generator.ImageGenerator
+	PromptBuilder ImagePromptBuilder
+	Characters    map[string]domain.Character
 }
