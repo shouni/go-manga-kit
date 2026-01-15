@@ -8,7 +8,7 @@ import (
 const (
 	DefaultGeminiModel    = "gemini-3-flash-preview"
 	DefaultImageModel     = "gemini-3-pro-image-preview"
-	DefaultRateInterval   = 30 * time.Second
+	DefaultRateInterval   = 10 * time.Second
 	DefaultStyleSuffix    = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
 	DefaultRequestTimeout = 5 * time.Minute
 )
