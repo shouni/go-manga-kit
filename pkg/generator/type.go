@@ -17,7 +17,20 @@ const (
 	PageAspectRatio = "3:4"
 )
 
+// ImagePromptBuilder は、画像生成用のプロンプトを構築するためのインターフェースを定義します。
+// これにより、漫画のパネルやページに対するプロンプト生成ロジックを抽象化します。
+type ImagePromptBuilder interface {
+	// BuildPanelPrompt は、単一の漫画パネル用のユーザープロンプト、システムプロンプト、
+	// および再現性のためのseed値を生成します。
+	BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64)
+
+	// BuildMangaPagePrompt は、統合された漫画ページ画像用のユーザープロンプトと
+	// システムプロンプトを生成します。
+	BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (userPrompt string, systemPrompt string)
+}
+
 type MangaGenerator struct {
-	ImgGen     generator.ImageGenerator
-	Characters map[string]domain.Character
+	ImgGen        generator.ImageGenerator
+	PromptBuilder ImagePromptBuilder
+	Characters    map[string]domain.Character
 }
