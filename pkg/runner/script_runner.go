@@ -77,6 +77,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode str
 	return manga, nil
 }
 
+// extractContent 抽出機能を使用して指定された URL からテキスト コンテンツを抽出し、コンテンツまたはエラーを返します。
 func (sr *MangaScriptRunner) extractContent(ctx context.Context, url string) (string, error) {
 	text, _, err := sr.extractor.FetchAndExtractText(ctx, url)
 	if err != nil {
@@ -85,6 +86,7 @@ func (sr *MangaScriptRunner) extractContent(ctx context.Context, url string) (st
 	return text, nil
 }
 
+// parseResponse AI API からの生の JSON 応答を取得し、解析されたデータを返します。
 func (sr *MangaScriptRunner) parseResponse(raw string) (domain.MangaResponse, error) {
 	raw = strings.TrimSpace(raw)
 	var rawJSON string
@@ -111,6 +113,7 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (domain.MangaResponse, er
 	return manga, nil
 }
 
+// truncateString 文字列を指定された最大長に切り捨てます。
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s

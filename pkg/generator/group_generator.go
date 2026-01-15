@@ -18,7 +18,7 @@ import (
 // GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type GroupGenerator struct {
 	mangaGenerator MangaGenerator
-	interval       time.Duration
+	limiter        *rate.Limiter
 	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
 	primaryChar    *domain.Character // 優先的にフォールバック先となる Primary キャラクター
 }
@@ -43,7 +43,7 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, interval time.Duration) *G
 
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
-		interval:       interval,
+		limiter:        rate.NewLimiter(rate.Every(interval), 2),
 		sortedCharKeys: keys,
 		primaryChar:    primary,
 	}
@@ -56,19 +56,11 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 	images := make([]*imagedom.ImageResponse, len(pages))
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	var limiter *rate.Limiter
-	if gg.interval > 0 {
-		// APIのバースト制限を考慮し、レートリミッターを設定します。
-		limiter = rate.NewLimiter(rate.Every(gg.interval), 2)
-	}
-
 	for i, page := range pages {
 		i, page := i, page
 		eg.Go(func() error {
-			if limiter != nil {
-				if err := limiter.Wait(egCtx); err != nil {
-					return err
-				}
+			if err := gg.limiter.Wait(egCtx); err != nil {
+				return err
 			}
 
 			// 1. キャラクター解決
@@ -99,7 +91,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 			slog.Info("パネル生成完了",
 				"panel_index", i+1,
 				"character", char.Name,
-				"duration", time.Since(startTime).Round(time.Millisecond),
+				"duration", time.Since(startTime).Round(time.Second),
 			)
 
 			images[i] = resp
