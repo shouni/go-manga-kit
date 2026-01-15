@@ -22,10 +22,10 @@ type PageGenerator struct {
 }
 
 // NewPageGenerator は PageGenerator の新しいインスタンスを初期化します。
-func NewPageGenerator(mangaGenerator MangaGenerator) *PageGenerator {
+func NewPageGenerator(mangaGenerator MangaGenerator, interval time.Duration) *PageGenerator {
 	return &PageGenerator{
 		mangaGenerator: mangaGenerator,
-		limiter:        rate.NewLimiter(rate.Every(30*time.Second), 1),
+		limiter:        rate.NewLimiter(rate.Every(interval), 1),
 	}
 }
 
