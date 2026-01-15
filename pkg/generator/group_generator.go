@@ -62,7 +62,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 
 			slog.Info("パネル生成開始",
 				"panel_index", i+1,
-				"character_id", char.ID,
+				"character", char.String(),
 				"seed", finalSeed)
 
 			// 3. アダプター呼び出し
@@ -98,10 +98,10 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 }
 
 // resolveAndGetCharacter は、与えられたページ情報から最適なキャラクターを決定します。
-func (gg *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characters map[string]domain.Character) domain.Character {
+func (gg *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, charMap domain.CharactersMap) domain.Character {
 	// 1. IDでの直接検索
 	id := strings.ToLower(strings.TrimSpace(page.SpeakerID))
-	if c, ok := characters[id]; ok {
+	if c, ok := charMap[id]; ok {
 		return c
 	}
 
@@ -119,7 +119,7 @@ func (gg *GroupGenerator) resolveAndGetCharacter(page domain.MangaPage, characte
 		fallbackID := gg.sortedCharKeys[0]
 		slog.Debug("Primary キャラクター不在のため、決定論的な最初のキャラを採用します",
 			"originalID", page.SpeakerID, "selectedID", fallbackID)
-		return characters[fallbackID]
+		return charMap[fallbackID]
 	}
 
 	// 4. 最終手段
