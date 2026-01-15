@@ -99,7 +99,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, pages []domain.
 			slog.Info("パネル生成完了",
 				"panel_index", i+1,
 				"character", char.Name,
-				"duration", time.Since(startTime).Round(time.Millisecond),
+				"duration", time.Since(startTime).Round(time.Second),
 			)
 
 			images[i] = resp
