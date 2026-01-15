@@ -1,6 +1,11 @@
 package asset
 
 import (
+	"fmt"
+	"path/filepath"
+	"regexp"
+	"strings"
+
 	"github.com/shouni/go-utils/urlpath"
 )
 
@@ -13,6 +18,13 @@ const (
 	DefaultPanelFileName = "panel.png"
 	// DefaultPageFileName はページ画像の共通のベースファイル名です。
 	DefaultPageFileName = "manga_page.png"
+)
+
+var (
+	// PanelFileRegex はパネル画像 (panel_1.png 等) に一致します
+	PanelFileRegex = createIndexedRegex(DefaultPanelFileName)
+	// PageFileRegex はページ画像 (manga_page_1.png 等) に一致します
+	PageFileRegex = createIndexedRegex(DefaultPageFileName)
 )
 
 // ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
@@ -32,4 +44,11 @@ func ResolveBaseURL(rawPath string) string {
 // 例: "path/to/image.png", 1 -> "path/to/image_1.png"
 func GenerateIndexedPath(basePath string, index int) (string, error) {
 	return urlpath.GenerateIndexedPath(basePath, index)
+}
+
+// 正規表現生成を共通化するためのヘルパー関数（非公開）
+func createIndexedRegex(fileName string) *regexp.Regexp {
+	baseName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+	pattern := fmt.Sprintf(`^%s_\d+\.png$`, regexp.QuoteMeta(baseName))
+	return regexp.MustCompile(pattern)
 }
