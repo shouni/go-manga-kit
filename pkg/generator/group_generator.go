@@ -19,8 +19,8 @@ import (
 type GroupGenerator struct {
 	mangaGenerator MangaGenerator
 	limiter        *rate.Limiter
-	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
 	primaryChar    *domain.Character // 優先的にフォールバック先となる Primary キャラクター
+	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
 }
 
 // NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
@@ -32,20 +32,11 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, interval time.Duration) *G
 	}
 	sort.Strings(keys)
 
-	var primary *domain.Character
-	for _, k := range keys {
-		if char := mangaGenerator.Characters[k]; char.IsPrimary {
-			c := char // ループ変数のアドレス回避
-			primary = &c
-			break
-		}
-	}
-
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
 		limiter:        rate.NewLimiter(rate.Every(interval), 2),
+		primaryChar:    mangaGenerator.Characters.GetPrimary(),
 		sortedCharKeys: keys,
-		primaryChar:    primary,
 	}
 }
 

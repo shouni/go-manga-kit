@@ -47,13 +47,19 @@ var tagRegex = regexp.MustCompile(`\[[^\]]+\]`)
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
+	characters map[string]domain.Character
 	writer     remoteio.OutputWriter
 	htmlRunner md2htmlrunner.Runner
 }
 
-// NewMangaPublisher は、指定されたwriterとHTML runnerを持つMangaPublisherの新しいインスタンスを作成して返却します。
-func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Runner) *MangaPublisher {
+// NewMangaPublisher は、指定された依存関係を持つMangaPublisherの新しいインスタンスを作成して返却します。
+func NewMangaPublisher(
+	characters map[string]domain.Character,
+	writer remoteio.OutputWriter,
+	htmlRunner md2htmlrunner.Runner,
+) *MangaPublisher {
 	return &MangaPublisher{
+		characters: characters,
 		writer:     writer,
 		htmlRunner: htmlRunner,
 	}
@@ -154,7 +160,6 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 		}
 
 		sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
-		sb.WriteString("- layout: standard\n")
 
 		if page.Dialogue != "" {
 			speaker := page.SpeakerID
@@ -167,8 +172,10 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 			h.Write([]byte(speaker))
 			speakerClass := "speaker-" + hex.EncodeToString(h.Sum(nil))[:10]
 
-			sb.WriteString(fmt.Sprintf("- speaker: %s\n", speakerClass))
+			sb.WriteString(fmt.Sprintf("- speaker: %s\n", speaker))
 			sb.WriteString(fmt.Sprintf("- text: %s\n", text))
+			sb.WriteString("- layout: standard\n")
+			sb.WriteString(fmt.Sprintf("- class: %s\n", speakerClass))
 			sb.WriteString(p.getDialogueStyle(i))
 		} else {
 			sb.WriteString("- type: none\n")

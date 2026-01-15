@@ -32,5 +32,5 @@ type ImagePromptBuilder interface {
 type MangaGenerator struct {
 	ImgGen        generator.ImageGenerator
 	PromptBuilder ImagePromptBuilder
-	Characters    map[string]domain.Character
+	Characters    domain.CharactersMap
 }

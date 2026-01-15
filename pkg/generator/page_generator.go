@@ -2,11 +2,8 @@ package generator
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -85,7 +82,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 
 	// 優先度の高いキャラクターのSeed値を探索
 	for _, p := range manga.Pages {
-		char := pg.findCharacter(p.SpeakerID, pg.mangaGenerator.Characters)
+		char := domain.FindCharacter(p.SpeakerID, pg.mangaGenerator.Characters)
 		if char != nil && char.IsPrimary && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -95,7 +92,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 
 	// 優先キャラがいない場合、最初の話者のSeedをフォールバックとして使用
 	if defaultSeed == nil && len(manga.Pages) > 0 {
-		char := pg.findCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
+		char := domain.FindCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
 			defaultSeed = &s
@@ -115,25 +112,6 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	return pg.mangaGenerator.ImgGen.GenerateMangaPage(ctx, req)
 }
 
-// findCharacter は SpeakerID からキャラクター情報を特定します。
-func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]domain.Character) *domain.Character {
-	sid := strings.ToLower(speakerID)
-	h := sha256.New()
-	for _, char := range characters {
-		h.Reset()
-		h.Write([]byte(char.ID))
-		hash := hex.EncodeToString(h.Sum(nil))
-		if sid == "speaker-"+hash[:10] {
-			return &char
-		}
-	}
-	cleanID := strings.TrimPrefix(sid, "speaker-")
-	if char, ok := characters[cleanID]; ok {
-		return &char
-	}
-	return nil
-}
-
 // collectReferences は必要な全ての画像URLを重複なく収集します。
 func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
 	urlMap := make(map[string]struct{})
@@ -141,7 +119,7 @@ func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters 
 
 	// キャラクターの参照URL
 	for _, p := range pages {
-		if char := pg.findCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
+		if char := domain.FindCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
 			if _, exists := urlMap[char.ReferenceURL]; !exists {
 				urlMap[char.ReferenceURL] = struct{}{}
 				urls = append(urls, char.ReferenceURL)
