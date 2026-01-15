@@ -1,46 +1,25 @@
 package domain
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 )
 
-// FindCharacter は 直接のID一致、ハッシュIDからキャラクター情報を特定します。
+// FindCharacter は 直接のIDからキャラクター情報を特定します。
 func (m CharactersMap) FindCharacter(ID string) *Character {
 	if m == nil {
 		return nil
 	}
-
-	// 1. 完全一致（最優先）
 	if char, ok := m[ID]; ok {
 		res := char
 		return &res
 	}
-
-	sid := strings.ToLower(ID)
-
-	h := sha256.New()
-	for _, char := range m {
-		h.Reset()
-		h.Write([]byte(char.ID))
-		hash := hex.EncodeToString(h.Sum(nil))
-		if sid == "speaker-"+hash[:10] {
-			res := char
-			return &res
-		}
-	}
-
-	// 3. 接頭辞 "speaker-" を除去して再試行
-	cleanID := strings.TrimPrefix(sid, "speaker-")
-	if char, ok := m[cleanID]; ok {
+	if char, ok := m[strings.ToLower(ID)]; ok {
 		res := char
 		return &res
 	}
-
 	return nil
 }
 
