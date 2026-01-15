@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	fieldKeySpeaker = "speaker"
-	fieldKeyText    = "text"
-	fieldKeyAction  = "action"
+	fieldKeySpeaker = "SpeakerID"
+	fieldKeyText    = "Dialogue"
+	fieldKeyAction  = "VisualAnchor"
 )
 
 // Parser は解析するためのインターフェースを定義します。
