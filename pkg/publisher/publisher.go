@@ -3,8 +3,6 @@ package publisher
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"path"
@@ -33,28 +31,27 @@ type PublishResult struct {
 }
 
 const (
-	placeholder          = "placeholder.png"
-	evenPanelTail        = "top"
-	evenPanelBottom      = "10%"
-	evenPanelLeft        = "10%"
-	oddPanelTail         = "bottom"
-	oddPanelTop          = "10%"
-	oddPanelRight        = "10%"
-	defaultNarrationName = "narration"
+	placeholder     = "placeholder.png"
+	evenPanelTail   = "top"
+	evenPanelBottom = "10%"
+	evenPanelLeft   = "10%"
+	oddPanelTail    = "bottom"
+	oddPanelTop     = "10%"
+	oddPanelRight   = "10%"
 )
 
 var tagRegex = regexp.MustCompile(`\[[^\]]+\]`)
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
-	characters map[string]domain.Character
+	characters domain.CharactersMap
 	writer     remoteio.OutputWriter
 	htmlRunner md2htmlrunner.Runner
 }
 
 // NewMangaPublisher は、指定された依存関係を持つMangaPublisherの新しいインスタンスを作成して返却します。
 func NewMangaPublisher(
-	characters map[string]domain.Character,
+	characters domain.CharactersMap,
 	writer remoteio.OutputWriter,
 	htmlRunner md2htmlrunner.Runner,
 ) *MangaPublisher {
@@ -151,7 +148,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-	h := sha256.New()
+	//	h := sha256.New()
 
 	for i, page := range manga.Pages {
 		img := placeholder
@@ -160,27 +157,28 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 		}
 
 		sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
-
 		if page.Dialogue != "" {
-			speaker := page.SpeakerID
-			if speaker == "" {
-				speaker = defaultNarrationName
+			character := p.characters.FindCharacter(page.SpeakerID)
+			var speakerID string
+			if character != nil {
+				speakerID = character.ID
+			} else {
+				if primary := p.characters.GetPrimary(); primary != nil {
+					speakerID = primary.ID
+				}
 			}
+
 			text := strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))
-
-			h.Reset()
-			h.Write([]byte(speaker))
-			speakerClass := "speaker-" + hex.EncodeToString(h.Sum(nil))[:10]
-
-			sb.WriteString(fmt.Sprintf("- speaker: %s\n", speaker))
+			sb.WriteString(fmt.Sprintf("- speaker: %s\n", speakerID))
 			sb.WriteString(fmt.Sprintf("- text: %s\n", text))
-			sb.WriteString("- layout: standard\n")
-			sb.WriteString(fmt.Sprintf("- class: %s\n", speakerClass))
-			sb.WriteString(p.getDialogueStyle(i))
-		} else {
-			sb.WriteString("- type: none\n")
+			//sb.WriteString("- layout: standard\n")
+			//h.Reset()
+			//h.Write([]byte(speakerID))
+			//		speakerClass := "speaker-" + hex.EncodeToString(h.Sum(nil))[:10]
+			//		sb.WriteString(fmt.Sprintf("- speakerclass: %s\n", speakerClass))
+			//			sb.WriteString(p.getDialogueStyle(i))
+			sb.WriteString("\n")
 		}
-		sb.WriteString("\n")
 	}
 	return sb.String()
 }

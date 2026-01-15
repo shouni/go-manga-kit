@@ -1,8 +1,6 @@
 package prompts
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
@@ -131,41 +129,18 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 		}
 
 		// SpeakerID を Name に変換して AI に伝える
-		displayName := pb.findCharacterName(page.SpeakerID)
-
+		character := pb.characterMap.FindCharacter(page.SpeakerID)
 		// アクション指示の中にある SpeakerID も名前に置換して AI の混乱を防ぐ
 		sceneDescription := page.VisualAnchor
-		if char, ok := pb.characterMap[page.SpeakerID]; ok {
-			sceneDescription = strings.ReplaceAll(sceneDescription, page.SpeakerID, char.Name)
-		}
+		sceneDescription = strings.ReplaceAll(sceneDescription, page.SpeakerID, character.Name)
 
 		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", sceneDescription))
 		if page.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", displayName, page.Dialogue))
+			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", character.Name, page.Dialogue))
 		}
 		us.WriteString("\n")
 	}
 	userPrompt = us.String()
 
 	return userPrompt, systemPrompt
-}
-
-// findCharacter は SpeakerID からキャラクター名を特定します。
-// ID直接一致、または台本形式(speaker-hash)の両方に対応します。
-func (pb *ImagePromptBuilder) findCharacterName(speakerID string) string {
-	sid := strings.ToLower(speakerID)
-	if char, ok := pb.characterMap[sid]; ok {
-		return char.Name
-	}
-
-	cleanID := strings.TrimPrefix(sid, "speaker-")
-	for _, char := range pb.characterMap {
-		h := sha256.Sum256([]byte(char.ID))
-		hash := hex.EncodeToString(h[:])
-		if cleanID == hash[:10] || cleanID == char.ID {
-			return char.Name
-		}
-	}
-
-	return speakerID
 }
