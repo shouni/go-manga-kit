@@ -157,13 +157,14 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 		if page.Dialogue != "" || page.VisualAnchor != "" {
 			sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
 			character := p.characters.FindCharacter(page.SpeakerID)
+			if character == nil {
+				character = p.characters.GetPrimary()
+			}
+
 			var speakerID string
 			if character != nil {
 				speakerID = character.ID
-			} else if primary := p.characters.GetPrimary(); primary != nil {
-				speakerID = primary.ID
 			}
-
 			if speakerID != "" {
 				sb.WriteString(fmt.Sprintf("- SpeakerID: %s\n", speakerID))
 			}

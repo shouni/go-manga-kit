@@ -103,7 +103,7 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 		// フィールド行の解析
 		if currentPanel != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
-				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
+				key, val := m[1], strings.TrimSpace(m[2])
 				switch key {
 				case fieldKeySpeaker:
 					currentPanel.SpeakerID = strings.ToLower(val)
