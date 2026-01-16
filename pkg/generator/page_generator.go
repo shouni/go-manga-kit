@@ -53,7 +53,7 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 		subManga := domain.MangaResponse{
 			Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, currentPageNum, totalPages),
 			Description: manga.Description,
-			Panels:      manga.Panels[i:end], // フィールド名を Pages に統一
+			Panels:      manga.Panels[i:end],
 		}
 
 		// 構造化ロギング
@@ -101,6 +101,13 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 			}
 		}
 	}
+
+	// 構造化ロギングの適用
+	logger := slog.With(
+		"Prompt", userPrompt,
+		"seed", defaultSeed,
+	)
+	logger.Info("Starting ImagePageRequest")
 
 	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
