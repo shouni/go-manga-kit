@@ -2,7 +2,6 @@ package prompts
 
 import (
 	"fmt"
-	"log/slog"
 	"math/rand/v2"
 	"strings"
 
@@ -110,17 +109,6 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, panels []d
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
 	}
-
-	// slog.With を利用した宣言的なロギング
-	logger := slog.With(
-		"manga_title", mangaTitle,
-		"style_suffix", pb.defaultSuffix,
-		"panel_count", numPanels,
-	)
-	if bigPanelIndex != -1 {
-		logger = logger.With("big_panel_index", bigPanelIndex)
-	}
-	logger.Info("Building manga page prompt")
 
 	// 各パネルの指示
 	for i, panel := range panels {
