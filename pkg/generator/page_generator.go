@@ -37,6 +37,10 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse
 	// 1ページあたりの最大パネル数に基づいてチャンク分割
 	totalPages := (len(manga.Panels) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
 	defaultSeed := pg.determineDefaultSeed(manga.Panels)
+	var seedValue any = "none"
+	if defaultSeed != nil {
+		seedValue = *defaultSeed
+	}
 
 	for i := 0; i < len(manga.Panels); i += MaxPanelsPerPage {
 		if err := pg.limiter.Wait(ctx); err != nil {
@@ -62,7 +66,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse
 			"page_number", currentPageNum,
 			"total_pages", totalPages,
 			"panel_count", len(subManga.Panels),
-			"seed", defaultSeed,
+			"seed", seedValue,
 		)
 		logger.Info("Starting manga page generation")
 
@@ -77,7 +81,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse
 }
 
 // generateMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成します。
-func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, defaultSeed *int64) (*imagedom.ImageResponse, error) {
+func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed *int64) (*imagedom.ImageResponse, error) {
 	pb := pg.mangaGenerator.PromptBuilder
 
 	// 参照URLの収集
@@ -91,7 +95,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		NegativePrompt: prompts.DefaultNegativeMangaPagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
-		Seed:           defaultSeed,
+		Seed:           seed,
 		ReferenceURLs:  refURLs,
 	}
 
