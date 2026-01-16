@@ -17,6 +17,13 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
+const (
+	// プロンプト構成用の定数
+	designPromptBaseTemplate = "Masterpiece character design sheet of %s, %s"
+	designLayoutMultiChar    = "standing front-view full body, side-by-side, distinct characters"
+	designLayoutSingleChar   = "multiple views (front, side, back), standing full body"
+)
+
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
@@ -109,13 +116,13 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	var layout string
 	if numChars > 1 {
 		// 2人以上の場合は情報の密度を優先して正面全身図に絞る
-		layout = "standing front-view full body, side-by-side, distinct characters"
+		layout = designLayoutMultiChar
 	} else {
 		// 1人の場合は詳細な三面図を狙う
-		layout = "multiple views (front, side, back), standing full body"
+		layout = designLayoutSingleChar
 	}
 
-	base := fmt.Sprintf("Masterpiece character design sheet of %s, %s",
+	base := fmt.Sprintf(designPromptBaseTemplate,
 		strings.Join(descriptions, " and "), layout)
 
 	// プロンプトの各要素を集約
@@ -141,14 +148,12 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 		}
 		processedIDs[id] = struct{}{}
 
-		// domain.CharactersMap.FindCharacter を使用（大文字小文字フォールバック対応）
 		char := chars.FindCharacter(id)
 		if char == nil {
 			missingIDs = append(missingIDs, id)
 			continue
 		}
 
-		// デザインシート生成には ReferenceURL が必須（一貫性のため）
 		if char.ReferenceURL == "" {
 			slog.Warn("キャラクターに参照URLがないためスキップします", "id", id)
 			continue
@@ -168,7 +173,8 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 	}
 
 	if len(referenceURLs) == 0 {
-		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %v)", ids)
+		// エラーメッセージの可読性向上: strings.Join でカンマ区切りにする
+		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
 	}
 
 	return referenceURLs, descriptions, nil
