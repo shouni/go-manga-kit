@@ -45,13 +45,13 @@ func NewMangaScriptRunner(
 }
 
 // Run は Web ページの内容を抽出し、Gemini を用いて漫画の台本 JSON を生成します。
-func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode string) (domain.MangaResponse, error) {
+func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode string) (*domain.MangaResponse, error) {
 	slog.Info("ScriptRunner: Extracting text", "url", scriptURL)
 
 	// 1. Web サイトからテキストを抽出
 	inputText, err := sr.extractContent(ctx, scriptURL)
 	if err != nil {
-		return domain.MangaResponse{}, err
+		return nil, err
 	}
 
 	// TemplateData 構造体を使用して InputText を流し込みます
@@ -59,20 +59,20 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode str
 	finalPrompt, promptErr := sr.promptBuilder.Build(mode, templateData)
 	if promptErr != nil {
 		err = fmt.Errorf("プロンプト生成に失敗: %w", promptErr)
-		return domain.MangaResponse{}, err
+		return nil, err
 	}
 
 	// 3. Gemini API を呼び出し
 	slog.Info("ScriptRunner: Calling Gemini API", "model", sr.cfg.GeminiModel)
 	resp, err := sr.aiClient.GenerateContent(ctx, finalPrompt, sr.cfg.GeminiModel)
 	if err != nil {
-		return domain.MangaResponse{}, fmt.Errorf("プロンプト生成に失敗: %w", err)
+		return nil, fmt.Errorf("プロンプト生成に失敗: %w", err)
 	}
 
 	// 4. AI 応答をパースして構造化データに変換
 	manga, err := sr.parseResponse(resp.Text)
 	if err != nil {
-		return domain.MangaResponse{}, err
+		return nil, err
 	}
 
 	return manga, nil
@@ -88,7 +88,7 @@ func (sr *MangaScriptRunner) extractContent(ctx context.Context, url string) (st
 }
 
 // parseResponse AI API からの生の JSON 応答を取得し、解析されたデータを返します。
-func (sr *MangaScriptRunner) parseResponse(raw string) (domain.MangaResponse, error) {
+func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, error) {
 	raw = strings.TrimSpace(raw)
 	var rawJSON string
 
@@ -96,28 +96,28 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (domain.MangaResponse, er
 	if len(matches) > 1 {
 		rawJSON = matches[1]
 	} else {
-		// Fallback 1: Find the outermost JSON object.
 		firstBracket := strings.Index(raw, "{")
 		lastBracket := strings.LastIndex(raw, "}")
 		if firstBracket != -1 && lastBracket != -1 && lastBracket > firstBracket {
 			rawJSON = raw[firstBracket : lastBracket+1]
 		} else {
-			// Fallback 2: Assume the entire response is JSON.
 			rawJSON = raw
 		}
 	}
 
 	var manga domain.MangaResponse
 	if err := json.Unmarshal([]byte(rawJSON), &manga); err != nil {
-		return domain.MangaResponse{}, fmt.Errorf("AIからの応答に含まれるJSONの解析に失敗しました (応答抜粋: %q): %w", truncateString(raw, 200), err)
+		return nil, fmt.Errorf("AIからの応答に含まれるJSONの解析に失敗しました (応答抜粋: %q): %w", truncateString(raw, 200), err)
 	}
-	return manga, nil
+
+	return &manga, nil
 }
 
 // truncateString 文字列を指定された最大長に切り捨てます。
 func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
 		return s
 	}
-	return s[:maxLen] + "..."
+	return string(runes[:maxLen]) + "..."
 }
