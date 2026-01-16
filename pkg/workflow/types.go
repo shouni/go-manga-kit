@@ -41,13 +41,13 @@ type PanelImageRunner interface {
 	Run(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error)
 }
 
-// PublishRunner は、生成された画像と漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
-type PublishRunner interface {
-	Run(ctx context.Context, manga mangadom.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
-}
-
 // PageImageRunner は、指定されたパスのMarkdownコンテンツから漫画のページ画像を生成する責務を持ちます。
 type PageImageRunner interface {
 	Run(ctx context.Context, markdownPath string) ([]*imagedom.ImageResponse, error)
 	RunAndSave(ctx context.Context, markdownPath string, explicitOutputDir string) ([]string, error)
+}
+
+// PublishRunner は、生成された画像と漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
+type PublishRunner interface {
+	Run(ctx context.Context, manga mangadom.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
 }
