@@ -101,10 +101,11 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 	return finalPath, nil
 }
 
+// buildDesignPrompt キャラクターデザインシートを生成するための詳細なプロンプト文字列を構築します。
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
-	base := fmt.Sprintf("Masterpiece character design sheet of %s, side-by-side, multiple views (front, side, back), standing full body",
-		strings.Join(descriptions, " and "))
-	// 保存されたデフォルトの画風サフィックスを結合
+	base := fmt.Sprintf("Masterpiece character design sheet of %d characters: %s. Each character is distinct, side-by-side, multiple views (front, side, back), standing full body",
+		len(descriptions), strings.Join(descriptions, " and "))
+
 	return fmt.Sprintf("%s, %s, white background, sharp focus, 4k resolution", base, dr.cfg.StyleSuffix)
 }
 
@@ -117,27 +118,26 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 	for _, id := range ids {
 		char := chars.FindCharacter(id)
 		if char == nil {
-			slog.Warn("Character not found, skipping", "id", id)
+			slog.Warn("キャラクターが見つからないためスキップします", "id", id)
 			continue
 		}
 
-		// 3. 参照画像URLがあれば収集
+		// 参照画像URLがあれば収集
 		if char.ReferenceURL != "" {
 			refs = append(refs, char.ReferenceURL)
 		}
 
-		// 4. プロンプト用の説明文を構築
+		// プロンプト用の説明文を構築
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
-			// 名前 (特徴1, 特徴2) の形式で集約
 			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
 		}
 		descs = append(descs, desc)
 	}
 
-	// 5. 少なくとも1つ以上の参照画像が必要な場合のチェック
+	// 少なくとも1つ以上の参照画像が必要な場合のチェック
 	if len(refs) == 0 {
-		return nil, nil, fmt.Errorf("指定されたキャラクターID %v に有効な参照URLが見つかりませんでした", ids)
+		return nil, nil, fmt.Errorf("指定されたキャラクターID [%s] に有効な参照URLが見つかりませんでした", strings.Join(ids, ", "))
 	}
 
 	return refs, descs, nil
