@@ -33,7 +33,7 @@
 ```json
 {
   "title": "（熱いタイトル）",
-  "pages": [
+  "panels": [
     {
       "page": 1,
       "speaker_id": "metan",
