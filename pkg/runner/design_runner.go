@@ -17,8 +17,6 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
-const designPromptTemplate = "Masterpiece character design sheet of %d characters: %s. Each character is distinct, side-by-side, multiple views (front, side, back), standing full body"
-
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
@@ -37,7 +35,7 @@ func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, 
 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
-	// 1. 複数キャラの情報を集約 (CharactersMap などから取得)
+	// 1. 複数キャラの情報を集約 (CharactersMap から取得)
 	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.Characters, charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
@@ -48,7 +46,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		slog.Int("ref_count", len(refs)),
 	)
 
-	// 2. プロンプト構築
+	// 2. プロンプト構築 (人数に応じたレイアウト調整)
 	designPrompt := dr.buildDesignPrompt(descriptions)
 
 	// 3. 生成リクエスト (Seedが0の場合はランダム生成)
@@ -66,7 +64,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		return "", 0, fmt.Errorf("画像の生成に失敗しました: %w", err)
 	}
 
-	// 5. 画像の保存 (GCS: OutputGCS を優先的に使用)
+	// 5. 画像の保存
 	outputPath, err := dr.saveResponseImage(ctx, *resp, charIDs, outputGCS)
 	if err != nil {
 		slog.Error("Failed to save image", "error", err)
@@ -105,21 +103,32 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 
 // buildDesignPrompt キャラクターデザインシートを生成するための詳細なプロンプト文字列を構築します。
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
-	base := fmt.Sprintf(designPromptTemplate, len(descriptions), strings.Join(descriptions, " and "))
+	numChars := len(descriptions)
 
-	// プロンプトの各要素をスライスに集約
+	// 人数に応じたレイアウトの最適化
+	var layout string
+	if numChars > 1 {
+		// 2人以上の場合は情報の密度を優先して正面全身図に絞る
+		layout = "standing front-view full body, side-by-side, distinct characters"
+	} else {
+		// 1人の場合は詳細な三面図を狙う
+		layout = "multiple views (front, side, back), standing full body"
+	}
+
+	base := fmt.Sprintf("Masterpiece character design sheet of %s, %s",
+		strings.Join(descriptions, " and "), layout)
+
+	// プロンプトの各要素を集約
 	promptParts := []string{base}
 	if dr.cfg.StyleSuffix != "" {
 		promptParts = append(promptParts, dr.cfg.StyleSuffix)
 	}
 	promptParts = append(promptParts, "white background", "sharp focus", "4k resolution")
 
-	// カンマとスペースで結合することで、空の要素による不正な出力を防ぐ
 	return strings.Join(promptParts, ", ")
 }
 
-// collectCharacterAssets CharactersMap から、指定されたキャラクター ID の参照 URL と説明を取得します。
-// 有効な参照が見つからない場合は、エラーとともに参照 URL と説明のスライスを返します。
+// collectCharacterAssets キャラクター情報を収集し、参照URLと説明文を返します。
 func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string, []string, error) {
 	var referenceURLs []string
 	var descriptions []string
@@ -132,15 +141,21 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 		}
 		processedIDs[id] = struct{}{}
 
+		// domain.CharactersMap.FindCharacter を使用（大文字小文字フォールバック対応）
 		char := chars.FindCharacter(id)
 		if char == nil {
 			missingIDs = append(missingIDs, id)
 			continue
 		}
 
-		if char.ReferenceURL != "" {
-			referenceURLs = append(referenceURLs, char.ReferenceURL)
+		// デザインシート生成には ReferenceURL が必須（一貫性のため）
+		if char.ReferenceURL == "" {
+			slog.Warn("キャラクターに参照URLがないためスキップします", "id", id)
+			continue
 		}
+
+		referenceURLs = append(referenceURLs, char.ReferenceURL)
+
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
 			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
@@ -149,12 +164,13 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 	}
 
 	if len(missingIDs) > 0 {
-		return nil, nil, fmt.Errorf("指定されたキャラクターIDが見つかりませんでした: %s", strings.Join(missingIDs, ", "))
+		return nil, nil, fmt.Errorf("一部のキャラクターIDが見つかりませんでした: %s", strings.Join(missingIDs, ", "))
 	}
 
 	if len(referenceURLs) == 0 {
-		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
+		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %v)", ids)
 	}
+
 	return referenceURLs, descriptions, nil
 }
 
