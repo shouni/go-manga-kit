@@ -77,13 +77,11 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, imageDir string) (string, error) {
 	extension := getPreferredExtension(resp.MimeType)
 	charTags := strings.Join(charIDs, "_")
-	isCloud := remoteio.IsGCSURI(imageDir) || remoteio.IsS3URI(imageDir)
-
 	filename := fmt.Sprintf("design_%s%s", charTags, extension)
 	var finalPath string
 	var err error
 
-	if isCloud {
+	if remoteio.IsRemoteURI(imageDir) {
 		finalPath, err = url.JoinPath(imageDir, filename)
 	} else {
 		finalPath = filepath.Join(imageDir, filename)
@@ -110,28 +108,38 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	return fmt.Sprintf("%s, %s, white background, sharp focus, 4k resolution", base, dr.cfg.StyleSuffix)
 }
 
-func collectCharacterAssets(chars map[string]domain.Character, ids []string) ([]string, []string, error) {
+// collectCharacterAssets CharactersMap から、指定されたキャラクター ID の参照 URL と説明を取得します。
+// 有効な参照が見つからない場合は、エラーとともに参照 URL と説明のスライスを返します。
+func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string, []string, error) {
 	var refs []string
 	var descs []string
 
 	for _, id := range ids {
-		char, ok := chars[id]
-		if !ok {
+		char := chars.FindCharacter(id)
+		if char == nil {
+			slog.Warn("Character not found, skipping", "id", id)
 			continue
 		}
+
+		// 3. 参照画像URLがあれば収集
 		if char.ReferenceURL != "" {
 			refs = append(refs, char.ReferenceURL)
 		}
+
+		// 4. プロンプト用の説明文を構築
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
+			// 名前 (特徴1, 特徴2) の形式で集約
 			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
 		}
 		descs = append(descs, desc)
 	}
 
+	// 5. 少なくとも1つ以上の参照画像が必要な場合のチェック
 	if len(refs) == 0 {
-		return nil, nil, fmt.Errorf("参照URLを持つキャラクターが見つかりません")
+		return nil, nil, fmt.Errorf("指定されたキャラクターID %v に有効な参照URLが見つかりませんでした", ids)
 	}
+
 	return refs, descs, nil
 }
 
