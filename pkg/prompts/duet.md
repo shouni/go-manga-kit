@@ -35,7 +35,7 @@
 ```json
 {
   "title": "魅力的な学習漫画タイトル",
-  "pages": [
+  "panels": [
     {
       "page": 1,
       "speaker_id": "metan",
