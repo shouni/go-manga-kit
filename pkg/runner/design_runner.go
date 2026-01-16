@@ -17,6 +17,8 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
+const designPromptTemplate = "Masterpiece character design sheet of %d characters: %s. Each character is distinct, side-by-side, multiple views (front, side, back), standing full body"
+
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
@@ -77,13 +79,11 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, imageDir string) (string, error) {
 	extension := getPreferredExtension(resp.MimeType)
 	charTags := strings.Join(charIDs, "_")
-	isCloud := remoteio.IsGCSURI(imageDir) || remoteio.IsS3URI(imageDir)
-
 	filename := fmt.Sprintf("design_%s%s", charTags, extension)
 	var finalPath string
 	var err error
 
-	if isCloud {
+	if remoteio.IsRemoteURI(imageDir) {
 		finalPath, err = url.JoinPath(imageDir, filename)
 	} else {
 		finalPath = filepath.Join(imageDir, filename)
@@ -103,36 +103,59 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 	return finalPath, nil
 }
 
+// buildDesignPrompt キャラクターデザインシートを生成するための詳細なプロンプト文字列を構築します。
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
-	base := fmt.Sprintf("Masterpiece character design sheet of %s, side-by-side, multiple views (front, side, back), standing full body",
-		strings.Join(descriptions, " and "))
-	// 保存されたデフォルトの画風サフィックスを結合
-	return fmt.Sprintf("%s, %s, white background, sharp focus, 4k resolution", base, dr.cfg.StyleSuffix)
+	base := fmt.Sprintf(designPromptTemplate, len(descriptions), strings.Join(descriptions, " and "))
+
+	// プロンプトの各要素をスライスに集約
+	promptParts := []string{base}
+	if dr.cfg.StyleSuffix != "" {
+		promptParts = append(promptParts, dr.cfg.StyleSuffix)
+	}
+	promptParts = append(promptParts, "white background", "sharp focus", "4k resolution")
+
+	// カンマとスペースで結合することで、空の要素による不正な出力を防ぐ
+	return strings.Join(promptParts, ", ")
 }
 
-func collectCharacterAssets(chars map[string]domain.Character, ids []string) ([]string, []string, error) {
-	var refs []string
-	var descs []string
+// collectCharacterAssets CharactersMap から、指定されたキャラクター ID の参照 URL と説明を取得します。
+// 有効な参照が見つからない場合は、エラーとともに参照 URL と説明のスライスを返します。
+func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string, []string, error) {
+	var referenceURLs []string
+	var descriptions []string
+	var missingIDs []string
+	processedIDs := make(map[string]struct{})
 
 	for _, id := range ids {
-		char, ok := chars[id]
-		if !ok {
+		if _, exists := processedIDs[id]; exists {
 			continue
 		}
+		processedIDs[id] = struct{}{}
+
+		char := chars.FindCharacter(id)
+		if char == nil {
+			missingIDs = append(missingIDs, id)
+			continue
+		}
+
 		if char.ReferenceURL != "" {
-			refs = append(refs, char.ReferenceURL)
+			referenceURLs = append(referenceURLs, char.ReferenceURL)
 		}
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
 			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
 		}
-		descs = append(descs, desc)
+		descriptions = append(descriptions, desc)
 	}
 
-	if len(refs) == 0 {
-		return nil, nil, fmt.Errorf("参照URLを持つキャラクターが見つかりません")
+	if len(missingIDs) > 0 {
+		return nil, nil, fmt.Errorf("指定されたキャラクターIDが見つかりませんでした: %s", strings.Join(missingIDs, ", "))
 	}
-	return refs, descs, nil
+
+	if len(referenceURLs) == 0 {
+		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
+	}
+	return referenceURLs, descriptions, nil
 }
 
 func ptrInt64(v int64) *int64 {
