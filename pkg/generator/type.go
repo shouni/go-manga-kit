@@ -26,7 +26,7 @@ type ImagePromptBuilder interface {
 
 	// BuildMangaPagePrompt は、統合された漫画ページ画像用のユーザープロンプトと
 	// システムプロンプトを生成します。
-	BuildMangaPagePrompt(mangaTitle string, panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string)
+	BuildMangaPagePrompt(panels []domain.Panel, refURLs []string, mangaTitle string) (userPrompt string, systemPrompt string)
 }
 
 type MangaGenerator struct {

@@ -78,7 +78,7 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID str
 }
 
 // BuildMangaPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string) {
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, refURLs []string, mangaTitle string) (userPrompt string, systemPrompt string) {
 	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
 	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
