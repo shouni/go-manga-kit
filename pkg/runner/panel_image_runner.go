@@ -14,19 +14,19 @@ import (
 // MangaPanelImageRunner は、台本を元に並列画像生成を管理する実装なのだ。
 type MangaPanelImageRunner struct {
 	cfg       config.Config
-	panelsGen generator.PanelsImageGenerator
+	generator generator.PanelsImageGenerator
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
 func NewMangaPanelImageRunner(
 	cfg config.Config,
-	panelsGen generator.PanelsImageGenerator,
+	generator generator.PanelsImageGenerator,
 	writer remoteio.OutputWriter,
 ) *MangaPanelImageRunner {
 	return &MangaPanelImageRunner{
 		cfg:       cfg,
-		panelsGen: panelsGen,
+		generator: generator,
 		writer:    writer,
 	}
 }
@@ -63,8 +63,7 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 		"total_count", len(allPanels),
 	)
 
-	// 3. GroupGeneratorに委譲するのだ。引数も []domain.Panel になっているはずなのだ
-	images, err := r.panelsGen.Execute(ctx, targetPanels)
+	images, err := r.generator.Execute(ctx, targetPanels)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)
 		return nil, err
