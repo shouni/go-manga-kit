@@ -18,23 +18,23 @@ import (
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	cfg      config.Config
-	mkParser parser.Parser
 	pageGen  *generator.PageGenerator
 	writer   remoteio.OutputWriter
+	mkParser parser.Parser
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	cfg config.Config,
-	mkParser parser.Parser,
-	mangaGen generator.MangaGenerator,
+	pageGen *generator.PageGenerator,
 	writer remoteio.OutputWriter,
+	mkParser parser.Parser,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		cfg:      cfg,
-		mkParser: mkParser,
-		pageGen:  generator.NewPageGenerator(mangaGen, cfg.RateInterval),
+		pageGen:  pageGen,
 		writer:   writer,
+		mkParser: mkParser,
 	}
 }
 

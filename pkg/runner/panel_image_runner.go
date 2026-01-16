@@ -8,21 +8,22 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // MangaPanelImageRunner は、台本を元に並列画像生成を管理する実装なのだ。
 type MangaPanelImageRunner struct {
 	cfg      config.Config
-	groupGen *generator.GroupGenerator // 並列生成とレートリミットを管理するコアなのだ
+	groupGen *generator.GroupGenerator
+	writer   remoteio.OutputWriter
 }
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
-func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerator) *MangaPanelImageRunner {
-	groupGen := generator.NewGroupGenerator(mangaGen, cfg.RateInterval)
-
+func NewMangaPanelImageRunner(cfg config.Config, groupGen *generator.GroupGenerator, writer remoteio.OutputWriter) *MangaPanelImageRunner {
 	return &MangaPanelImageRunner{
 		cfg:      cfg,
 		groupGen: groupGen,
+		writer:   writer,
 	}
 }
 
