@@ -62,7 +62,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse
 		logger := slog.With(
 			"page_number", currentPageNum,
 			"total_pages", totalPages,
-			"panel_Count", len(subManga.Panels),
+			"panel_count", len(subManga.Panels),
 			"seed", defaultSeed,
 		)
 		logger.Info("Starting manga page generation")

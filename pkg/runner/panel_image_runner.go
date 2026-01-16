@@ -11,14 +11,14 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
-// MangaPanelImageRunner は、台本を元に並列画像生成を管理する実装なのだ。
+// MangaPanelImageRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelImageRunner struct {
 	cfg       config.Config
 	generator generator.PanelsImageGenerator
 	writer    remoteio.OutputWriter
 }
 
-// NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
+// NewMangaPanelImageRunner は、依存関係を注入して初期化します。
 func NewMangaPanelImageRunner(
 	cfg config.Config,
 	generator generator.PanelsImageGenerator,
