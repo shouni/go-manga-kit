@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-// FindCharacter は、指定されたID（またはその小文字版）からキャラクター情報を特定します。
+// GetCharacter は、指定されたID（またはその小文字版）からキャラクター情報を特定します。
 // マップに存在する場合はそのポインタを返し、存在しない場合は nil を返します。
-func (m CharactersMap) FindCharacter(ID string) *Character {
+func (m CharactersMap) GetCharacter(ID string) *Character {
 	if m == nil {
 		return nil
 	}
@@ -30,26 +30,40 @@ func (m CharactersMap) FindCharacter(ID string) *Character {
 	return nil
 }
 
-// GetPrimary はマップ内から IsPrimary が true のキャラクターを1人返します。
+// GetDefault はマップ内から IsDefault が true のキャラクターを1人返します。
 // 常に決定論的な結果を得るため、IDでソートした順に走査します。
-func (m CharactersMap) GetPrimary() *Character {
+func (m CharactersMap) GetDefault() *Character {
 	if len(m) == 0 {
 		return nil
 	}
 
-	// 1. キー（ID）を抽出してソート
+	// キー（ID）を抽出してソート
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	// 2. ソート順に走査して最初に見つかった Primary を返す
+	// ソート順に走査して最初に見つかった デフォルト を返す
 	for _, k := range keys {
 		char := m[k]
-		if char.IsPrimary {
+		if char.IsDefault {
 			return &char
 		}
+	}
+
+	return nil
+}
+
+// GetCharacterWithDefault は、指定されたIDからキャラクター情報を取得なければデフォルト
+func (m CharactersMap) GetCharacterWithDefault(ID string) *Character {
+	char := m.GetCharacter(ID)
+	if char != nil {
+		return char
+	}
+	char = m.GetDefault()
+	if char != nil {
+		return char
 	}
 
 	return nil

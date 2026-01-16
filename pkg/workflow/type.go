@@ -4,11 +4,12 @@ import (
 	"context"
 	"time"
 
-	// package imagedom は画像生成サービスに関連するドメインモデルを扱います。
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	// package mangadom は漫画制作キット自体のドメインモデルを扱います。
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
+
+	// package imagedom は画像生成サービスに関連するドメインモデルを扱います。
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
 const (

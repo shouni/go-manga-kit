@@ -3,9 +3,9 @@ package generator
 import (
 	"context"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/gemini-image-kit/pkg/generator"
 )
 
@@ -22,25 +22,25 @@ const (
 // これにより、漫画のパネルやページに対するプロンプト生成ロジックを抽象化します。
 type ImagePromptBuilder interface {
 	// BuildPanelPrompt は、単一の漫画パネル用のユーザープロンプト、システムプロンプト、 seed値を生成します。
-	BuildPanelPrompt(panel domain.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64)
+	BuildPanelPrompt(panel mangadom.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64)
 
 	// BuildMangaPagePrompt は、統合された漫画ページ画像用のユーザープロンプトと システムプロンプトを生成します。
-	BuildMangaPagePrompt(panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string)
+	BuildMangaPagePrompt(panels []mangadom.Panel, refURLs []string) (userPrompt string, systemPrompt string)
 }
 
 // PanelsImageGenerator は、指定されたコンテキスト内で一連のパネルの画像レスポンスを生成するためのインターフェースを定義します。
 type PanelsImageGenerator interface {
-	Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error)
+	Execute(ctx context.Context, panels []mangadom.Panel) ([]*imagedom.ImageResponse, error)
 }
 
 // PagesImageGenerator は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
 // パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
 type PagesImageGenerator interface {
-	Execute(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error)
+	Execute(ctx context.Context, manga mangadom.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
 
 type MangaGenerator struct {
 	ImgGen        generator.ImageGenerator
 	PromptBuilder ImagePromptBuilder
-	Characters    domain.CharactersMap
+	Characters    mangadom.CharactersMap
 }

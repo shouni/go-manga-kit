@@ -10,10 +10,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+
+	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
@@ -155,7 +156,7 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 		}
 		processedIDs[id] = struct{}{}
 
-		char := chars.FindCharacter(id)
+		char := chars.GetCharacter(id)
 		if char == nil {
 			missingIDs = append(missingIDs, id)
 			continue

@@ -43,12 +43,7 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID str
 	var visualParts []string
 
 	// キャラクターの特定とフォールバック処理
-	char := pb.characterMap.FindCharacter(speakerID)
-	// 指定されたキャラが見つからない場合は、Primaryキャラをフォールバックとして取得
-	if char == nil {
-		char = pb.characterMap.GetPrimary()
-	}
-
+	char := pb.characterMap.GetCharacterWithDefault(speakerID)
 	// キャラクター（またはPrimary）が見つかった場合の処理
 	if char != nil {
 		if len(char.VisualCues) > 0 {
@@ -121,9 +116,8 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, refURL
 		}
 
 		// --- キャラクター解決と名前の正規化 ---
-		// IDを名前に変換してAIの理解を助ける。見つからない場合はIDをそのまま使う
 		displayName := panel.SpeakerID
-		if char := pb.characterMap.FindCharacter(panel.SpeakerID); char != nil {
+		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
 			displayName = char.Name
 		}
 

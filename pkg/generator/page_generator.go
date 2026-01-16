@@ -108,7 +108,7 @@ func (pg *PageGenerator) collectReferences(pages []domain.Panel) []string {
 	var urls []string
 
 	for _, p := range pages {
-		char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
+		char := pg.mangaGenerator.Characters.GetCharacter(p.SpeakerID)
 
 		// 1. キャラクターのマスター参照画像
 		if char != nil && char.ReferenceURL != "" {
@@ -131,15 +131,15 @@ func (pg *PageGenerator) collectReferences(pages []domain.Panel) []string {
 
 // determineDefaultSeed は、ページの代表的なSeed値を優先順位に基づいて決定します。
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) *int64 {
-	// 1. PrimaryキャラクターのSeedを最優先で試みる
-	if primaryChar := pg.mangaGenerator.Characters.GetPrimary(); primaryChar != nil && primaryChar.Seed > 0 {
-		s := primaryChar.Seed
+	// 1. defaultキャラクターのSeedを最優先で試みる
+	if defaultChar := pg.mangaGenerator.Characters.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
+		s := defaultChar.Seed
 		return &s
 	}
 
-	// 2. Primaryが見つからない場合、登場順で最初の有効なSeedを持つキャラクターを探す
+	// 2. defaultが見つからない場合、登場順で最初の有効なSeedを持つキャラクターを探す
 	for _, p := range panels {
-		char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
+		char := pg.mangaGenerator.Characters.GetCharacter(p.SpeakerID)
 		if char != nil && char.Seed > 0 {
 			s := char.Seed
 			return &s
