@@ -32,13 +32,13 @@ type ImagePromptBuilder interface {
 	BuildMangaPagePrompt(panels []domain.Panel, refURLs []string, mangaTitle string) (userPrompt string, systemPrompt string)
 }
 
-// PanelsImageGenerator defines an interface for generating image responses for a set of panels within a given context.
+// PanelsImageGenerator は、指定されたコンテキスト内で一連のパネルの画像レスポンスを生成するためのインターフェースを定義します。
 type PanelsImageGenerator interface {
 	Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error)
 }
 
-// PagesImageGenerator generates image data for manga pages based on the given manga response.
-// It processes panels and outputs a slice of image responses or an error on failure.
+// PagesImageGenerator は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
+// パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
 type PagesImageGenerator interface {
 	Execute(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
