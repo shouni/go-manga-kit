@@ -1,6 +1,9 @@
 package generator
 
 import (
+	"context"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
 	"github.com/shouni/gemini-image-kit/pkg/generator"
@@ -27,6 +30,17 @@ type ImagePromptBuilder interface {
 	// BuildMangaPagePrompt は、統合された漫画ページ画像用のユーザープロンプトと
 	// システムプロンプトを生成します。
 	BuildMangaPagePrompt(panels []domain.Panel, refURLs []string, mangaTitle string) (userPrompt string, systemPrompt string)
+}
+
+// PanelsImageGenerator defines an interface for generating image responses for a set of panels within a given context.
+type PanelsImageGenerator interface {
+	Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error)
+}
+
+// PagesImageGenerator generates image data for manga pages based on the given manga response.
+// It processes panels and outputs a slice of image responses or an error on failure.
+type PagesImageGenerator interface {
+	Execute(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
 
 type MangaGenerator struct {

@@ -26,8 +26,8 @@ func NewPageGenerator(mangaGenerator MangaGenerator, interval time.Duration) *Pa
 	}
 }
 
-// ExecuteMangaPages は全ページを適切なチャンクに分割し、順次生成処理を実行します。
-func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
+// Execute は全ページを適切なチャンクに分割し、順次生成処理を実行します。
+func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	var allResponses []*imagedom.ImageResponse
 
 	if len(manga.Panels) == 0 {

@@ -38,8 +38,8 @@ func NewGroupGenerator(mangaGenerator MangaGenerator, interval time.Duration) *G
 	}
 }
 
-// ExecutePanelGroup は、並列処理を用いてパネル群を生成します。
-func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
+// Execute は、並列処理を用いてパネル群を生成します。
+func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
 	// プロンプトビルダーの取得
 	pb := gg.mangaGenerator.PromptBuilder
 	images := make([]*imagedom.ImageResponse, len(panels))

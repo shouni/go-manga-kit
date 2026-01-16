@@ -18,7 +18,7 @@ import (
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	cfg      config.Config
-	pageGen  *generator.PageGenerator
+	pagesGen generator.PagesImageGenerator
 	writer   remoteio.OutputWriter
 	mkParser parser.Parser
 }
@@ -26,13 +26,13 @@ type MangaPageRunner struct {
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	cfg config.Config,
-	pageGen *generator.PageGenerator,
+	pagesGen generator.PagesImageGenerator,
 	writer remoteio.OutputWriter,
 	mkParser parser.Parser,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		cfg:      cfg,
-		pageGen:  pageGen,
+		pagesGen: pagesGen,
 		writer:   writer,
 		mkParser: mkParser,
 	}
@@ -55,7 +55,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownPath string) ([]*imag
 	)
 
 	// ページ生成エンジンを実行し、画像レスポンス群を取得
-	return r.pageGen.ExecuteMangaPages(ctx, *manga)
+	return r.pagesGen.Execute(ctx, *manga)
 }
 
 // RunAndSave は、画像の生成から指定ディレクトリへの保存までを一括で行います。
