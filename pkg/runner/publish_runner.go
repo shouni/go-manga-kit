@@ -6,8 +6,6 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
-
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
 // DefaultPublisherRunner は pkg/publisher を利用した標準実装なのだ。
@@ -23,10 +21,10 @@ func NewDefaultPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher)
 	}
 }
 
-func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error) {
+func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (publisher.PublishResult, error) {
 	opts := publisher.Options{
 		OutputDir: outputDir,
 	}
 
-	return pr.publisher.Publish(ctx, manga, images, opts)
+	return pr.publisher.Publish(ctx, manga, opts)
 }

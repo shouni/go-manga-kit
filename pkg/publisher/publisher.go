@@ -1,7 +1,6 @@
 package publisher
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -13,7 +12,6 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-text-format/pkg/md2htmlrunner"
 )
@@ -62,57 +60,52 @@ func NewMangaPublisher(
 	}
 }
 
-// Publish は画像の保存、Markdownの構築、HTML変換を一括して実行し、生成されたファイル情報を返却します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) (PublishResult, error) {
+// Publish は既存の画像パス（ReferenceURL）を参照して Markdown を構築し、HTML への変換・保存を実行します。
+func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts Options) (PublishResult, error) {
 	result := PublishResult{}
 
-	// 1. 出力パスの解決
+	if manga == nil {
+		return result, fmt.Errorf("manga データが nil です")
+	}
+
+	// 1. 出力パス（Markdown）の解決
 	markdown, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultMangaPlotName)
 	if err != nil {
-		return result, err
+		return result, fmt.Errorf("Markdown 出力パスの解決に失敗: %w", err)
 	}
 	result.MarkdownPath = markdown
 
-	// 画像ディレクトリのベースパスを作成
-	imgDir, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultImageDir)
-	if err != nil {
-		return result, err
+	// 2. 構造体内の ReferenceURL から Markdown 用の相対パスリストを作成
+	imagePaths := make([]string, 0, len(manga.Panels))
+	for _, panel := range manga.Panels {
+		// ReferenceURL (例: gs://bucket/images/panel_1.png) からファイル名を取得し
+		// images/panel_1.png のような相対パスを構築します
+		relPath := path.Join(asset.DefaultImageDir, filepath.Base(panel.ReferenceURL))
+		imagePaths = append(imagePaths, relPath)
 	}
+	result.ImagePaths = imagePaths
 
-	// 2. 画像の保存
-	savedPaths, err := p.saveImages(ctx, images, imgDir)
-	if err != nil {
-		return result, fmt.Errorf("画像の書き込みに失敗しました: %w", err)
-	}
-	result.ImagePaths = savedPaths
+	// 3. Markdown テキストの構築
+	content := p.buildMarkdown(manga, imagePaths)
 
-	// 3. Markdown用相対パスの作成
-	relativePaths := make([]string, 0, len(savedPaths))
-	for _, pathStr := range savedPaths {
-		relPath := path.Join(asset.DefaultImageDir, filepath.Base(pathStr))
-		relativePaths = append(relativePaths, relPath)
-	}
-
-	// 4. Markdownテキストの構築
-	content := p.buildMarkdown(manga, relativePaths)
-
-	// 5. Markdownファイルの書き出し
+	// 4. Markdown ファイルの書き出し
+	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdown)
 	if err := p.writer.Write(ctx, markdown, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
-		return result, fmt.Errorf("markdownファイルの書き込みに失敗しました: %w", err)
+		return result, fmt.Errorf("Markdown ファイルの書き込みに失敗: %w", err)
 	}
 
-	// 6. HTML変換と保存
+	// 5. HTML 変換と保存
 	if p.htmlRunner != nil {
-		slog.Info("Converting to Webtoon HTML", "title", manga.Title)
+		slog.InfoContext(ctx, "HTML への変換を開始します", "title", manga.Title)
 		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
 		if err != nil {
-			return result, fmt.Errorf("HTMLの変換に失敗しました: %w", err)
+			return result, fmt.Errorf("HTML 変換に失敗: %w", err)
 		}
 
-		// Markdownファイルのパスから拡張子を置換し、HTMLファイルのパスを生成します。
+		// Markdown のパスをベースに .html 拡張子へ置換
 		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
-			return result, fmt.Errorf("HTMLファイルの書き込みに失敗しました: %w", err)
+			return result, fmt.Errorf("HTML ファイルの書き込みに失敗: %w", err)
 		}
 		result.HTMLPath = htmlPath
 	}
@@ -120,58 +113,55 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse
 	return result, nil
 }
 
-// saveImages 指定されたディレクトリまたはリモートストレージ（GCS等）に画像データを保存し、保存先のパス一覧を返却します。
-func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.ImageResponse, baseDir string) ([]string, error) {
-	var paths []string
-	for i, img := range images {
-		if img == nil || len(img.Data) == 0 {
-			continue
-		}
-		name, err := asset.GenerateIndexedPath(asset.DefaultPanelFileName, i+1)
-		if err != nil {
-			return nil, fmt.Errorf("パネル画像名の生成に失敗しました: %w", err)
-		}
-		fullPath, err := asset.ResolveOutputPath(baseDir, name)
-		if err != nil {
-			return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
-		}
-
-		if err := p.writer.Write(ctx, fullPath, bytes.NewReader(img.Data), "image/png"); err != nil {
-			return nil, fmt.Errorf("画像の書き込みに失敗しました %s: %w", fullPath, err)
-		}
-		paths = append(paths, fullPath)
-	}
-	return paths, nil
-}
-
-// buildMarkdown 指定された漫画データ（manga）から、Markdown形式のコンテンツを生成して返します。
-func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
+// buildMarkdown は漫画データと画像相対パスから Markdown 形式の文字列を生成します。
+func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-	for i, page := range manga.Panels {
+
+	if manga.Description != "" {
+		sb.WriteString(fmt.Sprintf("> %s\n\n", manga.Description))
+	}
+
+	for i, panel := range manga.Panels {
 		img := placeholder
-		if i < len(imagePaths) {
+		if i < len(imagePaths) && imagePaths[i] != "" {
 			img = imagePaths[i]
 		}
-		// セリフまたはビジュアルアンカーのいずれかが存在すればパネルとして出力する
-		if page.Dialogue != "" || page.VisualAnchor != "" {
-			sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
-			character := p.characters.GetCharacterWithDefault(page.SpeakerID)
 
-			var speakerID string
+		// パネル情報の出力（セリフかアンカーがある場合）
+		if panel.Dialogue != "" || panel.VisualAnchor != "" {
+			// 1. パネル見出しと画像
+			sb.WriteString(fmt.Sprintf("## Panel %d\n", i+1))
+			sb.WriteString(fmt.Sprintf("![Panel Image](%s)\n\n", img))
+
+			//// 2. スタイル・設定（HTML変換用メタデータ）
+			//// リスト形式ではなく、あえて独立したセクション、あるいは特定の記法にすることで
+			//// md2html側で正規表現などで一括置換・スタイル適用しやすくします
+			//sb.WriteString("### Metadata\n")
+			//sb.WriteString(p.getDialogueStyle(i))
+
+			// 3. 話者とセリフ（引用符を使うことでシナリオ感を演出）
+			character := p.characters.GetCharacterWithDefault(panel.SpeakerID)
+			speaker := panel.SpeakerID
 			if character != nil {
-				speakerID = character.ID
+				speaker = character.Name
 			}
-			if speakerID != "" {
-				sb.WriteString(fmt.Sprintf("- SpeakerID: %s\n", speakerID))
+
+			sb.WriteString(fmt.Sprintf("- **Speaker**: %s\n", speaker))
+
+			if panel.Dialogue != "" {
+				cleanDialogue := strings.TrimSpace(tagRegex.ReplaceAllString(panel.Dialogue, ""))
+				// セリフを引用ブロックにすることで、HTML化の際に見栄えが良くなります
+				sb.WriteString(fmt.Sprintf("- **Dialogue**: \n> %s\n", cleanDialogue))
 			}
-			if page.Dialogue != "" {
-				sb.WriteString(fmt.Sprintf("- Dialogue: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))))
+
+			if panel.VisualAnchor != "" {
+				cleanAnchor := strings.TrimSpace(tagRegex.ReplaceAllString(panel.VisualAnchor, ""))
+				// 描画指示は補足情報としてイタリックに
+				sb.WriteString(fmt.Sprintf("- *Visual Anchor*: %s\n", cleanAnchor))
 			}
-			if page.VisualAnchor != "" {
-				sb.WriteString(fmt.Sprintf("- VisualAnchor: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.VisualAnchor, ""))))
-			}
-			sb.WriteString("\n")
+
+			sb.WriteString("\n---\n\n") // パネルごとの区切り線
 		}
 	}
 	return sb.String()

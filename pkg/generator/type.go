@@ -36,7 +36,7 @@ type PanelsImageGenerator interface {
 // PagesImageGenerator は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
 // パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
 type PagesImageGenerator interface {
-	Execute(ctx context.Context, manga mangadom.MangaResponse) ([]*imagedom.ImageResponse, error)
+	Execute(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
 
 type MangaGenerator struct {
