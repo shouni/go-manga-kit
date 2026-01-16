@@ -60,7 +60,6 @@ func NewMangaPublisher(
 	}
 }
 
-// Publish は画像の保存、Markdownの構築、HTML変換を一括して実行し、生成されたファイル情報を返却します。
 // Publish は既存の画像パス（ReferenceURL）を参照して Markdown を構築し、HTML への変換・保存を実行します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts Options) (PublishResult, error) {
 	result := PublishResult{}
