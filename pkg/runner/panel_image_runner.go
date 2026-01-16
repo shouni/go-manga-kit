@@ -72,3 +72,8 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 	slog.Info("Successfully generated panels", "count", len(images))
 	return images, nil
 }
+
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga domain.MangaResponse, targetIndices []int) ([]string, error) {
+	// TODO::あとで画像ファイルとページ構成のjson出力
+	return nil, nil
+}
