@@ -44,19 +44,21 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID str
 	var visualParts []string
 	var targetSeed int64
 
-	if char, ok := pb.characterMap[speakerID]; ok {
+	// キャラクターの特定とフォールバック処理
+	char := pb.characterMap.FindCharacter(speakerID)
+	// 指定されたキャラが見つからない場合は、Primaryキャラをフォールバックとして取得
+	if char == nil {
+		char = pb.characterMap.GetPrimary()
+	}
+
+	// キャラクター（またはPrimary）が見つかった場合の処理
+	if char != nil {
 		if len(char.VisualCues) > 0 {
 			visualParts = append(visualParts, char.VisualCues...)
 		}
 		targetSeed = char.Seed
 	} else {
-		primary := pb.characterMap.GetPrimary()
-		if primary != nil {
-			if len(primary.VisualCues) > 0 {
-				visualParts = append(visualParts, primary.VisualCues...)
-			}
-			targetSeed = primary.Seed
-		}
+		targetSeed = domain.GetSeedFromString(speakerID)
 	}
 
 	// アクション/ビジュアルアンカーの追加

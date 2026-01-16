@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -60,4 +62,13 @@ func GetCharacters(charactersJSON []byte) (CharactersMap, error) {
 		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
 	}
 	return chars, nil
+}
+
+// GetSeedFromString は文字列から決定論的なシード値を生成します。
+func GetSeedFromString(s string) int64 {
+	if s == "" {
+		return 0
+	}
+	hash := sha256.Sum256([]byte(s))
+	return int64(binary.BigEndian.Uint64(hash[:8]))
 }
