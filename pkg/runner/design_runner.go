@@ -19,9 +19,9 @@ import (
 
 const (
 	// プロンプト構成用の定数
-	designPromptBaseTemplate = "Masterpiece character design sheet of %s, %s"
-	designLayoutMultiChar    = "split composition with two distinct areas, left side features character 1, right side features character 2, NO shared features, separate individual appearances, standing front-view"
-	designLayoutSingleChar   = "multiple views (front, side, back), standing full body"
+	designPromptBaseTemplate = "Masterpiece character design sheet of %s"
+	// 共通のレイアウト: 三面図をデフォルトにする
+	designLayoutDefault = "multiple views (front, side, back), standing full body"
 )
 
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
@@ -42,7 +42,7 @@ func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, 
 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
-	// 1. 複数キャラの情報を集約 (CharactersMap から取得)
+	// 1. 複数キャラの情報を集約
 	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.Characters, charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
@@ -53,10 +53,10 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		slog.Int("ref_count", len(refs)),
 	)
 
-	// 2. プロンプト構築 (人数に応じたレイアウト調整)
+	// 2. プロンプト構築
 	designPrompt := dr.buildDesignPrompt(descriptions)
 
-	// 3. 生成リクエスト (Seedが0の場合はランダム生成)
+	// 3. 生成リクエスト
 	pageReq := imgdom.ImagePageRequest{
 		Prompt:        designPrompt,
 		ReferenceURLs: refs,
@@ -64,7 +64,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		Seed:          ptrInt64(seed),
 	}
 
-	// 4. 生成実行 (Gemini Nano Banana 呼び出し)
+	// 4. 生成実行
 	resp, err := dr.mangaGen.ImgGen.GenerateMangaPage(ctx, pageReq)
 	if err != nil {
 		slog.Error("Design generation failed", "error", err)
@@ -112,21 +112,24 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	numChars := len(descriptions)
 
-	// 人数に応じたレイアウトの最適化
-	var layout string
+	var subjects string
 	if numChars > 1 {
-		// 2人以上の場合は情報の密度を優先して正面全身図に絞る
-		layout = designLayoutMultiChar
+		// 複数人の場合はそれぞれの特徴をブラケットで囲み、別人であることを強調する
+		var sb strings.Builder
+		for i, d := range descriptions {
+			sb.WriteString(fmt.Sprintf("[Subject %d: %s] ", i+1, d))
+		}
+		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, sb.String())
 	} else {
-		// 1人の場合は詳細な三面図を狙う
-		layout = designLayoutSingleChar
+		subjects = descriptions[0]
 	}
 
-	base := fmt.Sprintf(designPromptBaseTemplate,
-		strings.Join(descriptions, " and "), layout)
+	// レイアウト指示とベースプロンプトを結合
+	base := fmt.Sprintf(designPromptBaseTemplate, subjects)
+	layout := fmt.Sprintf("Layout: %s, side-by-side, separate character charts", designLayoutDefault)
 
-	// プロンプトの各要素を集約
-	promptParts := []string{base}
+	// 各要素をカンマで集約
+	promptParts := []string{base, layout}
 	if dr.cfg.StyleSuffix != "" {
 		promptParts = append(promptParts, dr.cfg.StyleSuffix)
 	}
@@ -173,7 +176,6 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 	}
 
 	if len(referenceURLs) == 0 {
-		// エラーメッセージの可読性向上: strings.Join でカンマ区切りにする
 		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
 	}
 
