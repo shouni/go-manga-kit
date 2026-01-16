@@ -51,5 +51,5 @@ type PageImageRunner interface {
 
 // PublishRunner は、生成された画像と漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
 type PublishRunner interface {
-	Run(ctx context.Context, manga mangadom.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
+	Run(ctx context.Context, manga *mangadom.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
 }

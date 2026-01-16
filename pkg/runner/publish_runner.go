@@ -23,7 +23,7 @@ func NewDefaultPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher)
 	}
 }
 
-func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error) {
+func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error) {
 	opts := publisher.Options{
 		OutputDir: outputDir,
 	}

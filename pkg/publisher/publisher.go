@@ -63,7 +63,7 @@ func NewMangaPublisher(
 }
 
 // Publish は画像の保存、Markdownの構築、HTML変換を一括して実行し、生成されたファイル情報を返却します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) (PublishResult, error) {
+func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, images []*imagedom.ImageResponse, opts Options) (PublishResult, error) {
 	result := PublishResult{}
 
 	// 1. 出力パスの解決
@@ -145,7 +145,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 }
 
 // buildMarkdown 指定された漫画データ（manga）から、Markdown形式のコンテンツを生成して返します。
-func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
+func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
 	for i, page := range manga.Panels {
