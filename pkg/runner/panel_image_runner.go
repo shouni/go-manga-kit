@@ -107,7 +107,7 @@ func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.
 
 	slog.InfoContext(ctx, "更新された台本を保存しています", "path", plotPath)
 	if err := r.writer.Write(ctx, plotPath, bytes.NewReader(plotData), "application/json"); err != nil {
-		return fmt.Errorf("プロットファイルの台本に失敗しました: %w", err)
+		return fmt.Errorf("プロットファイルの保存に失敗しました: %w", err)
 	}
 
 	return nil

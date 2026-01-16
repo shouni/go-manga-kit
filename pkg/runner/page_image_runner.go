@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
@@ -49,20 +48,14 @@ func (r *MangaPageRunner) Run(ctx context.Context, plotPath string) ([]*imagedom
 	}
 	defer rc.Close()
 
-	data, err := io.ReadAll(rc)
-	if err != nil {
-		return nil, fmt.Errorf("プロットファイルの読み込みに失敗しました: %w", err)
-	}
-
-	// 2. JSONを構造体にデコード
 	var manga domain.MangaResponse
-	if err := json.Unmarshal(data, &manga); err != nil {
-		return nil, fmt.Errorf("プロットデータのJSONパースに失敗しました: %w", err)
+	if err := json.NewDecoder(rc).Decode(&manga); err != nil {
+		return nil, fmt.Errorf("プロットデータのJSONデコードに失敗しました: %w", err)
 	}
 
 	// 3. バリデーション
 	if len(manga.Panels) == 0 {
-		return nil, fmt.Errorf("マンガのパネルデータが空なのだ。生成を中止します")
+		return nil, fmt.Errorf("プロットファイルにパネルデータが含まれていません。生成を中止します")
 	}
 
 	slog.InfoContext(ctx, "MangaPageRunner: プロット読み込み完了",
