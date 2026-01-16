@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -42,7 +43,7 @@ func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, 
 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
-	// 1. 複数キャラの情報を集約 (CharactersMap から取得)
+	// 1. 複数キャラの情報を集約
 	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.Characters, charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
@@ -56,7 +57,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	// 2. プロンプト構築
 	designPrompt := dr.buildDesignPrompt(descriptions)
 	if designPrompt == "" {
-		return "", 0, fmt.Errorf("有効なプロンプトを生成できませんでした")
+		return "", 0, fmt.Errorf("キャラクター情報が空のため、プロンプトを生成できませんでした")
 	}
 
 	// 3. 生成リクエスト
@@ -67,7 +68,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		Seed:          ptrInt64(seed),
 	}
 
-	// 4. 生成実行 (Gemini Nano Banana 呼び出し)
+	// 4. 生成実行
 	resp, err := dr.mangaGen.ImgGen.GenerateMangaPage(ctx, pageReq)
 	if err != nil {
 		slog.Error("Design generation failed", "error", err)
@@ -121,23 +122,28 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 
 	var subjects string
 	if numChars > 1 {
-		// 複数人の場合はそれぞれの特徴をブラケットで囲み、別人であることを強調
 		var sb strings.Builder
 		for i, d := range descriptions {
-			sb.WriteString(fmt.Sprintf("[Subject %d: %s] ", i+1, d))
+			sb.WriteString("[Subject ")
+			sb.WriteString(strconv.Itoa(i + 1))
+			sb.WriteString(": ")
+			sb.WriteString(d)
+			sb.WriteString("] ")
 		}
-		// 末尾の余計な空白を TrimSpace で除去
-		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, strings.TrimSpace(sb.String()))
+
+		// 末尾の空白を除去して結合
+		result := sb.String()
+		if len(result) > 0 {
+			result = result[:len(result)-1]
+		}
+		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, result)
 	} else {
-		// インデックス外アクセスを回避した安全な取得
 		subjects = descriptions[0]
 	}
 
-	// レイアウト指示とベースプロンプトを定数から結合
 	base := fmt.Sprintf(designPromptBaseTemplate, subjects)
 	layout := fmt.Sprintf(designLayoutPromptFormat, designLayoutDefault)
 
-	// 各要素をカンマで集約
 	promptParts := []string{base, layout}
 	if dr.cfg.StyleSuffix != "" {
 		promptParts = append(promptParts, dr.cfg.StyleSuffix)
