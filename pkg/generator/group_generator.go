@@ -53,7 +53,7 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, panels []domain
 			}
 
 			// 1. キャラクター解決
-			char := gg.resolveAndGetCharacter(panel, gg.mangaGenerator.Characters)
+			char := gg.resolveAndGetCharacter(panel)
 
 			// 2. プロンプト構築 (最新の BuildPanelPrompt 仕様に合わせる)
 			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
@@ -98,7 +98,8 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, panels []domain
 }
 
 // resolveAndGetCharacter は、与えられたページ情報から最適なキャラクターを決定します。
-func (gg *GroupGenerator) resolveAndGetCharacter(panel domain.Panel, charMap domain.CharactersMap) domain.Character {
+func (gg *GroupGenerator) resolveAndGetCharacter(panel domain.Panel) domain.Character {
+	charMap := gg.mangaGenerator.Characters
 	// 1. IDでの直接検索
 	char := charMap.FindCharacter(panel.SpeakerID)
 	if char != nil {
