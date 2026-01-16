@@ -110,27 +110,30 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, panels []d
 		bigPanelIndex = rand.IntN(numPanels)
 	}
 
-	// 各パネルの指示
+	// 各パネルの指示を構築
 	for i, panel := range panels {
 		panelNum := i + 1
 		isBig := (i == bigPanelIndex)
 
 		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
 
-		// 参照指示を具体化: "posing and layout" を明示してAIの精度を向上させます
+		// 参照指示 (posing and layout)
 		if i < len(refURLs) {
 			us.WriteString(fmt.Sprintf("- REFERENCE: Use input_file_%d for visual guidance on posing and layout.\n", panelNum))
 		}
 
-		// SpeakerID を Name に変換して AI に伝える
-		character := pb.characterMap.FindCharacter(panel.SpeakerID)
-		// アクション指示の中にある SpeakerID も名前に置換して AI の混乱を防ぐ
-		sceneDescription := panel.VisualAnchor
-		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, character.Name)
+		// --- キャラクター解決と名前の正規化 ---
+		// IDを名前に変換してAIの理解を助ける。見つからない場合はIDをそのまま使う
+		displayName := panel.SpeakerID
+		if char := pb.characterMap.FindCharacter(panel.SpeakerID); char != nil {
+			displayName = char.Name
+		}
+
+		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
 
 		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", sceneDescription))
 		if panel.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", character.Name, panel.Dialogue))
+			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", displayName, panel.Dialogue))
 		}
 		us.WriteString("\n")
 	}
