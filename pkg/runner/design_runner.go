@@ -106,7 +106,16 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 // buildDesignPrompt キャラクターデザインシートを生成するための詳細なプロンプト文字列を構築します。
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	base := fmt.Sprintf(designPromptTemplate, len(descriptions), strings.Join(descriptions, " and "))
-	return fmt.Sprintf("%s, %s, white background, sharp focus, 4k resolution", base, dr.cfg.StyleSuffix)
+
+	// プロンプトの各要素をスライスに集約
+	promptParts := []string{base}
+	if dr.cfg.StyleSuffix != "" {
+		promptParts = append(promptParts, dr.cfg.StyleSuffix)
+	}
+	promptParts = append(promptParts, "white background", "sharp focus", "4k resolution")
+
+	// カンマとスペースで結合することで、空の要素による不正な出力を防ぐ
+	return strings.Join(promptParts, ", ")
 }
 
 // collectCharacterAssets CharactersMap から、指定されたキャラクター ID の参照 URL と説明を取得します。
@@ -114,20 +123,25 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string, []string, error) {
 	var refs []string
 	var descs []string
+	processedIDs := make(map[string]struct{}) // 処理済みIDを記録するためのセット
 
 	for _, id := range ids {
+		if _, exists := processedIDs[id]; exists {
+			continue // 既に処理済みのIDはスキップ
+		}
+		processedIDs[id] = struct{}{}
+
 		char := chars.FindCharacter(id)
 		if char == nil {
 			slog.Info("指定されたキャラクターIDが見つからないためスキップします", "id", id)
 			continue
 		}
 
-		// 参照画像URLがあれば収集
+		// (以降のロジックは変更なし)
 		if char.ReferenceURL != "" {
 			refs = append(refs, char.ReferenceURL)
 		}
 
-		// プロンプト用の説明文を構築
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
 			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
@@ -135,11 +149,9 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 		descs = append(descs, desc)
 	}
 
-	// 少なくとも1つ以上の参照画像が必要な場合のチェック
 	if len(refs) == 0 {
 		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
 	}
-
 	return refs, descs, nil
 }
 
