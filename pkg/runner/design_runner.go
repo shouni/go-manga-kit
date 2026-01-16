@@ -20,8 +20,8 @@ import (
 const (
 	// プロンプト構成用の定数
 	designPromptBaseTemplate = "Masterpiece character design sheet of %s"
-	// 共通のレイアウト: 三面図をデフォルトにする
-	designLayoutDefault = "multiple views (front, side, back), standing full body"
+	designLayoutDefault      = "multiple views (front, side, back), standing full body"
+	designLayoutPromptFormat = "Layout: %s, side-by-side, separate character charts"
 )
 
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
@@ -42,7 +42,7 @@ func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, 
 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
-	// 1. 複数キャラの情報を集約
+	// 1. 複数キャラの情報を集約 (CharactersMap から取得)
 	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.Characters, charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
@@ -55,6 +55,9 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 
 	// 2. プロンプト構築
 	designPrompt := dr.buildDesignPrompt(descriptions)
+	if designPrompt == "" {
+		return "", 0, fmt.Errorf("有効なプロンプトを生成できませんでした")
+	}
 
 	// 3. 生成リクエスト
 	pageReq := imgdom.ImagePageRequest{
@@ -64,7 +67,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		Seed:          ptrInt64(seed),
 	}
 
-	// 4. 生成実行
+	// 4. 生成実行 (Gemini Nano Banana 呼び出し)
 	resp, err := dr.mangaGen.ImgGen.GenerateMangaPage(ctx, pageReq)
 	if err != nil {
 		slog.Error("Design generation failed", "error", err)
@@ -111,22 +114,28 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 // buildDesignPrompt キャラクターデザインシートを生成するための詳細なプロンプト文字列を構築します。
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	numChars := len(descriptions)
+	if numChars == 0 {
+		slog.Warn("buildDesignPrompt called with empty descriptions")
+		return ""
+	}
 
 	var subjects string
 	if numChars > 1 {
-		// 複数人の場合はそれぞれの特徴をブラケットで囲み、別人であることを強調する
+		// 複数人の場合はそれぞれの特徴をブラケットで囲み、別人であることを強調
 		var sb strings.Builder
 		for i, d := range descriptions {
 			sb.WriteString(fmt.Sprintf("[Subject %d: %s] ", i+1, d))
 		}
-		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, sb.String())
+		// 末尾の余計な空白を TrimSpace で除去
+		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, strings.TrimSpace(sb.String()))
 	} else {
+		// インデックス外アクセスを回避した安全な取得
 		subjects = descriptions[0]
 	}
 
-	// レイアウト指示とベースプロンプトを結合
+	// レイアウト指示とベースプロンプトを定数から結合
 	base := fmt.Sprintf(designPromptBaseTemplate, subjects)
-	layout := fmt.Sprintf("Layout: %s, side-by-side, separate character charts", designLayoutDefault)
+	layout := fmt.Sprintf(designLayoutPromptFormat, designLayoutDefault)
 
 	// 各要素をカンマで集約
 	promptParts := []string{base, layout}
