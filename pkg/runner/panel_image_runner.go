@@ -35,8 +35,7 @@ func NewMangaPanelImageRunner(
 	}
 }
 
-// Run は、台本(MangaResponse)を受け取り、パネルの画像を生成するのだ。
-// func (r *MangaPanelImageRunner) Run(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error) {
+// Run は、台本(MangaResponse)を受け取り、パネルの画像を生成します。
 func (r *MangaPanelImageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	slog.Info("Starting parallel image generation")
 
