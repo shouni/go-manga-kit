@@ -8,13 +8,12 @@ import (
 )
 
 const (
+	// NegativePanelPrompt は、パネル用のネガティブプロンプトです。
+	NegativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
+	// NegativeMangaPagePrompt は、ページ用のネガティブプロンプトです。
+	NegativeMangaPagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
 	// CinematicTags クオリティ向上のための共通タグ
 	CinematicTags = "cinematic composition, high resolution, sharp focus, 8k"
-
-	// DefaultNegativePanelPrompt は、パネル用のネガティブプロンプトです。
-	DefaultNegativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
-	// DefaultNegativeMangaPagePrompt は、ページ用のネガティブプロンプトです。
-	DefaultNegativeMangaPagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
 
 	// MangaStructureHeader は作画の全体構造を定義します。
 	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
@@ -56,7 +55,6 @@ func BuildCharacterIdentitySection(chars domain.CharactersMap) string {
 		if len(char.VisualCues) > 0 {
 			cues = strings.Join(char.VisualCues, ", ")
 		}
-		// SUBJECT [名前] の形式でAIにアイデンティティを固定させるのだ
 		sb.WriteString(fmt.Sprintf("- SUBJECT [%s]: VISUAL_FEATURES: {%s}\n", char.Name, cues))
 	}
 	sb.WriteString("\n")

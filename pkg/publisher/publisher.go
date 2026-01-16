@@ -156,10 +156,7 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 		// セリフまたはビジュアルアンカーのいずれかが存在すればパネルとして出力する
 		if page.Dialogue != "" || page.VisualAnchor != "" {
 			sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
-			character := p.characters.FindCharacter(page.SpeakerID)
-			if character == nil {
-				character = p.characters.GetPrimary()
-			}
+			character := p.characters.GetCharacterWithDefault(page.SpeakerID)
 
 			var speakerID string
 			if character != nil {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sort"
 	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -18,23 +17,13 @@ import (
 type GroupGenerator struct {
 	mangaGenerator MangaGenerator
 	limiter        *rate.Limiter
-	primaryChar    *domain.Character // 優先的にフォールバック先となる Primary キャラクター
-	sortedCharKeys []string          // 決定論的な解決のために事前にソートされたIDリスト
 }
 
 // NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
 func NewGroupGenerator(mangaGenerator MangaGenerator, interval time.Duration) *GroupGenerator {
-	keys := make([]string, 0, len(mangaGenerator.Characters))
-	for k := range mangaGenerator.Characters {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
 	return &GroupGenerator{
 		mangaGenerator: mangaGenerator,
 		limiter:        rate.NewLimiter(rate.Every(interval), 2),
-		primaryChar:    mangaGenerator.Characters.GetPrimary(),
-		sortedCharKeys: keys,
 	}
 }
 
@@ -52,10 +41,14 @@ func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				return err
 			}
 
-			// 1. キャラクター解決
-			char := gg.resolveAndGetCharacter(panel)
+			// キャラクター解決
+			char := gg.mangaGenerator.Characters.GetCharacterWithDefault(panel.SpeakerID)
+			if char == nil {
+				// SpeakerIDが見つからず、デフォルトキャラも存在しない場合はエラーとする
+				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
+			}
 
-			// 2. プロンプト構築 (最新の BuildPanelPrompt 仕様に合わせる)
+			// プロンプト構築
 			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
 
 			// 構造化ロギングの適用
@@ -71,7 +64,7 @@ func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			startTime := time.Now()
 			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         userPrompt,
-				NegativePrompt: prompts.DefaultNegativePanelPrompt,
+				NegativePrompt: prompts.NegativePanelPrompt,
 				SystemPrompt:   systemPrompt,
 				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,
@@ -95,30 +88,4 @@ func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	}
 
 	return images, nil
-}
-
-// resolveAndGetCharacter は、与えられたページ情報から最適なキャラクターを決定します。
-func (gg *GroupGenerator) resolveAndGetCharacter(panel domain.Panel) domain.Character {
-	charMap := gg.mangaGenerator.Characters
-	// 1. IDでの直接検索
-	char := charMap.FindCharacter(panel.SpeakerID)
-	if char != nil {
-		return *char
-	}
-
-	slog.Debug("SpeakerID not found in map, attempting fallback", "speaker_id", panel.SpeakerID)
-
-	// 2. 事前に特定した Primary キャラクターを優先フォールバック
-	if gg.primaryChar != nil {
-		return *gg.primaryChar
-	}
-
-	// 3. Primary がいない場合、ソート順の最初のキャラをフォールバック
-	if len(gg.sortedCharKeys) > 0 {
-		fallbackID := gg.sortedCharKeys[0]
-		return charMap[fallbackID]
-	}
-
-	// 4. 最終手段
-	return domain.Character{ID: "unknown", Name: "Unknown"}
 }

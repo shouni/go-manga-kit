@@ -8,6 +8,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
+
 	"github.com/shouni/go-text-format/pkg/builder"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )

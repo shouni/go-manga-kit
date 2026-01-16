@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
@@ -35,10 +36,10 @@ func NewMangaPanelImageRunner(
 }
 
 // Run は、台本(MangaResponse)を受け取り、指定されたパネルの画像を生成するのだ。
-func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error) {
+func (r *MangaPanelImageRunner) Run(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error) {
 	// 1. 型を domain.Panel に合わせて修正するのだ
 	allPanels := manga.Panels
-	var targetPanels []domain.Panel
+	var targetPanels []mangadom.Panel
 
 	// 2. 生成対象のフィルタリング
 	if len(targetIndices) > 0 {
@@ -77,9 +78,9 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 }
 
 // RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。保存されたパス、またはエラーを返します。
-func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga domain.MangaResponse, targetIndices []int, plotFile string) ([]string, error) {
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int, plotFile string) ([]string, error) {
 	// TODO:パネルのターゲット指定
-	var targetPanels []domain.Panel
+	var targetPanels []mangadom.Panel
 	images, err := r.generator.Execute(ctx, targetPanels)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)

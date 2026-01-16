@@ -23,7 +23,7 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 }
 
 // BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID string) (string, string, int64) {
+func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64) {
 	// --- 1. System Prompt の構築 ---
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene."
 
@@ -37,19 +37,13 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID str
 		styleDNA := fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix)
 		systemParts = append(systemParts, styleDNA)
 	}
-	systemPrompt := strings.Join(systemParts, "\n\n")
+	systemPrompt = strings.Join(systemParts, "\n\n")
 
 	// --- 2. キャラクター設定とビジュアルアンカーの収集 (User Prompt) ---
 	var visualParts []string
-	var targetSeed int64
 
 	// キャラクターの特定とフォールバック処理
-	char := pb.characterMap.FindCharacter(speakerID)
-	// 指定されたキャラが見つからない場合は、Primaryキャラをフォールバックとして取得
-	if char == nil {
-		char = pb.characterMap.GetPrimary()
-	}
-
+	char := pb.characterMap.GetCharacterWithDefault(speakerID)
 	// キャラクター（またはPrimary）が見つかった場合の処理
 	if char != nil {
 		if len(char.VisualCues) > 0 {
@@ -72,32 +66,30 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID str
 			cleanParts = append(cleanParts, s)
 		}
 	}
-	prompt := strings.Join(cleanParts, ", ")
+	userPrompt = strings.Join(cleanParts, ", ")
 
-	return prompt, systemPrompt, targetSeed
+	return userPrompt, systemPrompt, targetSeed
 }
 
 // BuildMangaPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, refURLs []string, mangaTitle string) (userPrompt string, systemPrompt string) {
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string) {
 	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
-	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
-	ss.WriteString(mangaSystemInstruction)
-	ss.WriteString("\n\n")
-	ss.WriteString(MangaStructureHeader)
-	ss.WriteString("\n\n")
-	ss.WriteString(RenderingStyle)
-	ss.WriteString("\n\n")
-	ss.WriteString(CinematicTags)
-	if pb.defaultSuffix != "" {
-		ss.WriteString(fmt.Sprintf("\n- GLOBAL_STYLE_DNA: %s\n", pb.defaultSuffix))
+
+	systemParts := []string{
+		mangaSystemInstruction,
+		MangaStructureHeader,
+		RenderingStyle,
+		CinematicTags,
 	}
-	systemPrompt = ss.String()
+	if pb.defaultSuffix != "" {
+		styleDNA := fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix)
+		systemParts = append(systemParts, styleDNA)
+	}
+	systemPrompt = strings.Join(systemParts, "\n\n")
 
 	// --- 2. User Prompt の構築 (具体的なページの内容) ---
 	var us strings.Builder
-	// TODO::ページ単位でのタイトルは現時点では出力しない
-	//	us.WriteString(fmt.Sprintf("### TITLE: %s ###\n", mangaTitle))
 	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(panels)))
 
 	// キャラクター定義セクション
@@ -123,9 +115,8 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, refURL
 		}
 
 		// --- キャラクター解決と名前の正規化 ---
-		// IDを名前に変換してAIの理解を助ける。見つからない場合はIDをそのまま使う
 		displayName := panel.SpeakerID
-		if char := pb.characterMap.FindCharacter(panel.SpeakerID); char != nil {
+		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
 			displayName = char.Name
 		}
 

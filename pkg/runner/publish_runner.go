@@ -3,10 +3,11 @@ package runner
 import (
 	"context"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
 // DefaultPublisherRunner は pkg/publisher を利用した標準実装なのだ。
