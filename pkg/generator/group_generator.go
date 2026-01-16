@@ -71,7 +71,7 @@ func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			startTime := time.Now()
 			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         userPrompt,
-				NegativePrompt: prompts.DefaultNegativePanelPrompt,
+				NegativePrompt: prompts.NegativePanelPrompt,
 				SystemPrompt:   systemPrompt,
 				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,

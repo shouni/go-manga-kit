@@ -88,11 +88,11 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	refURLs := pg.collectReferences(manga.Panels)
 
 	// プロンプト構築
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, refURLs, manga.Title)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, refURLs)
 	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
-		NegativePrompt: prompts.DefaultNegativeMangaPagePrompt,
+		NegativePrompt: prompts.NegativeMangaPagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		Seed:           seed,
