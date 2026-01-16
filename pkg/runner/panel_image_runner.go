@@ -1,10 +1,13 @@
 package runner
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log/slog"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
@@ -73,7 +76,38 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 	return images, nil
 }
 
-func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga domain.MangaResponse, targetIndices []int) ([]string, error) {
-	// TODO::あとで画像ファイルとページ構成のjson出力
-	return nil, nil
+// RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。保存されたパス、またはエラーを返します。
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga domain.MangaResponse, targetIndices []int, plotFile string) ([]string, error) {
+	// TODO:パネルのターゲット指定
+	var targetPanels []domain.Panel
+	images, err := r.generator.Execute(ctx, targetPanels)
+	if err != nil {
+		slog.Error("Image generation pipeline failed", "error", err)
+		return nil, err
+	}
+
+	slog.Info("Successfully generated panels", "count", len(images))
+	// 4. 連番を付けて保存
+	basePath, err := asset.ResolveOutputPath(plotFile, asset.DefaultPanelFileName)
+	var savedPaths []string
+	for i, resp := range images {
+		// manga_page.png -> manga_page_1.png のように変換する
+		pagePath, err := asset.GenerateIndexedPath(basePath, i+1)
+		if err != nil {
+			return nil, fmt.Errorf("ページ %d の出力パス生成に失敗しました: %w", i+1, err)
+		}
+
+		slog.InfoContext(ctx, "ページ画像を保存しています",
+			"index", i+1,
+			"path", pagePath,
+		)
+
+		if err := r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+			// エラー発生時は、それまでの成果物は返さず、nilとエラーを返す
+			return nil, fmt.Errorf("第 %d ページの保存に失敗しました (path: %s): %w", i+1, pagePath, err)
+		}
+		savedPaths = append(savedPaths, pagePath)
+	}
+
+	return savedPaths, nil
 }
