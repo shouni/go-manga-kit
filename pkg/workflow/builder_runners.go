@@ -3,6 +3,7 @@ package workflow
 import (
 	"fmt"
 
+	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/parser"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
@@ -33,13 +34,17 @@ func (b *Builder) BuildDesignRunner() (DesignRunner, error) {
 
 // BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (b *Builder) BuildPanelImageRunner() (PanelImageRunner, error) {
-	return runner.NewMangaPanelImageRunner(b.cfg, b.mangaGen), nil
+	groupGenerator := generator.NewGroupGenerator(b.mangaGen, b.cfg.RateInterval)
+
+	return runner.NewMangaPanelImageRunner(b.cfg, groupGenerator, b.writer), nil
 }
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (b *Builder) BuildPageImageRunner() (PageImageRunner, error) {
+	pageGenerator := generator.NewPageGenerator(b.mangaGen, b.cfg.RateInterval)
 	mkParser := parser.NewMarkdownParser(b.reader)
-	return runner.NewMangaPageRunner(b.cfg, mkParser, b.mangaGen, b.writer), nil
+
+	return runner.NewMangaPageRunner(b.cfg, pageGenerator, b.writer, mkParser), nil
 }
 
 // BuildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。

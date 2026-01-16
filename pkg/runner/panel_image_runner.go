@@ -8,21 +8,26 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
-// MangaPanelImageRunner は、台本を元に並列画像生成を管理する実装なのだ。
+// MangaPanelImageRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelImageRunner struct {
-	cfg      config.Config
-	groupGen *generator.GroupGenerator // 並列生成とレートリミットを管理するコアなのだ
+	cfg       config.Config
+	generator generator.PanelsImageGenerator
+	writer    remoteio.OutputWriter
 }
 
-// NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
-func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerator) *MangaPanelImageRunner {
-	groupGen := generator.NewGroupGenerator(mangaGen, cfg.RateInterval)
-
+// NewMangaPanelImageRunner は、依存関係を注入して初期化します。
+func NewMangaPanelImageRunner(
+	cfg config.Config,
+	generator generator.PanelsImageGenerator,
+	writer remoteio.OutputWriter,
+) *MangaPanelImageRunner {
 	return &MangaPanelImageRunner{
-		cfg:      cfg,
-		groupGen: groupGen,
+		cfg:       cfg,
+		generator: generator,
+		writer:    writer,
 	}
 }
 
@@ -58,8 +63,7 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 		"total_count", len(allPanels),
 	)
 
-	// 3. GroupGeneratorに委譲するのだ。引数も []domain.Panel になっているはずなのだ
-	images, err := r.groupGen.ExecutePanelGroup(ctx, targetPanels)
+	images, err := r.generator.Execute(ctx, targetPanels)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)
 		return nil, err
@@ -67,4 +71,9 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaRespo
 
 	slog.Info("Successfully generated panels", "count", len(images))
 	return images, nil
+}
+
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga domain.MangaResponse, targetIndices []int) ([]string, error) {
+	// TODO::あとで画像ファイルとページ構成のjson出力
+	return nil, nil
 }

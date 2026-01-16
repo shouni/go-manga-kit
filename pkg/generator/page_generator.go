@@ -26,8 +26,8 @@ func NewPageGenerator(mangaGenerator MangaGenerator, interval time.Duration) *Pa
 	}
 }
 
-// ExecuteMangaPages は全ページを適切なチャンクに分割し、順次生成処理を実行します。
-func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
+// Execute は全ページを適切なチャンクに分割し、順次生成処理を実行します。
+func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	var allResponses []*imagedom.ImageResponse
 
 	if len(manga.Panels) == 0 {
@@ -36,6 +36,7 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 
 	// 1ページあたりの最大パネル数に基づいてチャンク分割
 	totalPages := (len(manga.Panels) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
+	defaultSeed := pg.determineDefaultSeed(manga.Panels)
 
 	for i := 0; i < len(manga.Panels); i += MaxPanelsPerPage {
 		if err := pg.limiter.Wait(ctx); err != nil {
@@ -61,10 +62,11 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 			"page_number", currentPageNum,
 			"total_pages", totalPages,
 			"panel_count", len(subManga.Panels),
+			"seed", defaultSeed,
 		)
 		logger.Info("Starting manga page generation")
 
-		res, err := pg.ExecuteMangaPage(ctx, subManga)
+		res, err := pg.generateMangaPage(ctx, subManga, defaultSeed)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate page %d: %w", currentPageNum, err)
 		}
@@ -74,41 +76,15 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 	return allResponses, nil
 }
 
-// ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成します。
-func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
+// generateMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成します。
+func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, defaultSeed *int64) (*imagedom.ImageResponse, error) {
 	pb := pg.mangaGenerator.PromptBuilder
 
 	// 参照URLの収集
 	refURLs := pg.collectReferences(manga.Panels)
 
-	// プロンプト構築 (User/System プロンプトの分離)
+	// プロンプト構築
 	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, refURLs, manga.Title)
-
-	// キャラクター設定からSeed値を特定
-	var defaultSeed *int64
-	// 1. PrimaryキャラクターのSeedを最優先で試みる
-	if primaryChar := pg.mangaGenerator.Characters.GetPrimary(); primaryChar != nil && primaryChar.Seed > 0 {
-		s := primaryChar.Seed
-		defaultSeed = &s
-	} else {
-		// 2. Primaryが見つからない場合、登場順で最初の有効なSeedを持つキャラクターを探す
-		for _, p := range manga.Panels {
-			char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
-			if char != nil && char.Seed > 0 {
-				s := char.Seed
-				defaultSeed = &s
-				break // 最初の有効なSeedが見つかったらループを抜ける
-			}
-		}
-	}
-
-	// 構造化ロギングの適用
-	logger := slog.With(
-		"Prompt", userPrompt,
-		"seed", defaultSeed,
-	)
-	logger.Info("Starting ImagePageRequest")
-
 	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
@@ -147,4 +123,24 @@ func (pg *PageGenerator) collectReferences(pages []domain.Panel) []string {
 		}
 	}
 	return urls
+}
+
+// determineDefaultSeed は、ページの代表的なSeed値を優先順位に基づいて決定します。
+func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) *int64 {
+	// 1. PrimaryキャラクターのSeedを最優先で試みる
+	if primaryChar := pg.mangaGenerator.Characters.GetPrimary(); primaryChar != nil && primaryChar.Seed > 0 {
+		s := primaryChar.Seed
+		return &s
+	}
+
+	// 2. Primaryが見つからない場合、登場順で最初の有効なSeedを持つキャラクターを探す
+	for _, p := range panels {
+		char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
+		if char != nil && char.Seed > 0 {
+			s := char.Seed
+			return &s
+		}
+	}
+
+	return nil
 }
