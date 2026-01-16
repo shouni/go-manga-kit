@@ -19,7 +19,11 @@ type MangaPanelImageRunner struct {
 }
 
 // NewMangaPanelImageRunner は、依存関係を注入して初期化するのだ。
-func NewMangaPanelImageRunner(cfg config.Config, panelsGen *generator.GroupGenerator, writer remoteio.OutputWriter) *MangaPanelImageRunner {
+func NewMangaPanelImageRunner(
+	cfg config.Config,
+	panelsGen generator.PanelsImageGenerator,
+	writer remoteio.OutputWriter,
+) *MangaPanelImageRunner {
 	return &MangaPanelImageRunner{
 		cfg:       cfg,
 		panelsGen: panelsGen,
