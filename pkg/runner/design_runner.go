@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -122,21 +121,11 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 
 	var subjects string
 	if numChars > 1 {
-		var sb strings.Builder
+		subjectParts := make([]string, numChars)
 		for i, d := range descriptions {
-			sb.WriteString("[Subject ")
-			sb.WriteString(strconv.Itoa(i + 1))
-			sb.WriteString(": ")
-			sb.WriteString(d)
-			sb.WriteString("] ")
+			subjectParts[i] = fmt.Sprintf("[Subject %d: %s]", i+1, d)
 		}
-
-		// 末尾の空白を除去して結合
-		result := sb.String()
-		if len(result) > 0 {
-			result = result[:len(result)-1]
-		}
-		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, result)
+		subjects = fmt.Sprintf("%d DIFFERENT characters: %s", numChars, strings.Join(subjectParts, " "))
 	} else {
 		subjects = descriptions[0]
 	}
