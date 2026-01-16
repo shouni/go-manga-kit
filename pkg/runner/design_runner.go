@@ -20,7 +20,7 @@ import (
 const (
 	// プロンプト構成用の定数
 	designPromptBaseTemplate = "Masterpiece character design sheet of %s, %s"
-	designLayoutMultiChar    = "standing front-view full body, side-by-side, distinct characters"
+	designLayoutMultiChar    = "exactly two characters, standing front-view full body, side-by-side, symmetric composition, NO side views, NO back views"
 	designLayoutSingleChar   = "multiple views (front, side, back), standing full body"
 )
 
