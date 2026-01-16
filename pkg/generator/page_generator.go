@@ -86,19 +86,18 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 
 	// キャラクター設定からSeed値を特定
 	var defaultSeed *int64
-	for _, p := range manga.Panels {
-		char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
-		if char != nil && char.Seed > 0 {
-			// Primary キャラクターがいれば最優先で採用
-			if char.IsPrimary {
+	// 1. PrimaryキャラクターのSeedを最優先で試みる
+	if primaryChar := pg.mangaGenerator.Characters.GetPrimary(); primaryChar != nil && primaryChar.Seed > 0 {
+		s := primaryChar.Seed
+		defaultSeed = &s
+	} else {
+		// 2. Primaryが見つからない場合、登場順で最初の有効なSeedを持つキャラクターを探す
+		for _, p := range manga.Panels {
+			char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
+			if char != nil && char.Seed > 0 {
 				s := char.Seed
 				defaultSeed = &s
-				break
-			}
-			// Primary が見つからない場合の暫定フォールバック
-			if defaultSeed == nil {
-				s := char.Seed
-				defaultSeed = &s
+				break // 最初の有効なSeedが見つかったらループを抜ける
 			}
 		}
 	}

@@ -153,27 +153,26 @@ func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []
 		if i < len(imagePaths) {
 			img = imagePaths[i]
 		}
-		if page.Dialogue != "" {
+		// セリフまたはビジュアルアンカーのいずれかが存在すればパネルとして出力する
+		if page.Dialogue != "" || page.VisualAnchor != "" {
 			sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
 			character := p.characters.FindCharacter(page.SpeakerID)
 			var speakerID string
 			if character != nil {
 				speakerID = character.ID
-			} else {
-				if primary := p.characters.GetPrimary(); primary != nil {
-					speakerID = primary.ID
-				}
+			} else if primary := p.characters.GetPrimary(); primary != nil {
+				speakerID = primary.ID
 			}
 
-			sb.WriteString(fmt.Sprintf("- SpeakerID: %s\n", speakerID))
-			sb.WriteString(fmt.Sprintf("- Dialogue: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))))
-			sb.WriteString(fmt.Sprintf("- VisualAnchor: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.VisualAnchor, ""))))
-			//sb.WriteString("- layout: standard\n")
-			//h.Reset()
-			//h.Write([]byte(speakerID))
-			//		speakerClass := "speaker-" + hex.EncodeToString(h.Sum(nil))[:10]
-			//		sb.WriteString(fmt.Sprintf("- speakerclass: %s\n", speakerClass))
-			//			sb.WriteString(p.getDialogueStyle(i))
+			if speakerID != "" {
+				sb.WriteString(fmt.Sprintf("- SpeakerID: %s\n", speakerID))
+			}
+			if page.Dialogue != "" {
+				sb.WriteString(fmt.Sprintf("- Dialogue: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))))
+			}
+			if page.VisualAnchor != "" {
+				sb.WriteString(fmt.Sprintf("- VisualAnchor: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.VisualAnchor, ""))))
+			}
 			sb.WriteString("\n")
 		}
 	}
