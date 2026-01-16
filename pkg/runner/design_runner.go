@@ -121,38 +121,41 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 // collectCharacterAssets CharactersMap から、指定されたキャラクター ID の参照 URL と説明を取得します。
 // 有効な参照が見つからない場合は、エラーとともに参照 URL と説明のスライスを返します。
 func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string, []string, error) {
-	var refs []string
-	var descs []string
-	processedIDs := make(map[string]struct{}) // 処理済みIDを記録するためのセット
+	var referenceURLs []string
+	var descriptions []string
+	var missingIDs []string
+	processedIDs := make(map[string]struct{})
 
 	for _, id := range ids {
 		if _, exists := processedIDs[id]; exists {
-			continue // 既に処理済みのIDはスキップ
+			continue
 		}
 		processedIDs[id] = struct{}{}
 
 		char := chars.FindCharacter(id)
 		if char == nil {
-			slog.Info("指定されたキャラクターIDが見つからないためスキップします", "id", id)
+			missingIDs = append(missingIDs, id)
 			continue
 		}
 
-		// (以降のロジックは変更なし)
 		if char.ReferenceURL != "" {
-			refs = append(refs, char.ReferenceURL)
+			referenceURLs = append(referenceURLs, char.ReferenceURL)
 		}
-
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
 			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
 		}
-		descs = append(descs, desc)
+		descriptions = append(descriptions, desc)
 	}
 
-	if len(refs) == 0 {
+	if len(missingIDs) > 0 {
+		return nil, nil, fmt.Errorf("指定されたキャラクターIDが見つかりませんでした: %s", strings.Join(missingIDs, ", "))
+	}
+
+	if len(referenceURLs) == 0 {
 		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
 	}
-	return refs, descs, nil
+	return referenceURLs, descriptions, nil
 }
 
 func ptrInt64(v int64) *int64 {
