@@ -3,13 +3,14 @@ package runner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/parser"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
@@ -19,54 +20,63 @@ import (
 type MangaPageRunner struct {
 	cfg       config.Config
 	generator generator.PagesImageGenerator
+	reader    remoteio.InputReader
 	writer    remoteio.OutputWriter
-	mkParser  parser.Parser
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	cfg config.Config,
 	generator generator.PagesImageGenerator,
+	reader remoteio.InputReader,
 	writer remoteio.OutputWriter,
-	mkParser parser.Parser,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		cfg:       cfg,
 		generator: generator,
+		reader:    reader,
 		writer:    writer,
-		mkParser:  mkParser,
 	}
 }
 
 // Run は、指定されたパスの Markdown コンテンツを解析し、漫画ページ画像（バイナリデータ）のリストを生成します。
-func (r *MangaPageRunner) Run(ctx context.Context, markdownPath string) ([]*imagedom.ImageResponse, error) {
-	manga, err := r.mkParser.ParseFromPath(ctx, markdownPath)
+func (r *MangaPageRunner) Run(ctx context.Context, plotPath string) ([]*imagedom.ImageResponse, error) {
+	// 1. ファイル（JSON）の読み込み
+	rc, err := r.reader.Open(ctx, plotPath)
 	if err != nil {
-		return nil, fmt.Errorf("markdown コンテンツの解析に失敗しました: %w", err)
+		return nil, fmt.Errorf("プロットファイルのオープンに失敗しました (%s): %w", plotPath, err)
 	}
-	if manga == nil {
-		return nil, fmt.Errorf("マンガの解析結果が nil です")
+	defer rc.Close()
+
+	var manga domain.MangaResponse
+	if err := json.NewDecoder(rc).Decode(&manga); err != nil {
+		return nil, fmt.Errorf("プロットデータのJSONデコードに失敗しました: %w", err)
 	}
 
-	slog.InfoContext(ctx, "MangaPageRunner: 解析完了",
-		"path", markdownPath,
+	// 3. バリデーション
+	if len(manga.Panels) == 0 {
+		return nil, fmt.Errorf("プロットファイルにパネルデータが含まれていません。生成を中止します")
+	}
+
+	slog.InfoContext(ctx, "MangaPageRunner: プロット読み込み完了",
+		"path", plotPath,
 		"title", manga.Title,
 		"panelCount", len(manga.Panels),
 	)
 
-	return r.generator.Execute(ctx, *manga)
+	// 4. ページ生成エンジン（を実行
+	return r.generator.Execute(ctx, manga)
 }
 
 // RunAndSave は、画像の生成から指定ディレクトリへの保存までを一括で行います。
-func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownPath string, explicitOutputDir string) ([]string, error) {
+func (r *MangaPageRunner) RunAndSave(ctx context.Context, plotPath string, explicitOutputDir string) ([]string, error) {
 	// 1. 保存先ディレクトリの決定
 	targetDir := explicitOutputDir
 	if targetDir == "" {
 		// 明示的な出力ディレクトリが指定されていない場合、
-		// 入力されたMarkdownファイルと同じディレクトリを保存先とします。
-		targetDir = asset.ResolveBaseURL(markdownPath)
+		targetDir = asset.ResolveBaseURL(plotPath)
 		if targetDir == "" {
-			return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", markdownPath)
+			return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", plotPath)
 		}
 	}
 
@@ -77,7 +87,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, markdownPath string, e
 	}
 
 	// 3. 画像の生成
-	resps, err := r.Run(ctx, markdownPath)
+	resps, err := r.Run(ctx, plotPath)
 	if err != nil {
 		return nil, err // Run 内部でエラーラップされているためそのまま返す
 	}

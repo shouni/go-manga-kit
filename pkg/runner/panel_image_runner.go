@@ -3,8 +3,10 @@ package runner
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"path"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
@@ -35,39 +37,11 @@ func NewMangaPanelImageRunner(
 	}
 }
 
-// Run は、台本(MangaResponse)を受け取り、指定されたパネルの画像を生成するのだ。
-func (r *MangaPanelImageRunner) Run(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error) {
-	// 1. 型を domain.Panel に合わせて修正するのだ
-	allPanels := manga.Panels
-	var targetPanels []mangadom.Panel
+// Run は、台本(MangaResponse)を受け取り、パネルの画像を生成します。
+func (r *MangaPanelImageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
+	slog.Info("Starting parallel image generation")
 
-	// 2. 生成対象のフィルタリング
-	if len(targetIndices) > 0 {
-		slog.Info("Generating specific panels", "indices", targetIndices)
-		for _, idx := range targetIndices {
-			if idx >= 0 && idx < len(allPanels) {
-				targetPanels = append(targetPanels, allPanels[idx])
-			} else {
-				slog.Warn("Index out of range, skipping", "index", idx, "total_panels", len(allPanels))
-			}
-		}
-	} else {
-		// 指定がない場合は全件（全パネル）対象なのだ
-		targetPanels = allPanels
-	}
-
-	if len(targetPanels) == 0 {
-		slog.Info("No panels to generate.")
-		return []*imagedom.ImageResponse{}, nil
-	}
-
-	slog.Info("Starting parallel image generation",
-		"title", manga.Title,
-		"target_count", len(targetPanels),
-		"total_count", len(allPanels),
-	)
-
-	images, err := r.generator.Execute(ctx, targetPanels)
+	images, err := r.generator.Execute(ctx, manga.Panels)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)
 		return nil, err
@@ -77,38 +51,64 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga mangadom.MangaRes
 	return images, nil
 }
 
-// RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。保存されたパス、またはエラーを返します。
-func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga mangadom.MangaResponse, targetIndices []int, plotFile string) ([]string, error) {
-	// TODO:パネルのターゲット指定
-	var targetPanels []mangadom.Panel
-	images, err := r.generator.Execute(ctx, targetPanels)
-	if err != nil {
-		slog.Error("Image generation pipeline failed", "error", err)
-		return nil, err
+// RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。エラーを返します。
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
+	if manga == nil {
+		return nil, fmt.Errorf("MangaResponse がありません")
 	}
 
-	slog.Info("Successfully generated panels", "count", len(images))
-	// 4. 連番を付けて保存
-	basePath, err := asset.ResolveOutputPath(plotFile, asset.DefaultPanelFileName)
-	var savedPaths []string
-	for i, resp := range images {
-		// manga_page.png -> manga_page_1.png のように変換する
-		pagePath, err := asset.GenerateIndexedPath(basePath, i+1)
+	// 保存先ディレクトリの決定
+	targetDir := asset.ResolveBaseURL(scriptPath)
+
+	// ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）
+	basePath, err := asset.ResolveOutputPath(targetDir, path.Join(asset.DefaultImageDir, asset.DefaultPanelFileName))
+	if err != nil {
+		return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
+	}
+
+	// 画像の生成
+	images, err := r.Run(ctx, manga)
+	if err != nil {
+		return nil, err // Run 内部でエラーラップされているためそのまま返す
+	}
+
+	if len(images) != len(manga.Panels) {
+		return nil, fmt.Errorf("生成された画像の数(%d)とパネルの数(%d)が一致しません", len(images), len(manga.Panels))
+	}
+	for i, image := range images {
+		// 連番を付けて保存
+		panelPath, err := asset.GenerateIndexedPath(basePath, i+1)
 		if err != nil {
-			return nil, fmt.Errorf("ページ %d の出力パス生成に失敗しました: %w", i+1, err)
+			return nil, fmt.Errorf("パネル %d の出力パス生成に失敗しました: %w", i+1, err)
 		}
 
-		slog.InfoContext(ctx, "ページ画像を保存しています",
+		slog.InfoContext(ctx, "パネル画像を保存しています",
 			"index", i+1,
-			"path", pagePath,
+			"path", panelPath,
 		)
 
-		if err := r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+		if err := r.writer.Write(ctx, panelPath, bytes.NewReader(image.Data), image.MimeType); err != nil {
 			// エラー発生時は、それまでの成果物は返さず、nilとエラーを返す
-			return nil, fmt.Errorf("第 %d ページの保存に失敗しました (path: %s): %w", i+1, pagePath, err)
+			return nil, fmt.Errorf("第 %d パネルの保存に失敗しました (path: %s): %w", i+1, panelPath, err)
 		}
-		savedPaths = append(savedPaths, pagePath)
+		manga.Panels[i].ReferenceURL = panelPath
 	}
 
-	return savedPaths, nil
+	plotPath, err := asset.ResolveOutputPath(targetDir, asset.DefaultMangaPlotName)
+	if err != nil {
+		return nil, fmt.Errorf("プロットファイル出力パスの解決に失敗しました: %w", err)
+	}
+
+	// JSONにシリアライズして保存
+	plotData, err := json.MarshalIndent(manga, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("台本データのJSON変換に失敗しました: %w", err)
+	}
+
+	slog.InfoContext(ctx, "更新された台本を保存しています", "path", plotPath)
+	if err := r.writer.Write(ctx, plotPath, bytes.NewReader(plotData), "application/json"); err != nil {
+		return nil, fmt.Errorf("プロットファイルの保存に失敗しました: %w", err)
+	}
+
+	return manga, nil
 }

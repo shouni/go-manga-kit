@@ -13,7 +13,7 @@ const (
 	// DefaultImageDir は生成された画像を格納するデフォルトのディレクトリ名です。
 	DefaultImageDir = "images"
 	// DefaultMangaPlotName は生成された漫画プロットのデフォルトファイル名です。
-	DefaultMangaPlotName = "manga_plot.md"
+	DefaultMangaPlotName = "manga_plot.json"
 	// DefaultPanelFileName はパネル画像の共通のベースファイル名です。
 	DefaultPanelFileName = "panel.png"
 	// DefaultPageFileName はページ画像の共通のベースファイル名です。

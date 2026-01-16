@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/parser"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
@@ -43,9 +42,8 @@ func (b *Builder) BuildPanelImageRunner() (PanelImageRunner, error) {
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (b *Builder) BuildPageImageRunner() (PageImageRunner, error) {
 	pageGenerator := generator.NewPageGenerator(b.mangaGen, b.cfg.RateInterval)
-	mkParser := parser.NewMarkdownParser(b.reader)
 
-	return runner.NewMangaPageRunner(b.cfg, pageGenerator, b.writer, mkParser), nil
+	return runner.NewMangaPageRunner(b.cfg, pageGenerator, b.reader, b.writer), nil
 }
 
 // BuildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
