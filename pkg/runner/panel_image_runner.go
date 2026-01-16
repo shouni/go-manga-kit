@@ -51,28 +51,30 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga mangadom.MangaRes
 }
 
 // RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。保存されたパス、またはエラーを返します。
-func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga mangadom.MangaResponse, scriptPath string) (mangadom.MangaResponse, error) {
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
 	// 保存先ディレクトリの決定
 	targetDir := asset.ResolveBaseURL(scriptPath)
 
 	// ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）
 	basePath, err := asset.ResolveOutputPath(targetDir, asset.DefaultPanelFileName)
 	if err != nil {
-		return mangadom.MangaResponse{}, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
+		return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
 	}
 
-	// 3. 画像の生成
+	// 画像の生成
 	images, err := r.Run(ctx, manga)
 	if err != nil {
-		return mangadom.MangaResponse{}, err // Run 内部でエラーラップされているためそのまま返す
+		return nil, err // Run 内部でエラーラップされているためそのまま返す
 	}
 
-	// 4. 連番を付けて保存
-	//	var savedPaths []string
+	if len(images) != len(manga.Panels) {
+		return nil, fmt.Errorf("生成された画像の数(%d)とパネルの数(%d)が一致しません", len(images), len(manga.Panels))
+	}
 	for i, image := range images {
+		// 連番を付けて保存
 		panelPath, err := asset.GenerateIndexedPath(basePath, i+1)
 		if err != nil {
-			return mangadom.MangaResponse{}, fmt.Errorf("パネル %d の出力パス生成に失敗しました: %w", i+1, err)
+			return nil, fmt.Errorf("パネル %d の出力パス生成に失敗しました: %w", i+1, err)
 		}
 
 		slog.InfoContext(ctx, "パネル画像を保存しています",
@@ -82,11 +84,10 @@ func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga mangadom.M
 
 		if err := r.writer.Write(ctx, panelPath, bytes.NewReader(image.Data), image.MimeType); err != nil {
 			// エラー発生時は、それまでの成果物は返さず、nilとエラーを返す
-			return mangadom.MangaResponse{}, fmt.Errorf("第 %d パネルの保存に失敗しました (path: %s): %w", i+1, panelPath, err)
+			return nil, fmt.Errorf("第 %d パネルの保存に失敗しました (path: %s): %w", i+1, panelPath, err)
 		}
 		manga.Panels[i].ReferenceURL = panelPath
-		//		savedPaths = append(savedPaths, panelPath)
 	}
 
-	return manga, nil
+	return &manga, nil
 }
