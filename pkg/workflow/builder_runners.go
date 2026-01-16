@@ -57,6 +57,6 @@ func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 		return nil, fmt.Errorf("md2htmlRunner の初期化に失敗しました: %w", err)
 	}
 
-	pub := publisher.NewMangaPublisher(b.writer, md2htmlRunner)
+	pub := publisher.NewMangaPublisher(b.chars, b.writer, md2htmlRunner)
 	return runner.NewDefaultPublisherRunner(b.cfg, pub), nil
 }

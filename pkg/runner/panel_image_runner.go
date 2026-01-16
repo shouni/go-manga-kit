@@ -28,37 +28,38 @@ func NewMangaPanelImageRunner(cfg config.Config, mangaGen generator.MangaGenerat
 
 // Run は、台本(MangaResponse)を受け取り、指定されたパネルの画像を生成するのだ。
 func (r *MangaPanelImageRunner) Run(ctx context.Context, manga domain.MangaResponse, targetIndices []int) ([]*imagedom.ImageResponse, error) {
-	allPages := manga.Pages
-	var targetPages []domain.MangaPage
+	// 1. 型を domain.Panel に合わせて修正するのだ
+	allPanels := manga.Panels
+	var targetPanels []domain.Panel
 
-	// 1. 生成対象のフィルタリング
+	// 2. 生成対象のフィルタリング
 	if len(targetIndices) > 0 {
 		slog.Info("Generating specific panels", "indices", targetIndices)
 		for _, idx := range targetIndices {
-			if idx >= 0 && idx < len(allPages) {
-				targetPages = append(targetPages, allPages[idx])
+			if idx >= 0 && idx < len(allPanels) {
+				targetPanels = append(targetPanels, allPanels[idx])
 			} else {
-				slog.Warn("Index out of range, skipping", "index", idx, "total_pages", len(allPages))
+				slog.Warn("Index out of range, skipping", "index", idx, "total_panels", len(allPanels))
 			}
 		}
 	} else {
-		// 指定がない場合は全件対象なのだ
-		targetPages = allPages
+		// 指定がない場合は全件（全パネル）対象なのだ
+		targetPanels = allPanels
 	}
 
-	if len(targetPages) == 0 {
-		slog.Info("No pages to generate.")
+	if len(targetPanels) == 0 {
+		slog.Info("No panels to generate.")
 		return []*imagedom.ImageResponse{}, nil
 	}
 
 	slog.Info("Starting parallel image generation",
 		"title", manga.Title,
-		"target_count", len(targetPages),
-		"total_count", len(allPages),
+		"target_count", len(targetPanels),
+		"total_count", len(allPanels),
 	)
 
-	// 2. GroupGeneratorに委譲するのだ
-	images, err := r.groupGen.ExecutePanelGroup(ctx, targetPages)
+	// 3. GroupGeneratorに委譲するのだ。引数も []domain.Panel になっているはずなのだ
+	images, err := r.groupGen.ExecutePanelGroup(ctx, targetPanels)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)
 		return nil, err

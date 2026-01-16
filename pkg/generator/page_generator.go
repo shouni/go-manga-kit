@@ -2,11 +2,8 @@ package generator
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -33,36 +30,43 @@ func NewPageGenerator(mangaGenerator MangaGenerator, interval time.Duration) *Pa
 func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	var allResponses []*imagedom.ImageResponse
 
-	if len(manga.Pages) == 0 {
+	if len(manga.Panels) == 0 {
 		return allResponses, nil
 	}
 
-	totalPages := (len(manga.Pages) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
+	// 1ページあたりの最大パネル数に基づいてチャンク分割
+	totalPages := (len(manga.Panels) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
 
-	for i := 0; i < len(manga.Pages); i += MaxPanelsPerPage {
-		slog.Info("APIレート制限を確認中...", slog.Int("current_idx", i))
-
+	for i := 0; i < len(manga.Panels); i += MaxPanelsPerPage {
 		if err := pg.limiter.Wait(ctx); err != nil {
-			return nil, fmt.Errorf("リミッター待機中にエラーが発生しました: %w", err)
+			return nil, fmt.Errorf("rate limiter wait error: %w", err)
 		}
 
 		end := i + MaxPanelsPerPage
-		if end > len(manga.Pages) {
-			end = len(manga.Pages)
+		if end > len(manga.Panels) {
+			end = len(manga.Panels)
 		}
 
-		currentPage := (i / MaxPanelsPerPage) + 1
+		currentPageNum := (i / MaxPanelsPerPage) + 1
+
+		// チャンク化された台本データの作成
 		subManga := domain.MangaResponse{
-			Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, currentPage, totalPages),
+			Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, currentPageNum, totalPages),
 			Description: manga.Description,
-			Pages:       manga.Pages[i:end],
+			Panels:      manga.Panels[i:end], // フィールド名を Pages に統一
 		}
 
-		slog.Info("ページ生成リクエストを送信します", slog.Int("page", currentPage))
+		// 構造化ロギング
+		logger := slog.With(
+			"page_number", currentPageNum,
+			"total_pages", totalPages,
+			"panel_count", len(subManga.Panels),
+		)
+		logger.Info("Starting manga page generation")
 
 		res, err := pg.ExecuteMangaPage(ctx, subManga)
 		if err != nil {
-			return nil, fmt.Errorf("ページ %d の生成に失敗しました: %w", currentPage, err)
+			return nil, fmt.Errorf("failed to generate page %d: %w", currentPageNum, err)
 		}
 		allResponses = append(allResponses, res)
 	}
@@ -72,33 +76,29 @@ func (pg *PageGenerator) ExecuteMangaPages(ctx context.Context, manga domain.Man
 
 // ExecuteMangaPage は構造化された台本を基に、1枚の統合漫画画像を生成します。
 func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.MangaResponse) (*imagedom.ImageResponse, error) {
-	// 共通のスタイルサフィックスを使用してプロンプトビルダーを初期化
 	pb := pg.mangaGenerator.PromptBuilder
 
 	// 参照URLの収集
-	refURLs := pg.collectReferences(manga.Pages, pg.mangaGenerator.Characters)
+	refURLs := pg.collectReferences(manga.Panels)
 
-	// ページ全体のプロンプトを構築
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Pages, refURLs)
+	// プロンプト構築 (User/System プロンプトの分離)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Panels, refURLs)
 
+	// キャラクター設定からSeed値を特定
 	var defaultSeed *int64
-
-	// 優先度の高いキャラクターのSeed値を探索
-	for _, p := range manga.Pages {
-		char := pg.findCharacter(p.SpeakerID, pg.mangaGenerator.Characters)
-		if char != nil && char.IsPrimary && char.Seed > 0 {
-			s := char.Seed
-			defaultSeed = &s
-			break
-		}
-	}
-
-	// 優先キャラがいない場合、最初の話者のSeedをフォールバックとして使用
-	if defaultSeed == nil && len(manga.Pages) > 0 {
-		char := pg.findCharacter(manga.Pages[0].SpeakerID, pg.mangaGenerator.Characters)
-		if char != nil && char.Seed > 0 {
-			s := char.Seed
-			defaultSeed = &s
+	// 1. PrimaryキャラクターのSeedを最優先で試みる
+	if primaryChar := pg.mangaGenerator.Characters.GetPrimary(); primaryChar != nil && primaryChar.Seed > 0 {
+		s := primaryChar.Seed
+		defaultSeed = &s
+	} else {
+		// 2. Primaryが見つからない場合、登場順で最初の有効なSeedを持つキャラクターを探す
+		for _, p := range manga.Panels {
+			char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
+			if char != nil && char.Seed > 0 {
+				s := char.Seed
+				defaultSeed = &s
+				break // 最初の有効なSeedが見つかったらループを抜ける
+			}
 		}
 	}
 
@@ -115,42 +115,23 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	return pg.mangaGenerator.ImgGen.GenerateMangaPage(ctx, req)
 }
 
-// findCharacter は SpeakerID からキャラクター情報を特定します。
-func (pg *PageGenerator) findCharacter(speakerID string, characters map[string]domain.Character) *domain.Character {
-	sid := strings.ToLower(speakerID)
-	h := sha256.New()
-	for _, char := range characters {
-		h.Reset()
-		h.Write([]byte(char.ID))
-		hash := hex.EncodeToString(h.Sum(nil))
-		if sid == "speaker-"+hash[:10] {
-			return &char
-		}
-	}
-	cleanID := strings.TrimPrefix(sid, "speaker-")
-	if char, ok := characters[cleanID]; ok {
-		return &char
-	}
-	return nil
-}
-
 // collectReferences は必要な全ての画像URLを重複なく収集します。
-func (pg *PageGenerator) collectReferences(pages []domain.MangaPage, characters map[string]domain.Character) []string {
+func (pg *PageGenerator) collectReferences(pages []domain.Panel) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
 
-	// キャラクターの参照URL
 	for _, p := range pages {
-		if char := pg.findCharacter(p.SpeakerID, characters); char != nil && char.ReferenceURL != "" {
+		char := pg.mangaGenerator.Characters.FindCharacter(p.SpeakerID)
+
+		// 1. キャラクターのマスター参照画像
+		if char != nil && char.ReferenceURL != "" {
 			if _, exists := urlMap[char.ReferenceURL]; !exists {
 				urlMap[char.ReferenceURL] = struct{}{}
 				urls = append(urls, char.ReferenceURL)
 			}
 		}
-	}
 
-	// ページごとの個別参照URL
-	for _, p := range pages {
+		// 2. パネル個別の参照画像
 		if p.ReferenceURL != "" {
 			if _, exists := urlMap[p.ReferenceURL]; !exists {
 				urlMap[p.ReferenceURL] = struct{}{}

@@ -3,8 +3,6 @@ package publisher
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"path"
@@ -33,27 +31,32 @@ type PublishResult struct {
 }
 
 const (
-	placeholder          = "placeholder.png"
-	evenPanelTail        = "top"
-	evenPanelBottom      = "10%"
-	evenPanelLeft        = "10%"
-	oddPanelTail         = "bottom"
-	oddPanelTop          = "10%"
-	oddPanelRight        = "10%"
-	defaultNarrationName = "narration"
+	placeholder     = "placeholder.png"
+	evenPanelTail   = "top"
+	evenPanelBottom = "10%"
+	evenPanelLeft   = "10%"
+	oddPanelTail    = "bottom"
+	oddPanelTop     = "10%"
+	oddPanelRight   = "10%"
 )
 
 var tagRegex = regexp.MustCompile(`\[[^\]]+\]`)
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
+	characters domain.CharactersMap
 	writer     remoteio.OutputWriter
 	htmlRunner md2htmlrunner.Runner
 }
 
-// NewMangaPublisher は、指定されたwriterとHTML runnerを持つMangaPublisherの新しいインスタンスを作成して返却します。
-func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Runner) *MangaPublisher {
+// NewMangaPublisher は、指定された依存関係を持つMangaPublisherの新しいインスタンスを作成して返却します。
+func NewMangaPublisher(
+	characters domain.CharactersMap,
+	writer remoteio.OutputWriter,
+	htmlRunner md2htmlrunner.Runner,
+) *MangaPublisher {
 	return &MangaPublisher{
+		characters: characters,
 		writer:     writer,
 		htmlRunner: htmlRunner,
 	}
@@ -145,35 +148,34 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-	h := sha256.New()
-
-	for i, page := range manga.Pages {
+	for i, page := range manga.Panels {
 		img := placeholder
 		if i < len(imagePaths) {
 			img = imagePaths[i]
 		}
-
-		sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
-		sb.WriteString("- layout: standard\n")
-
-		if page.Dialogue != "" {
-			speaker := page.SpeakerID
-			if speaker == "" {
-				speaker = defaultNarrationName
+		// セリフまたはビジュアルアンカーのいずれかが存在すればパネルとして出力する
+		if page.Dialogue != "" || page.VisualAnchor != "" {
+			sb.WriteString(fmt.Sprintf("## Panel: %s\n", img))
+			character := p.characters.FindCharacter(page.SpeakerID)
+			if character == nil {
+				character = p.characters.GetPrimary()
 			}
-			text := strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))
 
-			h.Reset()
-			h.Write([]byte(speaker))
-			speakerClass := "speaker-" + hex.EncodeToString(h.Sum(nil))[:10]
-
-			sb.WriteString(fmt.Sprintf("- speaker: %s\n", speakerClass))
-			sb.WriteString(fmt.Sprintf("- text: %s\n", text))
-			sb.WriteString(p.getDialogueStyle(i))
-		} else {
-			sb.WriteString("- type: none\n")
+			var speakerID string
+			if character != nil {
+				speakerID = character.ID
+			}
+			if speakerID != "" {
+				sb.WriteString(fmt.Sprintf("- SpeakerID: %s\n", speakerID))
+			}
+			if page.Dialogue != "" {
+				sb.WriteString(fmt.Sprintf("- Dialogue: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.Dialogue, ""))))
+			}
+			if page.VisualAnchor != "" {
+				sb.WriteString(fmt.Sprintf("- VisualAnchor: %s\n", strings.TrimSpace(tagRegex.ReplaceAllString(page.VisualAnchor, ""))))
+			}
+			sb.WriteString("\n")
 		}
-		sb.WriteString("\n")
 	}
 	return sb.String()
 }

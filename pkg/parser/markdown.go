@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	fieldKeySpeaker = "speaker"
-	fieldKeyText    = "text"
-	fieldKeyAction  = "action"
+	fieldKeySpeaker = "SpeakerID"
+	fieldKeyText    = "Dialogue"
+	fieldKeyAction  = "VisualAnchor"
 )
 
 // Parser は解析するためのインターフェースを定義します。
@@ -60,11 +60,11 @@ func (p *MarkdownParser) ParseFromPath(ctx context.Context, markdownAssetPath st
 func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaResponse, error) {
 	manga := &domain.MangaResponse{}
 	lines := strings.Split(input, "\n")
-	var currentPage *domain.MangaPage
+	var currentPanel *domain.Panel
 
 	addPreviousPage := func() {
-		if currentPage != nil && hasContent(currentPage) {
-			manga.Pages = append(manga.Pages, *currentPage)
+		if currentPanel != nil && hasContent(currentPanel) {
+			manga.Panels = append(manga.Panels, *currentPanel)
 		}
 	}
 
@@ -93,24 +93,24 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 				// パス解決の失敗は処理継続不可能なため、エラーをラップして返します。
 				return nil, fmt.Errorf("panel画像のパス解決に失敗しました (base: %s, ref: %s): %w", baseDir, refPath, err)
 			}
-			currentPage = &domain.MangaPage{
-				Page:         len(manga.Pages) + 1,
+			currentPanel = &domain.Panel{
+				Page:         len(manga.Panels) + 1,
 				ReferenceURL: resolvedFullPath,
 			}
 			continue
 		}
 
 		// フィールド行の解析
-		if currentPage != nil {
+		if currentPanel != nil {
 			if m := FieldRegex.FindStringSubmatch(trimmedLine); m != nil {
-				key, val := strings.ToLower(m[1]), strings.TrimSpace(m[2])
+				key, val := m[1], strings.TrimSpace(m[2])
 				switch key {
 				case fieldKeySpeaker:
-					currentPage.SpeakerID = strings.ToLower(val)
+					currentPanel.SpeakerID = strings.ToLower(val)
 				case fieldKeyText:
-					currentPage.Dialogue = val
+					currentPanel.Dialogue = val
 				case fieldKeyAction:
-					currentPage.VisualAnchor = val
+					currentPanel.VisualAnchor = val
 				default:
 					slog.Debug("未知のフィールドキーをスキップしました", "key", key)
 				}
@@ -120,7 +120,7 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 
 	addPreviousPage()
 
-	if len(manga.Pages) == 0 {
+	if len(manga.Panels) == 0 {
 		return nil, fmt.Errorf("有効なパネル情報が見つかりませんでした")
 	}
 
@@ -128,6 +128,6 @@ func (p *MarkdownParser) Parse(input string, baseDir string) (*domain.MangaRespo
 }
 
 // hasContent はページが有効な情報を保持しているか判定します。
-func hasContent(page *domain.MangaPage) bool {
-	return page.ReferenceURL != "" || page.Dialogue != "" || page.VisualAnchor != ""
+func hasContent(panel *domain.Panel) bool {
+	return panel.ReferenceURL != "" || panel.Dialogue != "" || panel.VisualAnchor != ""
 }

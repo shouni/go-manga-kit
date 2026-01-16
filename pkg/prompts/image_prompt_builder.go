@@ -1,8 +1,6 @@
 package prompts
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"math/rand/v2"
@@ -26,7 +24,7 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 }
 
 // BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
+func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene."
 
@@ -45,21 +43,27 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 	// --- 2. キャラクター設定とビジュアルアンカーの収集 (User Prompt) ---
 	var visualParts []string
 	var targetSeed int64
-	if char, ok := pb.characterMap[speakerID]; ok {
+
+	// キャラクターの特定とフォールバック処理
+	char := pb.characterMap.FindCharacter(speakerID)
+	// 指定されたキャラが見つからない場合は、Primaryキャラをフォールバックとして取得
+	if char == nil {
+		char = pb.characterMap.GetPrimary()
+	}
+
+	// キャラクター（またはPrimary）が見つかった場合の処理
+	if char != nil {
 		if len(char.VisualCues) > 0 {
 			visualParts = append(visualParts, char.VisualCues...)
 		}
 		targetSeed = char.Seed
 	} else {
-		targetSeed = domain.GetSeedFromName(speakerID, pb.characterMap)
-		if speakerID != "" {
-			visualParts = append(visualParts, speakerID)
-		}
+		targetSeed = domain.GetSeedFromString(speakerID)
 	}
 
 	// アクション/ビジュアルアンカーの追加
-	if page.VisualAnchor != "" {
-		visualParts = append(visualParts, page.VisualAnchor)
+	if panel.VisualAnchor != "" {
+		visualParts = append(visualParts, panel.VisualAnchor)
 	}
 
 	// --- 3. プロンプトのクリーンな結合 ---
@@ -75,7 +79,7 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 }
 
 // BuildMangaPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (userPrompt string, systemPrompt string) {
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string) {
 	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
 	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
@@ -95,13 +99,13 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	var us strings.Builder
 	// TODO::ページ単位でのタイトルは現時点では出力しない
 	//	us.WriteString(fmt.Sprintf("### TITLE: %s ###\n", mangaTitle))
-	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(pages)))
+	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(panels)))
 
 	// キャラクター定義セクション
 	us.WriteString(BuildCharacterIdentitySection(pb.characterMap))
 
 	// 大ゴマの決定
-	numPanels := len(pages)
+	numPanels := len(panels)
 	bigPanelIndex := -1
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
@@ -119,7 +123,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	logger.Info("Building manga page prompt")
 
 	// 各パネルの指示
-	for i, page := range pages {
+	for i, panel := range panels {
 		panelNum := i + 1
 		isBig := (i == bigPanelIndex)
 
@@ -131,41 +135,18 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 		}
 
 		// SpeakerID を Name に変換して AI に伝える
-		displayName := pb.findCharacterName(page.SpeakerID)
-
+		character := pb.characterMap.FindCharacter(panel.SpeakerID)
 		// アクション指示の中にある SpeakerID も名前に置換して AI の混乱を防ぐ
-		sceneDescription := page.VisualAnchor
-		if char, ok := pb.characterMap[page.SpeakerID]; ok {
-			sceneDescription = strings.ReplaceAll(sceneDescription, page.SpeakerID, char.Name)
-		}
+		sceneDescription := panel.VisualAnchor
+		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, character.Name)
 
 		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", sceneDescription))
-		if page.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", displayName, page.Dialogue))
+		if panel.Dialogue != "" {
+			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", character.Name, panel.Dialogue))
 		}
 		us.WriteString("\n")
 	}
 	userPrompt = us.String()
 
 	return userPrompt, systemPrompt
-}
-
-// findCharacter は SpeakerID からキャラクター名を特定します。
-// ID直接一致、または台本形式(speaker-hash)の両方に対応します。
-func (pb *ImagePromptBuilder) findCharacterName(speakerID string) string {
-	sid := strings.ToLower(speakerID)
-	if char, ok := pb.characterMap[sid]; ok {
-		return char.Name
-	}
-
-	cleanID := strings.TrimPrefix(sid, "speaker-")
-	for _, char := range pb.characterMap {
-		h := sha256.Sum256([]byte(char.ID))
-		hash := hex.EncodeToString(h[:])
-		if cleanID == hash[:10] || cleanID == char.ID {
-			return char.Name
-		}
-	}
-
-	return speakerID
 }
