@@ -82,7 +82,7 @@ func (pg *PageGenerator) ExecuteMangaPage(ctx context.Context, manga domain.Mang
 	refURLs := pg.collectReferences(manga.Panels)
 
 	// プロンプト構築 (User/System プロンプトの分離)
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Title, manga.Panels, refURLs)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, refURLs, manga.Title)
 
 	// キャラクター設定からSeed値を特定
 	var defaultSeed *int64
