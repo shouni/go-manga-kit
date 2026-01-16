@@ -37,6 +37,10 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse
 	// 1ページあたりの最大パネル数に基づいてチャンク分割
 	totalPages := (len(manga.Panels) + MaxPanelsPerPage - 1) / MaxPanelsPerPage
 	defaultSeed := pg.determineDefaultSeed(manga.Panels)
+	var seedVal any = "none"
+	if defaultSeed != nil {
+		seedVal = *defaultSeed
+	}
 
 	for i := 0; i < len(manga.Panels); i += MaxPanelsPerPage {
 		if err := pg.limiter.Wait(ctx); err != nil {
@@ -62,7 +66,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga domain.MangaResponse
 			"page_number", currentPageNum,
 			"total_pages", totalPages,
 			"panel_count", len(subManga.Panels),
-			"seed", defaultSeed,
+			"seed", seedVal,
 		)
 		logger.Info("Starting manga page generation")
 
