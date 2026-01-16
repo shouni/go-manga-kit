@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"sort"
-	"strings"
 	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -101,14 +100,12 @@ func (gg *GroupGenerator) ExecutePanelGroup(ctx context.Context, panels []domain
 // resolveAndGetCharacter は、与えられたページ情報から最適なキャラクターを決定します。
 func (gg *GroupGenerator) resolveAndGetCharacter(panel domain.Panel, charMap domain.CharactersMap) domain.Character {
 	// 1. IDでの直接検索
-	id := strings.ToLower(strings.TrimSpace(panel.SpeakerID))
-	if c, ok := charMap[id]; ok {
-		return c
+	char := charMap.FindCharacter(panel.SpeakerID)
+	if char != nil {
+		return *char
 	}
 
-	if id != "" {
-		slog.Debug("SpeakerID not found in map, attempting fallback", "speaker_id", id)
-	}
+	slog.Debug("SpeakerID not found in map, attempting fallback", "speaker_id", panel.SpeakerID)
 
 	// 2. 事前に特定した Primary キャラクターを優先フォールバック
 	if gg.primaryChar != nil {
