@@ -24,7 +24,7 @@ func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImageProm
 }
 
 // BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64) {
+func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID string) (string, string, int64) {
 	// --- 1. System Prompt の構築 ---
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene."
 
@@ -60,8 +60,8 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 	}
 
 	// アクション/ビジュアルアンカーの追加
-	if page.VisualAnchor != "" {
-		visualParts = append(visualParts, page.VisualAnchor)
+	if panel.VisualAnchor != "" {
+		visualParts = append(visualParts, panel.VisualAnchor)
 	}
 
 	// --- 3. プロンプトのクリーンな結合 ---
@@ -77,7 +77,7 @@ func (pb *ImagePromptBuilder) BuildPanelPrompt(page domain.MangaPage, speakerID 
 }
 
 // BuildMangaPagePrompt は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (userPrompt string, systemPrompt string) {
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string) {
 	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
 	var ss strings.Builder
 	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
@@ -97,13 +97,13 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	var us strings.Builder
 	// TODO::ページ単位でのタイトルは現時点では出力しない
 	//	us.WriteString(fmt.Sprintf("### TITLE: %s ###\n", mangaTitle))
-	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(pages)))
+	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(panels)))
 
 	// キャラクター定義セクション
 	us.WriteString(BuildCharacterIdentitySection(pb.characterMap))
 
 	// 大ゴマの決定
-	numPanels := len(pages)
+	numPanels := len(panels)
 	bigPanelIndex := -1
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
@@ -121,7 +121,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 	logger.Info("Building manga page prompt")
 
 	// 各パネルの指示
-	for i, page := range pages {
+	for i, panel := range panels {
 		panelNum := i + 1
 		isBig := (i == bigPanelIndex)
 
@@ -133,14 +133,14 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(mangaTitle string, pages []do
 		}
 
 		// SpeakerID を Name に変換して AI に伝える
-		character := pb.characterMap.FindCharacter(page.SpeakerID)
+		character := pb.characterMap.FindCharacter(panel.SpeakerID)
 		// アクション指示の中にある SpeakerID も名前に置換して AI の混乱を防ぐ
-		sceneDescription := page.VisualAnchor
-		sceneDescription = strings.ReplaceAll(sceneDescription, page.SpeakerID, character.Name)
+		sceneDescription := panel.VisualAnchor
+		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, character.Name)
 
 		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", sceneDescription))
-		if page.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", character.Name, page.Dialogue))
+		if panel.Dialogue != "" {
+			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", character.Name, panel.Dialogue))
 		}
 		us.WriteString("\n")
 	}

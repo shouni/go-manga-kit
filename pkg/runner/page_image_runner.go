@@ -51,7 +51,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, markdownPath string) ([]*imag
 	slog.InfoContext(ctx, "MangaPageRunner: 解析完了",
 		"path", markdownPath,
 		"title", manga.Title,
-		"panelCount", len(manga.Pages),
+		"panelCount", len(manga.Panels),
 	)
 
 	// ページ生成エンジンを実行し、画像レスポンス群を取得

@@ -22,11 +22,11 @@ const (
 type ImagePromptBuilder interface {
 	// BuildPanelPrompt は、単一の漫画パネル用のユーザープロンプト、システムプロンプト、
 	// および再現性のためのseed値を生成します。
-	BuildPanelPrompt(page domain.MangaPage, speakerID string) (string, string, int64)
+	BuildPanelPrompt(panel domain.Panel, speakerID string) (string, string, int64)
 
 	// BuildMangaPagePrompt は、統合された漫画ページ画像用のユーザープロンプトと
 	// システムプロンプトを生成します。
-	BuildMangaPagePrompt(mangaTitle string, pages []domain.MangaPage, refURLs []string) (userPrompt string, systemPrompt string)
+	BuildMangaPagePrompt(mangaTitle string, panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string)
 }
 
 type MangaGenerator struct {

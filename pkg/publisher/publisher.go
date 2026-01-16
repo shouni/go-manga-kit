@@ -148,7 +148,7 @@ func (p *MangaPublisher) saveImages(ctx context.Context, images []*imagedom.Imag
 func (p *MangaPublisher) buildMarkdown(manga domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-	for i, page := range manga.Pages {
+	for i, page := range manga.Panels {
 		img := placeholder
 		if i < len(imagePaths) {
 			img = imagePaths[i]
