@@ -55,7 +55,8 @@ func (m CharactersMap) GetDefault() *Character {
 	return nil
 }
 
-// GetCharacterWithDefault は、指定されたIDからキャラクター情報を取得なければデフォルト
+// GetCharacterWithDefault は、指定されたIDでキャラクターを検索し、見つからない場合はデフォルトのキャラクターを返します。
+// どちらのキャラクターも見つからない場合は nil を返します。
 func (m CharactersMap) GetCharacterWithDefault(ID string) *Character {
 	char := m.GetCharacter(ID)
 	if char != nil {

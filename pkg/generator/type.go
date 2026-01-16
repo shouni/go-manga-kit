@@ -21,7 +21,7 @@ const (
 // ImagePromptBuilder は、画像生成用のプロンプトを構築するためのインターフェースを定義します。
 // これにより、漫画のパネルやページに対するプロンプト生成ロジックを抽象化します。
 type ImagePromptBuilder interface {
-	// BuildPanelPrompt は、単一の漫画パネル用のユーザープロンプト、システムプロンプト、 seed値を生成します。
+	// BuildPanelPrompt は、単一の漫画パネル用のユーザープロンプト、システムプロンプト、および使用するseed値を決定します。
 	BuildPanelPrompt(panel mangadom.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64)
 
 	// BuildMangaPagePrompt は、統合された漫画ページ画像用のユーザープロンプトと システムプロンプトを生成します。
