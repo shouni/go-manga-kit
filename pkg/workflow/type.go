@@ -49,7 +49,7 @@ type PageImageRunner interface {
 	RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, plotPath string) ([]string, error)
 }
 
-// PublishRunner は、生成された画像と漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
+// PublishRunner は、漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
 type PublishRunner interface {
-	Run(ctx context.Context, manga *mangadom.MangaResponse, images []*imagedom.ImageResponse, outputDir string) (publisher.PublishResult, error)
+	Run(ctx context.Context, manga *mangadom.MangaResponse, outputDir string) (publisher.PublishResult, error)
 }
