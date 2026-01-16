@@ -40,7 +40,7 @@ type ScriptRunner interface {
 // PanelImageRunner は、解析済みの漫画データと対象パネルのインデックスを基に、パネル画像を生成する責務を持ちます。
 type PanelImageRunner interface {
 	Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error)
-	RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) error
+	RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error)
 }
 
 // PageImageRunner は、指定されたパスのMarkdownコンテンツから漫画のページ画像を生成する責務を持ちます。

@@ -52,9 +52,9 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga *mangadom.MangaRe
 }
 
 // RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。エラーを返します。
-func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) error {
+func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
 	if manga == nil {
-		return fmt.Errorf("MangaResponse がありません")
+		return nil, fmt.Errorf("MangaResponse がありません")
 	}
 
 	// 保存先ディレクトリの決定
@@ -63,23 +63,23 @@ func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.
 	// ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）
 	basePath, err := asset.ResolveOutputPath(targetDir, path.Join(asset.DefaultImageDir, asset.DefaultPanelFileName))
 	if err != nil {
-		return fmt.Errorf("出力パスの解決に失敗しました: %w", err)
+		return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
 	}
 
 	// 画像の生成
 	images, err := r.Run(ctx, manga)
 	if err != nil {
-		return err // Run 内部でエラーラップされているためそのまま返す
+		return nil, err // Run 内部でエラーラップされているためそのまま返す
 	}
 
 	if len(images) != len(manga.Panels) {
-		return fmt.Errorf("生成された画像の数(%d)とパネルの数(%d)が一致しません", len(images), len(manga.Panels))
+		return nil, fmt.Errorf("生成された画像の数(%d)とパネルの数(%d)が一致しません", len(images), len(manga.Panels))
 	}
 	for i, image := range images {
 		// 連番を付けて保存
 		panelPath, err := asset.GenerateIndexedPath(basePath, i+1)
 		if err != nil {
-			return fmt.Errorf("パネル %d の出力パス生成に失敗しました: %w", i+1, err)
+			return nil, fmt.Errorf("パネル %d の出力パス生成に失敗しました: %w", i+1, err)
 		}
 
 		slog.InfoContext(ctx, "パネル画像を保存しています",
@@ -89,26 +89,26 @@ func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.
 
 		if err := r.writer.Write(ctx, panelPath, bytes.NewReader(image.Data), image.MimeType); err != nil {
 			// エラー発生時は、それまでの成果物は返さず、nilとエラーを返す
-			return fmt.Errorf("第 %d パネルの保存に失敗しました (path: %s): %w", i+1, panelPath, err)
+			return nil, fmt.Errorf("第 %d パネルの保存に失敗しました (path: %s): %w", i+1, panelPath, err)
 		}
 		manga.Panels[i].ReferenceURL = panelPath
 	}
 
 	plotPath, err := asset.ResolveOutputPath(targetDir, asset.DefaultMangaPlotName)
 	if err != nil {
-		return fmt.Errorf("プロットファイル出力パスの解決に失敗しました: %w", err)
+		return nil, fmt.Errorf("プロットファイル出力パスの解決に失敗しました: %w", err)
 	}
 
 	// JSONにシリアライズして保存
 	plotData, err := json.MarshalIndent(manga, "", "  ")
 	if err != nil {
-		return fmt.Errorf("台本データのJSON変換に失敗しました: %w", err)
+		return nil, fmt.Errorf("台本データのJSON変換に失敗しました: %w", err)
 	}
 
 	slog.InfoContext(ctx, "更新された台本を保存しています", "path", plotPath)
 	if err := r.writer.Write(ctx, plotPath, bytes.NewReader(plotData), "application/json"); err != nil {
-		return fmt.Errorf("プロットファイルの保存に失敗しました: %w", err)
+		return nil, fmt.Errorf("プロットファイルの保存に失敗しました: %w", err)
 	}
 
-	return nil
+	return manga, nil
 }
