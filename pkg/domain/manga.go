@@ -14,6 +14,9 @@ type Panel struct {
 	Dialogue     string `json:"dialogue"`
 	SpeakerID    string `json:"speaker_id"`
 	ReferenceURL string `json:"reference_url"`
+
+	// GeneratedImageURI は 生成された個別パネル画像の File API URI。
+	GeneratedImageURI string `json:"-"`
 }
 
 // Page は物理的な1枚の画像（複数のパネルを統合したもの）を表します。
