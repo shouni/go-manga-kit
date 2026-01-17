@@ -11,7 +11,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 )
 
-// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントなのだ。
+// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
 type PageGenerator struct {
 	composer *MangaComposer
 }
@@ -36,7 +36,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	seed := pg.determineDefaultSeed(manga.Panels)
 
 	for i := 0; i < len(manga.Panels); i += MaxPanelsPerPage {
-		if err := pg.composer.ReteLimiter.Wait(ctx); err != nil {
+		if err := pg.composer.RateLimiter.Wait(ctx); err != nil {
 			return nil, fmt.Errorf("rate limiter wait error: %w", err)
 		}
 

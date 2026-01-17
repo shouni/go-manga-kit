@@ -35,7 +35,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	for i, panel := range panels {
 		i, panel := i, panel
 		eg.Go(func() error {
-			if err := pg.composer.ReteLimiter.Wait(egCtx); err != nil {
+			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
@@ -65,7 +65,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				SystemPrompt:   systemPrompt,
 				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,
-				AspectRatio:    "3:4", // もし PanelAspectRatio 定数があればそれを使用してください
+				AspectRatio:    PanelAspectRatio,
 			})
 			if err != nil {
 				return fmt.Errorf("パネル %d (キャラID: %s) の生成に失敗しました: %w", i+1, char.ID, err)

@@ -24,7 +24,6 @@ type Builder struct {
 	aiClient   gemini.GenerativeModel
 	reader     remoteio.InputReader
 	writer     remoteio.OutputWriter
-	imgGen     imageKit.ImageGenerator
 	mangaGen   *generator.MangaComposer
 }
 
@@ -60,7 +59,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		ImgGen:        imgGen,
 		PromptBuilder: pb,
 		CharactersMap: chars,
-		ReteLimiter:   rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
+		RateLimiter:   rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
 	}
 
 	return &Builder{
@@ -70,7 +69,6 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		aiClient:   aiClient,
 		reader:     reader,
 		writer:     writer,
-		imgGen:     imgGen,
 		mangaGen:   &mangaGen,
 	}, nil
 }

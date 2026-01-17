@@ -44,5 +44,5 @@ type MangaComposer struct {
 	ImgGen        generator.ImageGenerator
 	PromptBuilder ImagePromptBuilder
 	CharactersMap mangadom.CharactersMap
-	ReteLimiter   *rate.Limiter
+	RateLimiter   *rate.Limiter
 }
