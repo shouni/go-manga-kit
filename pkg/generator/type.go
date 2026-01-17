@@ -41,8 +41,10 @@ type PagesImageGenerator interface {
 }
 
 type MangaComposer struct {
-	ImgGen        generator.ImageGenerator
-	PromptBuilder ImagePromptBuilder
-	CharactersMap mangadom.CharactersMap
-	RateLimiter   *rate.Limiter
+	ImgGen               generator.ImageGenerator
+	PromptBuilder        ImagePromptBuilder
+	CharactersMap        mangadom.CharactersMap
+	RateLimiter          *rate.Limiter
+	characterResourceMap map[string]string // CharacterID -> FileAPIURI
+	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
 }
