@@ -10,48 +10,45 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/time/rate"
 )
 
-// GroupGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
-type GroupGenerator struct {
-	mangaGenerator MangaGenerator
-	limiter        *rate.Limiter
+// PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
+type PanelGenerator struct {
+	composer *MangaComposer
 }
 
-// NewGroupGenerator は GroupGenerator の新しいインスタンスを初期化します。
-func NewGroupGenerator(mangaGenerator MangaGenerator, interval time.Duration) *GroupGenerator {
-	return &GroupGenerator{
-		mangaGenerator: mangaGenerator,
-		limiter:        rate.NewLimiter(rate.Every(interval), 2),
+// NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
+func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
+	return &PanelGenerator{
+		composer: composer,
 	}
 }
 
 // Execute は、並列処理を用いてパネル群を生成します。
-func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-	// プロンプトビルダーの取得
-	pb := gg.mangaGenerator.PromptBuilder
+func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
+
+	pb := pg.composer.PromptBuilder
+	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
 		i, panel := i, panel
 		eg.Go(func() error {
-			if err := gg.limiter.Wait(egCtx); err != nil {
+			if err := pg.composer.ReteLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
-			// キャラクター解決
-			char := gg.mangaGenerator.CharactersMap.GetCharacterWithDefault(panel.SpeakerID)
+			// キャラクター解決 (SpeakerID に基づく)
+			char := cm.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
-				// SpeakerIDが見つからず、デフォルトキャラも存在しない場合はエラーとする
 				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
 			}
 
 			// プロンプト構築
 			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
 
-			// 構造化ロギングの適用
+			// 構造化ロギング
 			logger := slog.With(
 				"panel_index", i+1,
 				"character_id", char.ID,
@@ -60,15 +57,15 @@ func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			)
 			logger.Info("Starting panel generation")
 
-			// 3. アダプター呼び出し
+			// 画像生成アダプター呼び出し
 			startTime := time.Now()
-			resp, err := gg.mangaGenerator.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
+			resp, err := pg.composer.ImgGen.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         userPrompt,
 				NegativePrompt: prompts.NegativePanelPrompt,
 				SystemPrompt:   systemPrompt,
 				Seed:           &finalSeed,
 				ReferenceURL:   char.ReferenceURL,
-				AspectRatio:    PanelAspectRatio,
+				AspectRatio:    "3:4", // もし PanelAspectRatio 定数があればそれを使用してください
 			})
 			if err != nil {
 				return fmt.Errorf("パネル %d (キャラID: %s) の生成に失敗しました: %w", i+1, char.ID, err)
