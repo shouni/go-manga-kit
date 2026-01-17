@@ -101,18 +101,15 @@ func (pg *PageGenerator) collectReferences(panels []domain.Panel) []string {
 	var urls []string
 	cm := pg.composer.CharactersMap
 
+	// デフォルトキャラクターの参照URLを最優先で常駐させる
+	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
+		urlMap[def.ReferenceURL] = struct{}{}
+		urls = append(urls, def.ReferenceURL)
+		slog.Debug("Default character reference added to page", "url", def.ReferenceURL)
+	}
+
 	for _, p := range panels {
-		char := cm.GetCharacter(p.SpeakerID)
-
-		// 1. キャラクターのマスター参照画像
-		if char != nil && char.ReferenceURL != "" {
-			if _, exists := urlMap[char.ReferenceURL]; !exists {
-				urlMap[char.ReferenceURL] = struct{}{}
-				urls = append(urls, char.ReferenceURL)
-			}
-		}
-
-		// 2. パネル個別の参照画像
+		// パネル個別の参照画像
 		if p.ReferenceURL != "" {
 			if _, exists := urlMap[p.ReferenceURL]; !exists {
 				urlMap[p.ReferenceURL] = struct{}{}
