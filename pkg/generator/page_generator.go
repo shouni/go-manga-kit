@@ -141,6 +141,8 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	}
 
 	// フォールバック
+	// fallbackSeed は、キャラクター固有のSeedが見つからない場合に利用される固定のSeed値です。
+	// この値自体に特別な意味はなく、生成結果の再現性を担保するためのデフォルト値として機能します。
 	const fallbackSeed = 1000
 	slog.Warn("キャラクター由来のシードが見つからないため、フォールバックシードを使用します",
 		"fallback_seed", fallbackSeed,
