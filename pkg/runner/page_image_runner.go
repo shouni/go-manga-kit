@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
@@ -80,7 +79,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaR
 	}
 
 	// 2. ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）
-	basePath, err := asset.ResolveOutputPath(targetDir, path.Join(asset.DefaultImageDir, asset.DefaultPageFileName))
+	basePath, err := asset.ResolveOutputPath(targetDir, asset.DefaultPageImagePath())
 	if err != nil {
 		return nil, fmt.Errorf("出力パスの解決に失敗しました: %w", err)
 	}

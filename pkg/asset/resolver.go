@@ -2,6 +2,7 @@ package asset
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -28,6 +29,14 @@ var (
 	// PageFileRegex はページ画像 (manga_page_1.png 等) に一致します
 	PageFileRegex = createIndexedRegex(DefaultPageFileName)
 )
+
+func DefaultPanelImagePath() string {
+	return path.Join(DefaultImageDir, DefaultPanelFileName)
+}
+
+func DefaultPageImagePath() string {
+	return path.Join(DefaultImageDir, DefaultPageFileName)
+}
 
 // ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
 // GCS/ローカルを考慮した最終的な出力パスを生成します。
