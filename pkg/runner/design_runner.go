@@ -28,7 +28,7 @@ const (
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
-	composer *generator.MangaComposer // MangaGenerator から MangaComposer (ポインタ) に変更なのだ
+	composer *generator.MangaComposer
 	writer   remoteio.OutputWriter
 }
 

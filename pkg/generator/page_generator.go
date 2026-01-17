@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -16,14 +15,14 @@ type PageGenerator struct {
 	composer *MangaComposer
 }
 
-// NewPageGenerator は PageGenerator の新しいインスタンスを初期化するのだ。
+// NewPageGenerator は PageGenerator の新しいインスタンスを初期化します。
 func NewPageGenerator(composer *MangaComposer) *PageGenerator {
 	return &PageGenerator{
 		composer: composer,
 	}
 }
 
-// Execute は全パネルを適切なチャンク（ページ）に分割し、順次生成処理を実行するのだ。
+// Execute は全パネルを適切なチャンク（ページ）に分割し、順次生成処理を実行します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	var allResponses []*imagedom.ImageResponse
 
@@ -73,7 +72,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	return allResponses, nil
 }
 
-// generateMangaPage は構造化された情報を基に、1枚の統合漫画画像を生成するのだ。
+// generateMangaPage は構造化された情報を基に、1枚の統合漫画画像を生成します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	pb := pg.composer.PromptBuilder
 
@@ -96,7 +95,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	return pg.composer.ImgGen.GenerateMangaPage(ctx, req)
 }
 
-// collectReferences は必要な全ての画像URLを重複なく収集するのだ。
+// collectReferences は必要な全ての画像URLを重複なく収集します。
 func (pg *PageGenerator) collectReferences(panels []domain.Panel) []string {
 	urlMap := make(map[string]struct{})
 	var urls []string
@@ -124,7 +123,7 @@ func (pg *PageGenerator) collectReferences(panels []domain.Panel) []string {
 	return urls
 }
 
-// determineDefaultSeed は、ページの代表的なSeed値を優先順位に基づいて決定するのだ。
+// determineDefaultSeed は、ページの代表的なSeed値を優先順位に基づいて決定します。
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	cm := pg.composer.CharactersMap
 
@@ -142,8 +141,7 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	}
 
 	// フォールバック
-	// どのキャラクターからも取得できない場合、実行時の時間から新しいSeedを生成
-	fallbackSeed := time.Now().UnixNano()
+	const fallbackSeed = 1000
 	slog.Warn("キャラクター由来のシードが見つからないため、フォールバックシードを使用します",
 		"fallback_seed", fallbackSeed,
 		"panel_count", len(panels),
