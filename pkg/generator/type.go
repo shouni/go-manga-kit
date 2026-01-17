@@ -4,6 +4,7 @@ import (
 	"context"
 
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
+	"golang.org/x/time/rate"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/gemini-image-kit/pkg/generator"
@@ -39,8 +40,9 @@ type PagesImageGenerator interface {
 	Execute(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error)
 }
 
-type MangaGenerator struct {
+type MangaComposer struct {
 	ImgGen        generator.ImageGenerator
 	PromptBuilder ImagePromptBuilder
-	Characters    mangadom.CharactersMap
+	CharactersMap mangadom.CharactersMap
+	RateLimiter   *rate.Limiter
 }

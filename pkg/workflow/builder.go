@@ -7,6 +7,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
+	"golang.org/x/time/rate"
 
 	"github.com/patrickmn/go-cache"
 	imageKit "github.com/shouni/gemini-image-kit/pkg/generator"
@@ -23,8 +24,7 @@ type Builder struct {
 	aiClient   gemini.GenerativeModel
 	reader     remoteio.InputReader
 	writer     remoteio.OutputWriter
-	imgGen     imageKit.ImageGenerator
-	mangaGen   generator.MangaGenerator
+	mangaGen   *generator.MangaComposer
 }
 
 // NewBuilder は、設定とキャラクター定義を基に新しい Builder を初期化します。
@@ -55,10 +55,11 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	}
 
 	pb := prompts.NewImagePromptBuilder(chars, cfg.StyleSuffix)
-	mangaGen := generator.MangaGenerator{
+	mangaGen := generator.MangaComposer{
 		ImgGen:        imgGen,
 		PromptBuilder: pb,
-		Characters:    chars,
+		CharactersMap: chars,
+		RateLimiter:   rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
 	}
 
 	return &Builder{
@@ -68,8 +69,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		aiClient:   aiClient,
 		reader:     reader,
 		writer:     writer,
-		imgGen:     imgGen,
-		mangaGen:   mangaGen,
+		mangaGen:   &mangaGen,
 	}, nil
 }
 

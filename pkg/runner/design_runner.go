@@ -28,15 +28,15 @@ const (
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
-	mangaGen generator.MangaGenerator
+	composer *generator.MangaComposer
 	writer   remoteio.OutputWriter
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化するのだ。
-func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, writer remoteio.OutputWriter) *MangaDesignRunner {
+func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, writer remoteio.OutputWriter) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		cfg:      cfg,
-		mangaGen: mangaGen,
+		composer: composer,
 		writer:   writer,
 	}
 }
@@ -44,7 +44,7 @@ func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
-	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.Characters, charIDs)
+	refs, descriptions, err := collectCharacterAssets(dr.composer.CharactersMap, charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
 	}
@@ -69,7 +69,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 4. 生成実行
-	resp, err := dr.mangaGen.ImgGen.GenerateMangaPage(ctx, pageReq)
+	resp, err := dr.composer.ImgGen.GenerateMangaPage(ctx, pageReq)
 	if err != nil {
 		slog.Error("Design generation failed", "error", err)
 		return "", 0, fmt.Errorf("画像の生成に失敗しました: %w", err)
