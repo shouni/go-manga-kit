@@ -44,7 +44,7 @@ func NewMangaDesignRunner(cfg config.Config, mangaGen generator.MangaGenerator, 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
-	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.Characters, charIDs)
+	refs, descriptions, err := collectCharacterAssets(dr.mangaGen.CharactersMap, charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
 	}

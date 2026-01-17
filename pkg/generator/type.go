@@ -42,5 +42,5 @@ type PagesImageGenerator interface {
 type MangaGenerator struct {
 	ImgGen        generator.ImageGenerator
 	PromptBuilder ImagePromptBuilder
-	Characters    mangadom.CharactersMap
+	CharactersMap mangadom.CharactersMap
 }

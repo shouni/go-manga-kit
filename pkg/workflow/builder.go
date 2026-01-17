@@ -58,7 +58,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	mangaGen := generator.MangaGenerator{
 		ImgGen:        imgGen,
 		PromptBuilder: pb,
-		Characters:    chars,
+		CharactersMap: chars,
 	}
 
 	return &Builder{

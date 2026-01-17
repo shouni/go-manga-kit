@@ -42,7 +42,7 @@ func (gg *GroupGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			}
 
 			// キャラクター解決
-			char := gg.mangaGenerator.Characters.GetCharacterWithDefault(panel.SpeakerID)
+			char := gg.mangaGenerator.CharactersMap.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
 				// SpeakerIDが見つからず、デフォルトキャラも存在しない場合はエラーとする
 				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
