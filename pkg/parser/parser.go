@@ -15,7 +15,7 @@ type Parser interface {
 	ParseFromPath(ctx context.Context, fullPath string) (*domain.MangaResponse, error)
 }
 
-// MangaResponseParser は Json 形式の台本を解析する構造体です。
+// MangaResponseParser は JSON 形式の台本を解析する構造体です。
 type MangaResponseParser struct {
 	reader remoteio.InputReader
 }
@@ -28,7 +28,6 @@ func NewMangaResponseParser(r remoteio.InputReader) *MangaResponseParser {
 // ParseFromPath は指定された GCS URIやローカルファイルパスなどから
 // コンテンツを読み込み、解析して domain.MangaResponse を返します。
 func (p *MangaResponseParser) ParseFromPath(ctx context.Context, plotFile string) (*domain.MangaResponse, error) {
-	// プロットJSONの読み込み
 	slog.InfoContext(ctx, "プロットファイルを読み込んでいます", "path", plotFile)
 	rc, err := p.reader.Open(ctx, plotFile)
 	if err != nil {
@@ -36,7 +35,6 @@ func (p *MangaResponseParser) ParseFromPath(ctx context.Context, plotFile string
 	}
 	defer rc.Close()
 
-	// インスタンスを生成し、デコードを実行
 	manga := &domain.MangaResponse{}
 	if err := json.NewDecoder(rc).Decode(manga); err != nil {
 		return nil, fmt.Errorf("プロットJSONのパースに失敗しました: %w", err)

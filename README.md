@@ -46,8 +46,8 @@
 | **1. Designing**  | `DesignRunner` | キャラクターのDNA（特徴）を固定し、一貫性のあるデザインシートを生成。 |
 | **2. Scripting**  | `ScriptRunner` | Web/テキストから、キャラクター・セリフ・構図を含むJSON台本を生成。 |
 | **3. Panel Gen** | `PanelImageRunner` | 台本の各パネル（コマ）に対応する画像を、並列かつレート制限を遵守しながら個別に生成。 |
-| **4. Publishing** | `PublishRunner` | 画像とテキストを統合し、HTML/Markdown/PNG等で出力。 |
-| **5. Page Gen**   | `PageImageRunner` | 生成済みのパネル画像を、Markdown形式に基づきページ単位にレイアウトし、ページ画像を生成。 |
+| **4. Publishing** | `PublishRunner` | 画像とテキストを統合し、HTML/Markdown等で出力。 |
+| **5. Page Gen**   | `PageImageRunner` | 生成済みのパネル画像を、JSON台本に基づきページ単位にレイアウトし、ページ画像を生成。 |
 
 ---
 
@@ -58,9 +58,9 @@
 | **`pkg/asset`** | GCSやローカルパスなど、異なるストレージ間でのパス解決（resolver）を担う。 |
 | **`pkg/domain`** | `Character`, `Panel`, `Manga` 等の基底モデル。DNA情報やコアとなるデータ構造を定義。 |
 | **`pkg/generator`** | **中核機能**。`PageGenerator` や `GroupGenerator` による作画・レイアウト制御を担当。 |
-| **`pkg/parser`** | Markdown や正規表現を用いて、ソーステキストをネーム（台本）へ解析・変換。 |
+| **`pkg/parser`** | ソーステキストをネーム（台本）へ解析・変換。 |
 | **`pkg/prompts`** | 描画AIへの空間構成指示や、テンプレート管理を行うプロンプトの司令塔。 |
-| **`pkg/publisher`** | 生成したアセットを統合画像（PNG）やHTMLとして書き出す最終出力を担当。 |
+| **`pkg/publisher`** | 生成したアセットを書き出す最終出力を担当。 |
 | **`pkg/runner`** | `workflow` インターフェースを満たす具体的な実行実体（各工程のメインロジック）。 |
 | **`pkg/workflow`** | 全体のワークフロー定義、インターフェース、および `Builder` による統合。 |
 
@@ -75,7 +75,7 @@ go-manga-kit/
     ├── config/      # 環境変数管理
     ├── domain/      # ドメインモデル (character.go, manga.go)
     ├── generator/   # 生成戦略 (builder.go, page/group_generator.go)
-    ├── parser/      # 構文解析 (markdown.go, regex.go)
+    ├── parser/      # 構文解析
     ├── prompts/     # プロンプト構築
     ├── publisher/   # 成果物出力 (publisher.go)
     ├── runner/      # ワークフローの実行処理
