@@ -17,6 +17,7 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
+// buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
 func buildMangaComposer(
 	cfg config.Config,
 	httpClient httpkit.ClientInterface,
@@ -51,6 +52,7 @@ func buildMangaComposer(
 	}, nil
 }
 
+// initializeAssetManager 提供された GeminiImageCore を使用して AssetManager インスタンスを初期化し、返します。
 func initializeAssetManager(core *imagekit.GeminiImageCore) imagekit.AssetManager {
 	return core
 }
@@ -63,6 +65,7 @@ func initializeImageGenerator(model string, core *imagekit.GeminiImageCore) (ima
 	)
 }
 
+// initializeCore 提供された依存関係で構成された GeminiImageCore インスタンスを初期化して返します。
 func initializeCore(reader remoteio.InputReader, httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel) (*imagekit.GeminiImageCore, error) {
 	imgCache := cache.New(defaultCacheExpiration, cacheCleanupInterval)
 	core, err := imagekit.NewGeminiImageCore(
