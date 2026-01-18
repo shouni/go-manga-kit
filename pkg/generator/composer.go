@@ -20,20 +20,33 @@ type MangaComposer struct {
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
-	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
+	panelResourceMap     map[int]string    // PanelIndex -> FileAPIURI
 	mu                   sync.RWMutex
 	uploadGroup          singleflight.Group
 }
 
-// PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
-func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
-	// マップの遅延初期化
-	mc.mu.Lock()
-	if mc.CharacterResourceMap == nil {
-		mc.CharacterResourceMap = make(map[string]string)
+// NewMangaComposer は MangaComposer の新しいインスタンスを、必要なマップを初期化した状態で生成します。
+func NewMangaComposer(
+	assetMgr generator.AssetManager,
+	imgGen generator.ImageGenerator,
+	pb ImagePromptBuilder,
+	cm domain.CharactersMap,
+	limiter *rate.Limiter,
+) *MangaComposer {
+	return &MangaComposer{
+		AssetManager:         assetMgr,
+		ImageGenerator:       imgGen,
+		PromptBuilder:        pb,
+		CharactersMap:        cm,
+		RateLimiter:          limiter,
+		CharacterResourceMap: make(map[string]string),
+		panelResourceMap:     make(map[int]string),
 	}
-	mc.mu.Unlock()
+}
 
+// PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
+// コンストラクタでマップが初期化されていることを前提としているため、ここでのロック付き nil チェックは不要です。
+func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := mc.CharactersMap
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -46,7 +59,6 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 				return nil
 			}
 
-			// キャッシュを考慮したアップロードロジックを呼び出し
 			_, err := mc.getOrUploadAsset(egCtx, char.ID, char.ReferenceURL)
 			if err != nil {
 				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", char.ID, speakerID, err)
@@ -58,14 +70,11 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 	return eg.Wait()
 }
 
-// getOrUploadAsset は指定されたキャラクターのアセットが既にアップロード済みであればその URI を返し、
-// 未アップロードであれば File API へアップロードしてマップに格納します。
-// singleflight を使用して、同一キャラクターの同時リクエストを集約します。
+// getOrUploadAsset は、内部的なキャッシュ（CharacterResourceMap）を利用し、
+// 必要に応じて Gemini File API へのアップロードを singleflight で実行します。
 func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, referenceURL string) (string, error) {
 	val, err, _ := mc.uploadGroup.Do(charID, func() (interface{}, error) {
-		// 【重要】singleflight.Group は「現在進行中の呼び出し」はまとめますが、
-		// 過去に完了した結果を永続的にキャッシュする機能はありません。
-		// そのため、コールバック内で再度マップを確認し、既に完了済みの場合は処理をスキップします。
+		// singleflight の実行中に他の goroutine が完了させている可能性があるため、マップを確認
 		mc.mu.RLock()
 		existingURI, ok := mc.CharacterResourceMap[charID]
 		mc.mu.RUnlock()
@@ -73,13 +82,11 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 			return existingURI, nil
 		}
 
-		// ネットワーク I/O を伴うアップロード実行
 		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
 		if uploadErr != nil {
 			return nil, uploadErr
 		}
 
-		// 結果を永続的なキャッシュマップに保存
 		mc.mu.Lock()
 		mc.CharacterResourceMap[charID] = uploadedURI
 		mc.mu.Unlock()

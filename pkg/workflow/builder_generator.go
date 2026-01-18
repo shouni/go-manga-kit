@@ -43,14 +43,13 @@ func buildMangaComposer(
 	}
 	pb := prompts.NewImagePromptBuilder(chars, cfg.StyleSuffix)
 
-	return &generator.MangaComposer{
-		AssetManager:         assetManager,
-		ImageGenerator:       imageGenerator,
-		PromptBuilder:        pb,
-		CharactersMap:        chars,
-		RateLimiter:          rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
-		CharacterResourceMap: make(map[string]string),
-	}, nil
+	return generator.NewMangaComposer(
+		assetManager,
+		imageGenerator,
+		pb,
+		chars,
+		rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
+	), nil
 }
 
 // initializeAssetManager 提供された GeminiImageCore を使用して AssetManager インスタンスを初期化し、返します。
