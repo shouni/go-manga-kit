@@ -9,7 +9,7 @@
 
 **Go Manga Kit** は、非構造化ドキュメントを解析し、AIによる**キャラクターDNAの一貫性を維持した作画**を行うためのエンジニア向けライブラリです。
 
-[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルで自動分割を行います。GCS (Google Cloud Storage) とシームレスに連携し、クラウド上のリソースを最大限に活用した作画制作を実現するハイエンドなツールキットです。
+[Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**オート・チャンク・システム**により、1ページあたり最大6パネルでの自動スライス生成を行います。Gemini File API を最大限に活用し、リソースの事前アップロードとキャッシュ戦略を組み合わせることで、高速かつ安定した作画制作を実現します。
 
 ---
 
@@ -17,9 +17,9 @@
 
 * **🧬 Character DNA System**: `domain.Character` に定義したSeed値と視覚特徴をプロンプトへ動的に注入。全ページを通じてキャラクターの外見を一貫させることが可能です。
 * **📑 Auto-Chunk Pagination**: パネル数が上限を超えると自動でページをスライス。AIの描画限界を回避し、複数枚構成の漫画を安定して生成します。
-* **📖 Script-to-Manga Generator**: Markdown等のソースを `parser` が解析。`net/url` を基盤とした解析により、クラウド上の相対パスを正確な絶対URL（`gs://...`）へ解決します。
+* **⚡ Smart Asset Preloading**: 生成前に全アセットを Gemini File API へ並列アップロード。`singleflight` 制御により、同一URLの二重アップロードを完全に排除し、APIクォータを節約します。
+* **🎯 Visual Anchor Mapping**: デフォルトキャラクター（デザインシート）を常にリソースの0番（`input_file_0`）に固定。AIが迷うことなく基準スタイルを参照できる仕組みを提供します。
 * **📐 Dynamic Layout Director**: ページごとに「主役パネル（Big Panel）」を動的に決定。単調なコマ割りを防ぎ、ドラマチックな演出を自動生成します。
-* **🛡️ Robust Path Resolution**: `url.ResolveReference` を採用。`../` などの相対参照も標準プロトコルに従って安全に解決し、GCSやHTTPのスキームを破壊することなくアセットを特定します。
 
 ---
 
@@ -27,13 +27,12 @@
 
 | レイヤー | 技術 / ライブラリ | 役割 |
 | --- | --- | --- |
-| **Intelligence** | **Gemini 3.0 Flash** | 伝説の編集者プロンプトによるネーム構成 |
+| **Intelligence** | **Gemini 3.0 Flash** | ネーム（台本）構成およびマルチモーダル推論 |
 | **Artistic** | **Nano Banana** | DNA注入と空間構成プロンプトによる一括作画 |
-| **Resilience** | **go-cache** | 参照画像のTTL管理（30分）による高速化 |
-| **Concurrency** | `x/time/rate` | 安定したAPIクォータ遵守 |
-| **Drawing Engine** | `shouni/gemini-image-kit` | Image-to-Image / Multi-Reference 描画コア |
+| **Resilience** | `singleflight` & `sync.Map` | アセットアップロードの重複抑制と高速再利用 |
+| **Concurrency** | `x/time/rate` & `errgroup` | 安定したAPIクォータ遵守とリソースの並列準備 |
+| **Drawing Engine** | `shouni/gemini-image-kit` | Gemini File API 連携および描画コア |
 | **I/O Factory** | `shouni/go-remote-io` | GCS/Localの透過的なアクセス |
-| **Web Extract** | `shouni/go-web-exact` | Webページからのセマンティックなコンテンツ抽出。 |
 
 ---
 
@@ -89,56 +88,32 @@ go-manga-kit/
 ```mermaid
 sequenceDiagram
     participant APP as Application
-    participant Gen as manga-kit.MangaGenerator
-    participant Kit_Gen as gemini-image-kit.GeminiGenerator
-    participant Kit_Core as gemini-image-kit.GeminiImageCore
-    participant R_IO as remoteio.InputReader (GCS)
-    participant HTTP as HTTP Client (Web)
-    participant API as Gemini API (Nano Banana)
+    participant Comp as generator.MangaComposer
+    participant Page as generator.PageGenerator
+    participant Asset as gemini-image-kit.AssetManager
+    participant API as Gemini API (File API / Nano Banana)
 
-    Note over APP, Kit_Gen: 1. 初期化フェーズ
-    APP->>Kit_Core: NewGeminiImageCore(reader, client, cache)
-    APP->>Kit_Gen: NewGeminiGenerator(core, apiClient, model)
+    Note over APP, Comp: 1. アセット事前準備 (Parallel)
+    APP->>Comp: PrepareCharacterResources / PreparePanelResources
 
-    Note over APP, API: 2. 生成フェーズ (Execution)
-    APP->>Gen: ExecuteMangaPages
-    Gen->>Kit_Gen: GenerateMangaPage(req)
-
-    loop 各 ReferenceURL の処理 (Core Pipeline)
-        Kit_Gen->>Kit_Core: prepareImagePart(url)
-        
-        rect rgb(240, 240, 240)
-            Note over Kit_Core: 【Security】 IsSafeURL (SSRF Check)
-        end
-
-        Kit_Core->>Kit_Core: キャッシュ確認
-        
-        alt キャッシュなし
-            Note over Kit_Core, HTTP: スキームに応じて取得先を分岐
-            critical URL Scheme check
-                option gs://
-                    Kit_Core->>R_IO: Open / ReadAll (GCS)
-                    R_IO-->>Kit_Core: []byte
-                option http(s)://
-                    Kit_Core->>HTTP: FetchBytes (Web)
-                    HTTP-->>Kit_Core: []byte
-            end
-
-            rect rgb(230, 245, 255)
-                Note over Kit_Core: 【Optimization】 imgutil.CompressToJPEG
-            end
-            Kit_Core->>Kit_Core: キャッシュ保存
-        end
-        
-        Kit_Core-->>Kit_Gen: genai.Part (InlineData)
+    loop 各ユニークURL (Character/Panel)
+        Comp->>Comp: getOrUploadResource (URL Key)
+        Note right of Comp: singleflight で二重送出を防止
+        Comp->>Asset: UploadFile(ctx, url)
+        Asset->>API: File API Upload
+        API-->>Asset: File API URI (gs://...)
+        Asset-->>Comp: URI
+        Comp->>Comp: PanelResourceMap[URL] に保存
     end
 
-    Note over Kit_Gen, API: 3. AI推論 (Inference)
-    Kit_Gen->>API: GenerateContent (Part + Prompt + Seed)
-    API-->>Kit_Gen: Candidate Image Data
-    Kit_Gen->>Kit_Core: parseToResponse (抽出・正規化)
-    Kit_Gen-->>Gen: domain.ImageResponse
-    Gen-->>APP: 生成完了通知
+    Note over APP, API: 2. ページ生成 (Inference)
+    APP->>Page: Execute
+    Page->>Page: collectResources (MapからURIを取得)
+    Note right of Page: 0番目にデフォルトキャラ(input_file_0)を固定
+
+    Page->>API: GenerateContent (FileAPIURIs + Prompt + Seed)
+    API-->>Page: Generated Image Data
+    Page-->>APP: []imagedom.ImageResponse
 
 ```
 
