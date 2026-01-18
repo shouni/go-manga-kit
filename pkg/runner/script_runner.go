@@ -64,7 +64,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode str
 
 	// 3. Gemini API を呼び出し
 	slog.Info("ScriptRunner: Calling Gemini API", "model", sr.cfg.GeminiModel)
-	resp, err := sr.aiClient.GenerateContent(ctx, finalPrompt, sr.cfg.GeminiModel)
+	resp, err := sr.aiClient.GenerateContent(ctx, sr.cfg.GeminiModel, finalPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("プロンプト生成に失敗: %w", err)
 	}
