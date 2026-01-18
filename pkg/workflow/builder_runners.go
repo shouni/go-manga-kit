@@ -29,19 +29,19 @@ func (b *Builder) BuildScriptRunner() (ScriptRunner, error) {
 
 // BuildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
 func (b *Builder) BuildDesignRunner() (DesignRunner, error) {
-	return runner.NewMangaDesignRunner(b.cfg, b.mangaGen, b.writer), nil
+	return runner.NewMangaDesignRunner(b.cfg, b.mangaComposer, b.writer), nil
 }
 
 // BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (b *Builder) BuildPanelImageRunner() (PanelImageRunner, error) {
-	panelsGen := generator.NewPanelGenerator(b.mangaGen)
+	panelsGen := generator.NewPanelGenerator(b.mangaComposer)
 
 	return runner.NewMangaPanelImageRunner(b.cfg, panelsGen, b.writer), nil
 }
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (b *Builder) BuildPageImageRunner() (PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(b.mangaGen)
+	pagesGen := generator.NewPageGenerator(b.mangaComposer)
 
 	return runner.NewMangaPageRunner(b.cfg, pagesGen, b.reader, b.writer), nil
 }
@@ -61,6 +61,6 @@ func (b *Builder) BuildPublishRunner() (PublishRunner, error) {
 		return nil, fmt.Errorf("md2htmlRunner の初期化に失敗しました: %w", err)
 	}
 
-	pub := publisher.NewMangaPublisher(b.chars, b.writer, md2htmlRunner)
+	pub := publisher.NewMangaPublisher(b.mangaComposer.CharactersMap, b.writer, md2htmlRunner)
 	return runner.NewDefaultPublisherRunner(b.cfg, pub), nil
 }

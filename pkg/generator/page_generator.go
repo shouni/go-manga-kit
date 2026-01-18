@@ -92,7 +92,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		ReferenceURLs:  refURLs,
 	}
 
-	return pg.composer.ImgGen.GenerateMangaPage(ctx, req)
+	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
 // collectReferences は必要な全ての画像URLを重複なく収集します。

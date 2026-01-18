@@ -41,7 +41,8 @@ type PagesImageGenerator interface {
 }
 
 type MangaComposer struct {
-	ImgGen               generator.ImageGenerator
+	AssetManager         generator.AssetManager
+	ImageGenerator       generator.ImageGenerator
 	PromptBuilder        ImagePromptBuilder
 	CharactersMap        mangadom.CharactersMap
 	RateLimiter          *rate.Limiter
