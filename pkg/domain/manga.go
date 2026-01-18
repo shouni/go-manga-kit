@@ -16,6 +16,30 @@ type Panel struct {
 	ReferenceURL string `json:"reference_url"`
 }
 
+// Panels は Panel のスライスに対するカスタム型です。
+type Panels []Panel
+
+// UniqueSpeakerIDs はパネルのスライスから重複しない SpeakerID を抽出します。
+func (ps Panels) UniqueSpeakerIDs() []string {
+	// 重複排除用の集合 (Set) を作成
+	set := make(map[string]struct{})
+
+	for _, panel := range ps {
+		// 空文字でない場合のみ追加
+		if panel.SpeakerID != "" {
+			set[panel.SpeakerID] = struct{}{}
+		}
+	}
+
+	// 抽出されたIDをスライスに変換
+	uniqueIDs := make([]string, 0, len(set))
+	for id := range set {
+		uniqueIDs = append(uniqueIDs, id)
+	}
+
+	return uniqueIDs
+}
+
 // Page は物理的な1枚の画像（複数のパネルを統合したもの）を表します。
 // 複数のパネルを1枚の画像に合成する場合に活用します。
 type Page struct {

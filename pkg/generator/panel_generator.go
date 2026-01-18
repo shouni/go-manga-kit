@@ -17,17 +17,12 @@ type PanelGenerator struct {
 	composer *MangaComposer
 }
 
-// NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
 func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
-	return &PanelGenerator{
-		composer: composer,
-	}
+	return &PanelGenerator{composer: composer}
 }
 
-// Execute は、並列処理を用いてパネル群を生成します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-
-	// 1. リソースの事前準備（別の関数に切り出し）
+	// 1. リソースの事前準備（スレッドセーフ化済み）
 	if err := pg.prepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
@@ -38,7 +33,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	pb := pg.composer.PromptBuilder
 	cm := pg.composer.CharactersMap
 
-	// --- 2. パネル生成フェーズ (並列実行) ---
 	for i, panel := range panels {
 		i, panel := i, panel
 		eg.Go(func() error {
@@ -53,14 +47,12 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
 
-			// 事前準備した File API URI を取得（存在しない場合は空文字となりフォールバックされる）
+			// 読み取りもロックをかけて安全に取得
+			pg.composer.mu.Lock()
 			fileURI := pg.composer.characterResourceMap[char.ID]
+			pg.composer.mu.Unlock()
 
-			logger := slog.With(
-				"panel_index", i+1,
-				"speaker_id", char.ID,
-				"use_file_api", fileURI != "",
-			)
+			logger := slog.With("panel_index", i+1, "speaker_id", char.ID, "use_file_api", fileURI != "")
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
@@ -74,37 +66,39 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				AspectRatio:    PanelAspectRatio,
 			})
 			if err != nil {
-				return fmt.Errorf("panel %d (speaker: %s) generation failed: %w", i+1, char.ID, err)
+				return fmt.Errorf("panel %d generation failed: %w", i+1, err)
 			}
 
-			logger.Info("Panel generation completed",
-				"duration", time.Since(startTime).Round(time.Millisecond),
-			)
-
+			logger.Info("Panel generation completed", "duration", time.Since(startTime).Round(time.Millisecond))
 			images[i] = resp
 			return nil
 		})
 	}
 
-	if err := eg.Wait(); err != nil {
-		return nil, err
-	}
-
-	return images, nil
+	return images, eg.Wait()
 }
 
-// prepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
+// prepareCharacterResources パネル生成中にキャラクターの一貫性を保つために必要なリソースを準備します。
+// キャラクターリソースマップのスレッドセーフな初期化を保証し、必要に応じてアセットをアップロードします。
+// アセットのアップロードに失敗した場合はエラーを返します。
 func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
+	// マップ初期化時の保護
+	pg.composer.mu.Lock()
 	if pg.composer.characterResourceMap == nil {
 		pg.composer.characterResourceMap = make(map[string]string)
 	}
+	pg.composer.mu.Unlock()
 
-	uniqueSpeakerIDs := ExtractUniqueSpeakerIDs(panels)
+	// domain.Panels 型へのキャストによるメソッド呼び出し
+	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := pg.composer.CharactersMap
 
 	for _, speakerID := range uniqueSpeakerIDs {
-		// すでに URI 保持済みならスキップ
-		if _, ok := pg.composer.characterResourceMap[speakerID]; ok {
+		// 存在確認のロック
+		pg.composer.mu.Lock()
+		_, ok := pg.composer.characterResourceMap[speakerID]
+		pg.composer.mu.Unlock()
+		if ok {
 			continue
 		}
 
@@ -113,38 +107,16 @@ func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels 
 			continue
 		}
 
-		slog.Info("Uploading character asset to Gemini File API",
-			"speaker_id", speakerID,
-			"url", char.ReferenceURL,
-		)
-
+		// API 呼び出し（時間のかかる処理）はロックの外で行う
 		uri, err := pg.composer.AssetManager.UploadFile(ctx, char.ReferenceURL)
 		if err != nil {
 			return fmt.Errorf("failed to upload asset for speaker %s: %w", speakerID, err)
 		}
 
+		// 書き込みのロック
+		pg.composer.mu.Lock()
 		pg.composer.characterResourceMap[speakerID] = uri
+		pg.composer.mu.Unlock()
 	}
 	return nil
-}
-
-// ExtractUniqueSpeakerIDs はパネルのスライスから重複しない SpeakerID を抽出します。
-func ExtractUniqueSpeakerIDs(panels []domain.Panel) []string {
-
-	set := make(map[string]struct{})
-
-	for _, panel := range panels {
-		// 空文字でない場合のみ追加
-		if panel.SpeakerID != "" {
-			set[panel.SpeakerID] = struct{}{}
-		}
-	}
-
-	// 抽出されたIDをスライスに変換
-	uniqueIDs := make([]string, 0, len(set))
-	for id := range set {
-		uniqueIDs = append(uniqueIDs, id)
-	}
-
-	return uniqueIDs
 }

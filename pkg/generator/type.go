@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"sync"
 
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/time/rate"
@@ -48,4 +49,5 @@ type MangaComposer struct {
 	RateLimiter          *rate.Limiter
 	characterResourceMap map[string]string // CharacterID -> FileAPIURI
 	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
+	mu                   sync.Mutex
 }
