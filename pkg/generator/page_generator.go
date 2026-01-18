@@ -26,7 +26,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		return nil, nil
 	}
 
-	// アセットの事前並列アップロード
+	// アセットの事前並列アップロード（これらが成功していることが後続の前提条件）
 	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
 		return nil, err
 	}
@@ -55,7 +55,13 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 				Panels:      group,
 			}
 
-			logger := slog.With("page", currentPageNum, "total", totalPages, "seed", seed)
+			// ログにパネル数(panels)を復元し、コンテキストを強化
+			logger := slog.With(
+				"page", currentPageNum,
+				"total", totalPages,
+				"panels", len(group),
+				"seed", seed,
+			)
 			logger.Info("Starting manga page generation")
 
 			startTime := time.Now()
@@ -79,8 +85,11 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	pb := pg.composer.PromptBuilder
 
-	// 生のURL(プロンプト用)と File API URI(画像データ用)を分離して収集
-	rawURLs, fileURIs := pg.collectResources(manga.Panels)
+	// リソース収集フェーズ。不整合がある場合は明示的にエラーを返す。
+	rawURLs, fileURIs, err := pg.collectResources(manga.Panels)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect resources: %w", err)
+	}
 
 	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, rawURLs)
 
@@ -97,7 +106,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
-func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []string, fileURIs []string) {
+func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []string, fileURIs []string, err error) {
 	rawMap := make(map[string]struct{})
 	fileMap := make(map[string]struct{})
 	cm := pg.composer.CharactersMap
@@ -117,7 +126,7 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []stri
 		}
 	}
 
-	charIDsToCollect := make(map[string]string) // charID -> referenceURL
+	charIDsToCollect := make(map[string]string)
 	panelURLsToCollect := make(map[string]struct{})
 
 	// 1. 収集フェーズ (ロックなし)
@@ -134,20 +143,29 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []stri
 	}
 
 	// 2. マップアクセスフェーズ (ロックあり)
-	// ロック時間を最小化するため、I/Oや計算を含まない抽出のみを行う
+	// キーの存在チェックを行い、「静かな失敗」を防止する。
 	pg.composer.mu.RLock()
+	defer pg.composer.mu.RUnlock()
+
 	for id, refURL := range charIDsToCollect {
-		add(refURL, pg.composer.CharacterResourceMap[id])
+		uri, ok := pg.composer.CharacterResourceMap[id]
+		if !ok && refURL != "" {
+			return nil, nil, fmt.Errorf("character resource not found in cache for ID %s (URL: %s)", id, refURL)
+		}
+		add(refURL, uri)
 	}
 	for refURL := range panelURLsToCollect {
-		add(refURL, pg.composer.PanelResourceMap[refURL])
+		uri, ok := pg.composer.PanelResourceMap[refURL]
+		if !ok {
+			return nil, nil, fmt.Errorf("panel resource not found in cache for URL: %s", refURL)
+		}
+		add(refURL, uri)
 	}
-	pg.composer.mu.RUnlock()
 
 	// 3. ソートフェーズ (ロックなし)
 	sort.Strings(rawURLs)
 	sort.Strings(fileURIs)
-	return rawURLs, fileURIs
+	return rawURLs, fileURIs, nil
 }
 
 // chunkPanels はパネルのスライスを指定されたサイズごとに分割します。
@@ -179,7 +197,7 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	}
 
 	const fallbackSeed = 1000
-	slog.Warn("No character-specific seed found, using fallback seed. This may affect visual consistency.",
+	slog.Warn("No character-specific seed found, using fallback seed.",
 		"fallback_seed", fallbackSeed,
 		"panel_count", len(panels),
 	)
