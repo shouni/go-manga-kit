@@ -49,5 +49,5 @@ type MangaComposer struct {
 	RateLimiter          *rate.Limiter
 	characterResourceMap map[string]string // CharacterID -> FileAPIURI
 	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
-	mu                   sync.Mutex
+	mu                   sync.RWMutex
 }

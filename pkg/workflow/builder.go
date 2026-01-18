@@ -12,8 +12,7 @@ import (
 
 // Builder は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type Builder struct {
-	cfg config.Config
-	//	chars      domain.CharactersMap
+	cfg           config.Config
 	httpClient    httpkit.ClientInterface
 	aiClient      gemini.GenerativeModel
 	reader        remoteio.InputReader
