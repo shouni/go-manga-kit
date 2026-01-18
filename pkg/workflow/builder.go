@@ -11,7 +11,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	imageKit "github.com/shouni/gemini-image-kit/pkg/generator"
-	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
+	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
@@ -77,6 +77,7 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 func initializeImageGenerator(reader remoteio.InputReader, httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, model string) (imageKit.ImageGenerator, error) {
 	imgCache := cache.New(defaultCacheExpiration, cacheCleanupInterval)
 	core, err := imageKit.NewGeminiImageCore(
+		aiClient,
 		reader,
 		httpClient,
 		imgCache,
@@ -87,9 +88,8 @@ func initializeImageGenerator(reader remoteio.InputReader, httpClient httpkit.Cl
 	}
 
 	imgGen, err := imageKit.NewGeminiGenerator(
-		core,
-		aiClient,
 		model,
+		core,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGenerator の初期化に失敗しました: %w", err)

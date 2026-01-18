@@ -4,11 +4,12 @@ go 1.25
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.1.0
-	github.com/shouni/go-ai-client/v2 v2.2.0
+	github.com/shouni/gemini-image-kit v1.2.0
+	github.com/shouni/go-gemini-client v1.0.3
 	github.com/shouni/go-http-kit v1.1.2
-	github.com/shouni/go-remote-io v1.1.1
+	github.com/shouni/go-remote-io v1.1.2
 	github.com/shouni/go-text-format v1.1.3
+	github.com/shouni/go-utils v1.0.16
 	github.com/shouni/go-web-exact/v2 v2.0.13
 	golang.org/x/sync v0.19.0
 	golang.org/x/time v0.14.0
@@ -57,7 +58,6 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/shouni/go-utils v1.0.16 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
 	github.com/yuin/goldmark v1.7.13 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -75,7 +75,7 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/api v0.256.0 // indirect
-	google.golang.org/genai v1.41.0 // indirect
+	google.golang.org/genai v1.42.0 // indirect
 	google.golang.org/genproto v0.0.0-20250922171735-9219d122eba9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20251111163417-95abcf5c77ba // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251111163417-95abcf5c77ba // indirect
