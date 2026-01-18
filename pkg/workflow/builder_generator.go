@@ -23,7 +23,8 @@ func buildMangaComposer(
 	httpClient httpkit.ClientInterface,
 	aiClient gemini.GenerativeModel,
 	reader remoteio.InputReader,
-	charData []byte) (*generator.MangaComposer, error) {
+	charData []byte,
+) (*generator.MangaComposer, error) {
 
 	// 1. キャラクターデータの解析
 	chars, err := domain.GetCharacters(charData)

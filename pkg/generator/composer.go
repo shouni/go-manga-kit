@@ -20,12 +20,12 @@ type MangaComposer struct {
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
-	panelResourceMap     map[int]string    // PanelIndex -> FileAPIURI
+	PanelResourceMap     map[int]string    // PanelIndex -> FileAPIURI
 	mu                   sync.RWMutex
 	uploadGroup          singleflight.Group
 }
 
-// NewMangaComposer は MangaComposer の新しいインスタンスを、必要なマップを初期化した状態で生成します。
+// NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
 func NewMangaComposer(
 	assetMgr generator.AssetManager,
 	imgGen generator.ImageGenerator,
@@ -40,12 +40,11 @@ func NewMangaComposer(
 		CharactersMap:        cm,
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),
-		panelResourceMap:     make(map[int]string),
+		PanelResourceMap:     make(map[int]string),
 	}
 }
 
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
-// コンストラクタでマップが初期化されていることを前提としているため、ここでのロック付き nil チェックは不要です。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := mc.CharactersMap
@@ -70,23 +69,17 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 	return eg.Wait()
 }
 
-// getOrUploadAsset は、内部的なキャッシュ（CharacterResourceMap）を利用し、
-// 必要に応じて Gemini File API へのアップロードを singleflight で実行します。
+// getOrUploadAsset は内部的なキャッシュを利用し、必要に応じてアップロードを実行します（非公開メソッド）。
 func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, referenceURL string) (string, error) {
+	// singleflight.Do は同一キーに対して、このコールバックを「同時に一度」しか実行しません。
 	val, err, _ := mc.uploadGroup.Do(charID, func() (interface{}, error) {
-		// singleflight の実行中に他の goroutine が完了させている可能性があるため、マップを確認
-		mc.mu.RLock()
-		existingURI, ok := mc.CharacterResourceMap[charID]
-		mc.mu.RUnlock()
-		if ok {
-			return existingURI, nil
-		}
-
+		// 1. アップロード実行（重い I/O 処理）
 		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
 		if uploadErr != nil {
 			return nil, uploadErr
 		}
 
+		// 2. マップに結果を保存
 		mc.mu.Lock()
 		mc.CharacterResourceMap[charID] = uploadedURI
 		mc.mu.Unlock()
