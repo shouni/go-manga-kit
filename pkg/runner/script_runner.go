@@ -12,7 +12,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 
-	"github.com/shouni/go-ai-client/v2/pkg/ai/gemini"
+	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
