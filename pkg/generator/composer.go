@@ -80,7 +80,7 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 	}
 
 	val, err, _ := mc.uploadGroup.Do(charID, func() (interface{}, error) {
-		// ingleflight で待機中に他のゴルーチンがアップロードを完了させている可能性があるため、コールバック内で再度マップを確認
+		// singleflight で待機中に他のゴルーチンがアップロードを完了させている可能性があるため、コールバック内で再度マップを確認
 		mc.mu.RLock()
 		existingURI, ok := mc.CharacterResourceMap[charID]
 		mc.mu.RUnlock()
