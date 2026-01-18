@@ -13,22 +13,25 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
 type PageGenerator struct {
 	composer *MangaComposer
 }
 
-// NewPageGenerator は PageGenerator の新しいインスタンスを初期化します。
 func NewPageGenerator(composer *MangaComposer) *PageGenerator {
-	return &PageGenerator{
-		composer: composer,
-	}
+	return &PageGenerator{composer: composer}
 }
 
-// Execute は全パネルを適切なページに分割し、並列で生成処理を実行します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	if len(manga.Panels) == 0 {
 		return nil, nil
+	}
+
+	// アセットの事前並列アップロード
+	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
+		return nil, err
+	}
+	if err := pg.composer.PreparePanelResources(ctx, manga.Panels); err != nil {
+		return nil, err
 	}
 
 	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
@@ -52,12 +55,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 				Panels:      group,
 			}
 
-			logger := slog.With(
-				"page_number", currentPageNum,
-				"total_pages", totalPages,
-				"panel_count", len(group),
-				"seed", seed,
-			)
+			logger := slog.With("page", currentPageNum, "total", totalPages, "seed", seed)
 			logger.Info("Starting manga page generation")
 
 			startTime := time.Now()
@@ -75,59 +73,70 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-
 	return allResponses, nil
 }
 
-// generateMangaPage は構造化された情報を基に、1枚の統合漫画画像を生成します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	pb := pg.composer.PromptBuilder
 
-	// 参照URLの収集
-	refURLs := pg.collectReferences(manga.Panels)
+	// 生のURL(プロンプト用)と File API URI(画像データ用)を分離して収集
+	rawURLs, fileURIs := pg.collectResources(manga.Panels)
 
-	// プロンプト構築
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, refURLs)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, rawURLs)
 
-	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
 		NegativePrompt: prompts.NegativeMangaPagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		Seed:           &seed,
-		ReferenceURLs:  refURLs,
+		ReferenceURLs:  rawURLs,
+		FileAPIURIs:    fileURIs,
 	}
 
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
-// collectReferences は必要な全ての画像URLを重複なく収集します。
-// 出力順序を決定論的にするため、ソート処理を追加しています。
-func (pg *PageGenerator) collectReferences(panels []domain.Panel) []string {
-	urlMap := make(map[string]struct{})
+func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []string, fileURIs []string) {
+	rawMap := make(map[string]struct{})
+	fileMap := make(map[string]struct{})
 	cm := pg.composer.CharactersMap
 
-	// デフォルトキャラクターの参照URL
-	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
-		urlMap[def.ReferenceURL] = struct{}{}
-	}
+	pg.composer.mu.RLock()
+	defer pg.composer.mu.RUnlock()
 
-	// 各パネルの参照画像
-	for _, p := range panels {
-		if p.ReferenceURL != "" {
-			urlMap[p.ReferenceURL] = struct{}{}
+	add := func(raw, file string) {
+		if raw != "" {
+			if _, ok := rawMap[raw]; !ok {
+				rawMap[raw] = struct{}{}
+				rawURLs = append(rawURLs, raw)
+			}
+		}
+		if file != "" {
+			if _, ok := fileMap[file]; !ok {
+				fileMap[file] = struct{}{}
+				fileURIs = append(fileURIs, file)
+			}
 		}
 	}
 
-	// 順序を一定にするためにソート
-	urls := make([]string, 0, len(urlMap))
-	for url := range urlMap {
-		urls = append(urls, url)
+	// 1. デフォルトキャラクター
+	if def := cm.GetDefault(); def != nil {
+		add(def.ReferenceURL, pg.composer.CharacterResourceMap[def.ID])
 	}
-	sort.Strings(urls)
 
-	return urls
+	// 2. パネルごとの話者とパネル固有の参照
+	for _, p := range panels {
+		if char := cm.GetCharacter(p.SpeakerID); char != nil {
+			add(char.ReferenceURL, pg.composer.CharacterResourceMap[char.ID])
+		}
+		// パネル固有の ReferenceURL
+		add(p.ReferenceURL, pg.composer.PanelResourceMap[p.ReferenceURL])
+	}
+
+	sort.Strings(rawURLs)
+	sort.Strings(fileURIs)
+	return rawURLs, fileURIs
 }
 
 // chunkPanels はパネルのスライスを指定されたサイズごとに分割します。

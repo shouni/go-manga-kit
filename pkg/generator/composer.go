@@ -20,7 +20,7 @@ type MangaComposer struct {
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
-	PanelResourceMap     map[int]string    // PanelIndex -> FileAPIURI
+	PanelResourceMap     map[string]string // PanelIndex -> FileAPIURI
 	mu                   sync.RWMutex
 	uploadGroup          singleflight.Group
 }
@@ -40,7 +40,7 @@ func NewMangaComposer(
 		CharactersMap:        cm,
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),
-		PanelResourceMap:     make(map[int]string),
+		PanelResourceMap:     make(map[string]string),
 	}
 }
 
@@ -60,18 +60,35 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 
 			_, err := mc.getOrUploadAsset(egCtx, char.ID, char.ReferenceURL)
 			if err != nil {
-				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", char.ID, speakerID, err)
+				return fmt.Errorf("failed to prepare character asset %s: %w", char.ID, err)
 			}
 			return nil
 		})
 	}
-
 	return eg.Wait()
 }
 
-// getOrUploadAsset は内部的なキャッシュを利用し、必要に応じてアップロードを実行します（非公開メソッド）。
+// PreparePanelResources は各パネル固有の ReferenceURL を事前アップロードします。
+func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []domain.Panel) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	for _, panel := range panels {
+		panel := panel
+		if panel.ReferenceURL == "" {
+			continue
+		}
+
+		eg.Go(func() error {
+			// URLそのものをキーとしてアップロード/キャッシュ
+			_, err := mc.getOrUploadPanelAsset(egCtx, panel.ReferenceURL)
+			return err
+		})
+	}
+	return eg.Wait()
+}
+
+// getOrUploadAsset はキャラクター用アセットを二重チェック付き singleflight で処理します。
 func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, referenceURL string) (string, error) {
-	// RLock でキャッシュ（マップ）を素早く確認
 	mc.mu.RLock()
 	uri, ok := mc.CharacterResourceMap[charID]
 	mc.mu.RUnlock()
@@ -80,7 +97,6 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 	}
 
 	val, err, _ := mc.uploadGroup.Do(charID, func() (interface{}, error) {
-		// singleflight で待機中に他のゴルーチンがアップロードを完了させている可能性があるため、コールバック内で再度マップを確認
 		mc.mu.RLock()
 		existingURI, ok := mc.CharacterResourceMap[charID]
 		mc.mu.RUnlock()
@@ -88,27 +104,58 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 			return existingURI, nil
 		}
 
-		// 本当に未アップロードの場合のみ、重い I/O 処理を実行
 		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
 		if uploadErr != nil {
 			return nil, uploadErr
 		}
 
-		// 結果を永続的なキャッシュマップに保存
 		mc.mu.Lock()
 		mc.CharacterResourceMap[charID] = uploadedURI
 		mc.mu.Unlock()
-
 		return uploadedURI, nil
 	})
 
 	if err != nil {
 		return "", err
 	}
+	return val.(string), nil
+}
 
-	uri, ok = val.(string)
-	if !ok {
-		return "", fmt.Errorf("unexpected return type from singleflight: %T", val)
+// getOrUploadPanelAsset は ReferenceURL をキーにキャッシュ制御を行います。
+func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL string) (string, error) {
+	// 1. キャッシュ確認
+	mc.mu.RLock()
+	uri, ok := mc.PanelResourceMap[referenceURL]
+	mc.mu.RUnlock()
+	if ok {
+		return uri, nil
 	}
-	return uri, nil
+
+	// 2. singleflight で重複抑制（キーは URL そのもの）
+	val, err, _ := mc.uploadGroup.Do(referenceURL, func() (interface{}, error) {
+		// ダブルチェック
+		mc.mu.RLock()
+		existingURI, ok := mc.PanelResourceMap[referenceURL]
+		mc.mu.RUnlock()
+		if ok {
+			return existingURI, nil
+		}
+
+		// アップロード実行
+		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
+		if uploadErr != nil {
+			return nil, uploadErr
+		}
+
+		// キャッシュ保存
+		mc.mu.Lock()
+		mc.PanelResourceMap[referenceURL] = uploadedURI
+		mc.mu.Unlock()
+		return uploadedURI, nil
+	})
+
+	if err != nil {
+		return "", err
+	}
+	return val.(string), nil
 }
