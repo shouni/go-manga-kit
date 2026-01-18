@@ -102,9 +102,6 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []stri
 	fileMap := make(map[string]struct{})
 	cm := pg.composer.CharactersMap
 
-	pg.composer.mu.RLock()
-	defer pg.composer.mu.RUnlock()
-
 	add := func(raw, file string) {
 		if raw != "" {
 			if _, ok := rawMap[raw]; !ok {
@@ -120,20 +117,34 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []stri
 		}
 	}
 
-	// 1. デフォルトキャラクター
-	if def := cm.GetDefault(); def != nil {
-		add(def.ReferenceURL, pg.composer.CharacterResourceMap[def.ID])
-	}
+	charIDsToCollect := make(map[string]string) // charID -> referenceURL
+	panelURLsToCollect := make(map[string]struct{})
 
-	// 2. パネルごとの話者とパネル固有の参照
+	// 1. 収集フェーズ (ロックなし)
+	if def := cm.GetDefault(); def != nil {
+		charIDsToCollect[def.ID] = def.ReferenceURL
+	}
 	for _, p := range panels {
 		if char := cm.GetCharacter(p.SpeakerID); char != nil {
-			add(char.ReferenceURL, pg.composer.CharacterResourceMap[char.ID])
+			charIDsToCollect[char.ID] = char.ReferenceURL
 		}
-		// パネル固有の ReferenceURL
-		add(p.ReferenceURL, pg.composer.PanelResourceMap[p.ReferenceURL])
+		if p.ReferenceURL != "" {
+			panelURLsToCollect[p.ReferenceURL] = struct{}{}
+		}
 	}
 
+	// 2. マップアクセスフェーズ (ロックあり)
+	// ロック時間を最小化するため、I/Oや計算を含まない抽出のみを行う
+	pg.composer.mu.RLock()
+	for id, refURL := range charIDsToCollect {
+		add(refURL, pg.composer.CharacterResourceMap[id])
+	}
+	for refURL := range panelURLsToCollect {
+		add(refURL, pg.composer.PanelResourceMap[refURL])
+	}
+	pg.composer.mu.RUnlock()
+
+	// 3. ソートフェーズ (ロックなし)
 	sort.Strings(rawURLs)
 	sort.Strings(fileURIs)
 	return rawURLs, fileURIs
@@ -156,12 +167,10 @@ func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	cm := pg.composer.CharactersMap
 
-	// 1. デフォルトキャラクターのSeedを最優先
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
 	}
 
-	// 2. 登場するキャラクターから有効なSeedを検索
 	for _, p := range panels {
 		char := cm.GetCharacter(p.SpeakerID)
 		if char != nil && char.Seed > 0 {
@@ -169,7 +178,6 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 		}
 	}
 
-	// 3. フォールバック（警告ログを復元）
 	const fallbackSeed = 1000
 	slog.Warn("No character-specific seed found, using fallback seed. This may affect visual consistency.",
 		"fallback_seed", fallbackSeed,
