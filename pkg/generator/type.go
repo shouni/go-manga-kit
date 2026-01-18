@@ -5,10 +5,11 @@ import (
 	"sync"
 
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
-	"golang.org/x/time/rate"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/gemini-image-kit/pkg/generator"
+	"golang.org/x/sync/singleflight"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -50,4 +51,5 @@ type MangaComposer struct {
 	characterResourceMap map[string]string // CharacterID -> FileAPIURI
 	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
 	mu                   sync.RWMutex
+	uploadGroup          singleflight.Group //
 }

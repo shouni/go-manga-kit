@@ -88,6 +88,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 }
 
 // prepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
+// singleflight を利用して、同一キャラクターの重複アップロード（APIコール）を完全に阻止します。
 func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
 	pg.composer.mu.Lock()
 	if pg.composer.characterResourceMap == nil {
@@ -103,33 +104,43 @@ func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels 
 		speakerID := id
 
 		eg.Go(func() error {
-			// 先にキャラクターを解決し、実体の ID を特定する
+			// キャラクター解決
 			char := cm.GetCharacterWithDefault(speakerID)
 			if char == nil || char.ReferenceURL == "" {
 				return nil
 			}
-			resolvedCharID := char.ID // 解決後のIDをキーとして使用
+			resolvedCharID := char.ID
 
-			// 1. 解決後の ID で存在確認
-			pg.composer.mu.RLock()
-			_, ok := pg.composer.characterResourceMap[resolvedCharID]
-			pg.composer.mu.RUnlock()
-			if ok {
-				return nil
-			}
+			// singleflight.Do により、同じ resolvedCharID に対する処理が複数走っている場合、
+			// 最初の1つだけが実行され、他はその完了（結果）を待ちます。
+			_, err, _ := pg.composer.uploadGroup.Do(resolvedCharID, func() (interface{}, error) {
+				// 1. 既に他の singleflight 呼び出しによって完了しているかチェック
+				pg.composer.mu.RLock()
+				uri, ok := pg.composer.characterResourceMap[resolvedCharID]
+				pg.composer.mu.RUnlock()
+				if ok {
+					return uri, nil
+				}
 
-			// 2. アップロード実行
-			uri, err := pg.composer.AssetManager.UploadFile(egCtx, char.ReferenceURL)
+				// 2. アップロード実行（重い I/O 処理）
+				// ロックの外で実行されるため、異なるキャラクターのアップロードは並列に進みます
+				uploadedURI, uploadErr := pg.composer.AssetManager.UploadFile(egCtx, char.ReferenceURL)
+				if uploadErr != nil {
+					return nil, uploadErr
+				}
+
+				// 3. マップに書き込み
+				pg.composer.mu.Lock()
+				pg.composer.characterResourceMap[resolvedCharID] = uploadedURI
+				pg.composer.mu.Unlock()
+
+				return uploadedURI, nil
+			})
+
 			if err != nil {
-				return fmt.Errorf("failed to upload asset for character %s (resolved from speaker %s): %w", resolvedCharID, speakerID, err)
+				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", resolvedCharID, speakerID, err)
 			}
 
-			// 3. 解決後の ID をキーに書き込み（ダブルチェック）
-			pg.composer.mu.Lock()
-			defer pg.composer.mu.Unlock()
-			if _, ok := pg.composer.characterResourceMap[resolvedCharID]; !ok {
-				pg.composer.characterResourceMap[resolvedCharID] = uri
-			}
 			return nil
 		})
 	}
