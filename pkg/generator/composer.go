@@ -39,11 +39,10 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 			if char == nil || char.ReferenceURL == "" {
 				return nil
 			}
-			resolvedCharID := char.ID
 
-			_, err, _ := mc.uploadGroup.Do(resolvedCharID, func() (interface{}, error) {
+			_, err, _ := mc.uploadGroup.Do(char.ID, func() (interface{}, error) {
 				mc.mu.RLock()
-				existingURI, ok := mc.CharacterResourceMap[resolvedCharID]
+				existingURI, ok := mc.CharacterResourceMap[char.ID]
 				mc.mu.RUnlock()
 				if ok {
 					return existingURI, nil
@@ -55,14 +54,14 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 				}
 
 				mc.mu.Lock()
-				mc.CharacterResourceMap[resolvedCharID] = uploadedURI
+				mc.CharacterResourceMap[char.ID] = uploadedURI
 				mc.mu.Unlock()
 
 				return uploadedURI, nil
 			})
 
 			if err != nil {
-				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", resolvedCharID, speakerID, err)
+				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", char.ID, speakerID, err)
 			}
 
 			return nil
