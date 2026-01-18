@@ -2,12 +2,14 @@ package generator
 
 import (
 	"context"
+	"sync"
 
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
-	"golang.org/x/time/rate"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/gemini-image-kit/pkg/generator"
+	"golang.org/x/sync/singleflight"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -41,10 +43,13 @@ type PagesImageGenerator interface {
 }
 
 type MangaComposer struct {
-	ImgGen               generator.ImageGenerator
+	AssetManager         generator.AssetManager
+	ImageGenerator       generator.ImageGenerator
 	PromptBuilder        ImagePromptBuilder
 	CharactersMap        mangadom.CharactersMap
 	RateLimiter          *rate.Limiter
-	characterResourceMap map[string]string // CharacterID -> FileAPIURI
+	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
 	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
+	mu                   sync.RWMutex
+	uploadGroup          singleflight.Group //
 }

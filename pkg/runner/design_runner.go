@@ -69,7 +69,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 4. 生成実行
-	resp, err := dr.composer.ImgGen.GenerateMangaPage(ctx, pageReq)
+	resp, err := dr.composer.ImageGenerator.GenerateMangaPage(ctx, pageReq)
 	if err != nil {
 		slog.Error("Design generation failed", "error", err)
 		return "", 0, fmt.Errorf("画像の生成に失敗しました: %w", err)

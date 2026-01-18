@@ -16,6 +16,9 @@ type Panel struct {
 	ReferenceURL string `json:"reference_url"`
 }
 
+// Panels は Panel のスライスに対するカスタム型です。
+type Panels []Panel
+
 // Page は物理的な1枚の画像（複数のパネルを統合したもの）を表します。
 // 複数のパネルを1枚の画像に合成する場合に活用します。
 type Page struct {
