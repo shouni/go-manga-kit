@@ -16,20 +16,20 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
-// MangaPanelImageRunner は、台本を元に並列画像生成を管理します。
-type MangaPanelImageRunner struct {
+// MangaPanelRunner は、台本を元に並列画像生成を管理します。
+type MangaPanelRunner struct {
 	cfg       config.Config
 	generator generator.PanelsImageGenerator
 	writer    remoteio.OutputWriter
 }
 
-// NewMangaPanelImageRunner は、依存関係を注入して初期化します。
-func NewMangaPanelImageRunner(
+// NewMangaPanelRunner は、依存関係を注入して初期化します。
+func NewMangaPanelRunner(
 	cfg config.Config,
 	generator generator.PanelsImageGenerator,
 	writer remoteio.OutputWriter,
-) *MangaPanelImageRunner {
-	return &MangaPanelImageRunner{
+) *MangaPanelRunner {
+	return &MangaPanelRunner{
 		cfg:       cfg,
 		generator: generator,
 		writer:    writer,
@@ -37,7 +37,7 @@ func NewMangaPanelImageRunner(
 }
 
 // Run は、台本(MangaResponse)を受け取り、パネルの画像を生成します。
-func (r *MangaPanelImageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
+func (r *MangaPanelRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	slog.Info("Starting parallel image generation")
 
 	images, err := r.generator.Execute(ctx, manga.Panels)
@@ -51,7 +51,7 @@ func (r *MangaPanelImageRunner) Run(ctx context.Context, manga *mangadom.MangaRe
 }
 
 // RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。エラーを返します。
-func (r *MangaPanelImageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
+func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("MangaResponse がありません")
 	}
