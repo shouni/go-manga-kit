@@ -25,7 +25,7 @@ func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
 // Execute は、並列処理を用いてパネル群を生成します。
 // 事前にキャラクターリソースを準備し、各パネルの画像生成を並行して実行します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-	// 1. リソースの事前準備
+	// リソースの事前準備
 	if err := pg.prepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 			// 解決後の char.ID をキーに URI を取得
 			pg.composer.mu.RLock()
-			fileURI := pg.composer.characterResourceMap[char.ID]
+			fileURI := pg.composer.CharacterResourceMap[char.ID]
 			pg.composer.mu.RUnlock()
 
 			// ログフィールド名を character_id に修正し、実体と一致させる
@@ -92,12 +92,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 // prepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
 // singleflight を利用して、同一キャラクターの重複アップロード（APIコール）を完全に阻止します。
 func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
-	pg.composer.mu.Lock()
-	if pg.composer.characterResourceMap == nil {
-		pg.composer.characterResourceMap = make(map[string]string)
-	}
-	pg.composer.mu.Unlock()
-
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := pg.composer.CharactersMap
 	eg, egCtx := errgroup.WithContext(ctx)
@@ -118,7 +112,7 @@ func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels 
 			_, err, _ := pg.composer.uploadGroup.Do(resolvedCharID, func() (interface{}, error) {
 				// 1. 既に他の singleflight 呼び出しによって完了しているかチェック
 				pg.composer.mu.RLock()
-				uri, ok := pg.composer.characterResourceMap[resolvedCharID]
+				uri, ok := pg.composer.CharacterResourceMap[resolvedCharID]
 				pg.composer.mu.RUnlock()
 				if ok {
 					return uri, nil
@@ -133,7 +127,7 @@ func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels 
 
 				// 3. マップに書き込み
 				pg.composer.mu.Lock()
-				pg.composer.characterResourceMap[resolvedCharID] = uploadedURI
+				pg.composer.CharacterResourceMap[resolvedCharID] = uploadedURI
 				pg.composer.mu.Unlock()
 
 				return uploadedURI, nil

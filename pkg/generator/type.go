@@ -48,7 +48,7 @@ type MangaComposer struct {
 	PromptBuilder        ImagePromptBuilder
 	CharactersMap        mangadom.CharactersMap
 	RateLimiter          *rate.Limiter
-	characterResourceMap map[string]string // CharacterID -> FileAPIURI
+	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
 	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
 	mu                   sync.RWMutex
 	uploadGroup          singleflight.Group //

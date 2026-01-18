@@ -44,11 +44,12 @@ func buildMangaComposer(
 	pb := prompts.NewImagePromptBuilder(chars, cfg.StyleSuffix)
 
 	return &generator.MangaComposer{
-		AssetManager:   assetManager,
-		ImageGenerator: imageGenerator,
-		PromptBuilder:  pb,
-		CharactersMap:  chars,
-		RateLimiter:    rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
+		AssetManager:         assetManager,
+		ImageGenerator:       imageGenerator,
+		PromptBuilder:        pb,
+		CharactersMap:        chars,
+		RateLimiter:          rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
+		CharacterResourceMap: make(map[string]string),
 	}, nil
 }
 
