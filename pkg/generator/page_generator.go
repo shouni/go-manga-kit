@@ -26,7 +26,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		return nil, nil
 	}
 
-	// 1. アセットの事前並列アップロード（これらが成功していることが後続の前提条件）
+	// 1. アセットの事前並列アップロード（Character と Panel のリソースを準備）
 	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
 		return nil, fmt.Errorf("failed to prepare character resources: %w", err)
 	}
@@ -43,7 +43,6 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 
 	for i, group := range panelGroups {
 		currentPageNum := i + 1
-		// ページ冒頭のキャラクターDNAを引き継ぐためのSeed決定
 		seed := pg.determineDefaultSeed(group)
 
 		eg.Go(func() error {
@@ -86,70 +85,105 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	pb := pg.composer.PromptBuilder
 
-	// リソース収集：パネル固有のReferenceURLをソート済みリストとして取得
-	rawURLs, fileURIs, err := pg.collectResources(manga.Panels)
+	// 1. リソース収集とインデックスマッピングの作成
+	resMap, err := pg.collectResources(manga.Panels)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect resources: %w", err)
 	}
 
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, rawURLs)
+	// 2. プロンプト構築 (ResourceMap を渡すように pb 側を調整済みと想定)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, resMap)
 
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
-		NegativePrompt: prompts.NegativeMangaPagePrompt,
+		NegativePrompt: prompts.NegativePagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		Seed:           &seed,
-		ReferenceURLs:  rawURLs,
-		FileAPIURIs:    fileURIs,
+		ReferenceURLs:  resMap.OrderedURLs,
+		FileAPIURIs:    resMap.OrderedURIs,
 	}
 
 	slog.Info("Requesting AI image generation",
 		"title", manga.Title,
 		"seed", seed,
-		"use_file_api", len(fileURIs),
+		"character_resources", len(resMap.CharacterFiles),
+		"panel_resources", len(resMap.PanelFiles),
+		"total_files", len(resMap.OrderedURIs),
 	)
 
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
-// collectResources は、ページ内のパネルが要求する外部リソースを
-// 重複なく、かつURL順で決定論的に収集します。
-func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []string, fileURIs []string, err error) {
-	type resourceEntry struct {
-		rawURL  string
-		fileURI string
+// collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。
+func (pg *PageGenerator) collectResources(panels []domain.Panel) (*prompts.ResourceMap, error) {
+	res := &prompts.ResourceMap{
+		CharacterFiles: make(map[string]int),
+		PanelFiles:     make(map[string]int),
 	}
-	var entries []resourceEntry
-	addedMap := make(map[string]struct{})
+	addedMap := make(map[string]int) // URL -> index (重複排除用)
 
 	pg.composer.mu.RLock()
 	defer pg.composer.mu.RUnlock()
 
-	for _, p := range panels {
-		if p.ReferenceURL == "" {
-			continue
-		}
-		if _, ok := addedMap[p.ReferenceURL]; !ok {
-			// パネルリソースマップからURIを取得
-			if uri, ok := pg.composer.PanelResourceMap[p.ReferenceURL]; ok {
-				entries = append(entries, resourceEntry{rawURL: p.ReferenceURL, fileURI: uri})
-				addedMap[p.ReferenceURL] = struct{}{}
+	// 1. ページ内に登場する全キャラクターの立ち絵を優先的に登録 (input_file_0, 1...)
+	speakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
+	for _, sID := range speakerIDs {
+		char := pg.composer.CharactersMap.GetCharacter(sID)
+		if char != nil && char.ReferenceURL != "" {
+			if uri, ok := pg.composer.CharacterResourceMap[char.ID]; ok {
+				// 同じURLが既に登録されていれば、そのインデックスを再利用
+				if idx, exists := addedMap[char.ReferenceURL]; exists {
+					res.CharacterFiles[sID] = idx
+				} else {
+					newIdx := len(res.OrderedURIs)
+					res.OrderedURLs = append(res.OrderedURLs, char.ReferenceURL)
+					res.OrderedURIs = append(res.OrderedURIs, uri)
+					res.CharacterFiles[sID] = newIdx
+					addedMap[char.ReferenceURL] = newIdx
+				}
 			}
 		}
 	}
 
-	// input_file_N の対応関係を一定にするためソート
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].rawURL < entries[j].rawURL
-	})
+	// 2. パネル固有のポーズ参照（重複排除しつつソートして順序を安定させる）
+	type panelRef struct{ url, uri string }
+	var refs []panelRef
+	for _, p := range panels {
+		if p.ReferenceURL == "" {
+			continue
+		}
+		// 既にキャラ立ち絵として登録済みの画像でなければ、候補に追加
+		if _, exists := addedMap[p.ReferenceURL]; !exists {
+			if uri, ok := pg.composer.PanelResourceMap[p.ReferenceURL]; ok {
+				refs = append(refs, panelRef{url: p.ReferenceURL, uri: uri})
+				addedMap[p.ReferenceURL] = -1 // 仮登録
+			}
+		}
+	}
+	// 決定論的な順序のためにURLでソート
+	sort.Slice(refs, func(i, j int) bool { return refs[i].url < refs[j].url })
 
-	for _, entry := range entries {
-		rawURLs = append(rawURLs, entry.rawURL)
-		fileURIs = append(fileURIs, entry.fileURI)
+	// 3. ソート済みパネル参照を OrderedURIs に追加し、インデックスを確定
+	for _, r := range refs {
+		newIdx := len(res.OrderedURIs)
+		res.OrderedURLs = append(res.OrderedURLs, r.url)
+		res.OrderedURIs = append(res.OrderedURIs, r.uri)
+		res.PanelFiles[r.url] = newIdx
+		// addedMap を更新（同じURLが複数パネルで使われている場合のため）
+		addedMap[r.url] = newIdx
 	}
 
-	return rawURLs, fileURIs, nil
+	// 最後に、複数のパネルで同じ ReferenceURL が使われていた場合のマッピングを補完
+	for _, p := range panels {
+		if p.ReferenceURL != "" {
+			if idx, ok := addedMap[p.ReferenceURL]; ok && idx != -1 {
+				res.PanelFiles[p.ReferenceURL] = idx
+			}
+		}
+	}
+
+	return res, nil
 }
 
 func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain.Panel {
@@ -164,23 +198,16 @@ func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain
 	return chunks
 }
 
-// determineDefaultSeed は、ページの最初のパネルのキャラクターSeedを最優先し、絵柄を安定させます。
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	if len(panels) == 0 {
 		return 1000
 	}
-
 	cm := pg.composer.CharactersMap
-
-	// 1. 最初のパネルのスピーカーのSeedを優先
 	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
 		return char.Seed
 	}
-
-	// 2. フォールバック: システム全体のデフォルトキャラSeed
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
 	}
-
 	return 1000
 }
