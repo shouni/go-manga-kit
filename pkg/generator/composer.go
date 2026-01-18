@@ -20,7 +20,7 @@ type MangaComposer struct {
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
-	PanelResourceMap     map[int]string    // PanelIndex -> FileAPIURI
+	PanelResourceMap     map[string]string // ReferenceURL -> FileAPIURI
 	mu                   sync.RWMutex
 	uploadGroup          singleflight.Group
 }
@@ -40,7 +40,7 @@ func NewMangaComposer(
 		CharactersMap:        cm,
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),
-		PanelResourceMap:     make(map[int]string),
+		PanelResourceMap:     make(map[string]string),
 	}
 }
 
@@ -49,6 +49,17 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := mc.CharactersMap
 	eg, egCtx := errgroup.WithContext(ctx)
+
+	// まずデフォルトキャラクターを確実にアップロード対象にする
+	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
+		eg.Go(func() error {
+			_, err := mc.getOrUploadAsset(egCtx, def.ID, def.ReferenceURL)
+			if err != nil {
+				return fmt.Errorf("failed to prepare default character asset: %w", err)
+			}
+			return nil
+		})
+	}
 
 	for _, id := range uniqueSpeakerIDs {
 		speakerID := id
@@ -60,45 +71,71 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 
 			_, err := mc.getOrUploadAsset(egCtx, char.ID, char.ReferenceURL)
 			if err != nil {
-				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", char.ID, speakerID, err)
+				return fmt.Errorf("failed to prepare character asset %s: %w", char.ID, err)
 			}
 			return nil
 		})
 	}
-
 	return eg.Wait()
 }
 
-// getOrUploadAsset は内部的なキャッシュを利用し、必要に応じてアップロードを実行します（非公開メソッド）。
+// PreparePanelResources は各パネル固有の ReferenceURL を事前アップロードします。
+func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []domain.Panel) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	for _, panel := range panels {
+		panel := panel
+		if panel.ReferenceURL == "" {
+			continue
+		}
+
+		eg.Go(func() error {
+			_, err := mc.getOrUploadPanelAsset(egCtx, panel.ReferenceURL)
+			return err
+		})
+	}
+	return eg.Wait()
+}
+
+// getOrUploadAsset はキャラクター用アセットをキャッシュ制御しつつ取得またはアップロードします。
 func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, referenceURL string) (string, error) {
-	// RLock でキャッシュ（マップ）を素早く確認
+	return mc.getOrUploadResource(ctx, charID, referenceURL, mc.CharacterResourceMap)
+}
+
+// getOrUploadPanelAsset はパネル用参照URLをキャッシュ制御しつつ取得またはアップロードします。
+func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL string) (string, error) {
+	// パネルアセットの場合、検索キーとソースURLは同一です。
+	return mc.getOrUploadResource(ctx, referenceURL, referenceURL, mc.PanelResourceMap)
+}
+
+// getOrUploadResource は二重チェックロッキングと singleflight を用いてアセットアップロードの共通ロジックを提供します。
+func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
+	// 最初のチェック: ロックを最小限にするための RLock
 	mc.mu.RLock()
-	uri, ok := mc.CharacterResourceMap[charID]
+	uri, ok := resourceMap[key]
 	mc.mu.RUnlock()
 	if ok {
 		return uri, nil
 	}
 
-	val, err, _ := mc.uploadGroup.Do(charID, func() (interface{}, error) {
-		// singleflight で待機中に他のゴルーチンがアップロードを完了させている可能性があるため、コールバック内で再度マップを確認
+	// 同一キーに対する同時リクエストを1つに集約
+	val, err, _ := mc.uploadGroup.Do(key, func() (interface{}, error) {
+		// ダブルチェック: singleflight 待機中に他で完了している可能性があるため
 		mc.mu.RLock()
-		existingURI, ok := mc.CharacterResourceMap[charID]
+		existingURI, ok := resourceMap[key]
 		mc.mu.RUnlock()
 		if ok {
 			return existingURI, nil
 		}
 
-		// 本当に未アップロードの場合のみ、重い I/O 処理を実行
 		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
 		if uploadErr != nil {
 			return nil, uploadErr
 		}
 
-		// 結果を永続的なキャッシュマップに保存
 		mc.mu.Lock()
-		mc.CharacterResourceMap[charID] = uploadedURI
+		resourceMap[key] = uploadedURI
 		mc.mu.Unlock()
-
 		return uploadedURI, nil
 	})
 
@@ -106,9 +143,9 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 		return "", err
 	}
 
-	uri, ok = val.(string)
+	res, ok := val.(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected return type from singleflight: %T", val)
+		return "", fmt.Errorf("unexpected type from upload group for key %q: expected string, got %T", key, val)
 	}
-	return uri, nil
+	return res, nil
 }

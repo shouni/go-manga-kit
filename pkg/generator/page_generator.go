@@ -13,22 +13,25 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// PageGenerator は複数のパネルを1枚の漫画ページとして統合生成するコンポーネントです。
 type PageGenerator struct {
 	composer *MangaComposer
 }
 
-// NewPageGenerator は PageGenerator の新しいインスタンスを初期化します。
 func NewPageGenerator(composer *MangaComposer) *PageGenerator {
-	return &PageGenerator{
-		composer: composer,
-	}
+	return &PageGenerator{composer: composer}
 }
 
-// Execute は全パネルを適切なページに分割し、並列で生成処理を実行します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	if len(manga.Panels) == 0 {
 		return nil, nil
+	}
+
+	// アセットの事前並列アップロード（これらが成功していることが後続の前提条件）
+	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
+		return nil, fmt.Errorf("failed to prepare character resources: %w", err)
+	}
+	if err := pg.composer.PreparePanelResources(ctx, manga.Panels); err != nil {
+		return nil, fmt.Errorf("failed to prepare panel resources: %w", err)
 	}
 
 	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
@@ -52,10 +55,11 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 				Panels:      group,
 			}
 
+			// ログにパネル数(panels)を復元し、コンテキストを強化
 			logger := slog.With(
-				"page_number", currentPageNum,
-				"total_pages", totalPages,
-				"panel_count", len(group),
+				"page", currentPageNum,
+				"total", totalPages,
+				"panels", len(group),
 				"seed", seed,
 			)
 			logger.Info("Starting manga page generation")
@@ -75,59 +79,128 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
-
 	return allResponses, nil
 }
 
-// generateMangaPage は構造化された情報を基に、1枚の統合漫画画像を生成します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	pb := pg.composer.PromptBuilder
 
-	// 参照URLの収集
-	refURLs := pg.collectReferences(manga.Panels)
+	// リソース収集フェーズ。不整合がある場合は明示的にエラーを返す。
+	rawURLs, fileURIs, err := pg.collectResources(manga.Panels)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect resources: %w", err)
+	}
 
-	// プロンプト構築
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, refURLs)
+	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, rawURLs)
 
-	// 画像生成リクエストの構築
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
 		NegativePrompt: prompts.NegativeMangaPagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		Seed:           &seed,
-		ReferenceURLs:  refURLs,
+		ReferenceURLs:  rawURLs,
+		FileAPIURIs:    fileURIs,
 	}
 
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
-// collectReferences は必要な全ての画像URLを重複なく収集します。
-// 出力順序を決定論的にするため、ソート処理を追加しています。
-func (pg *PageGenerator) collectReferences(panels []domain.Panel) []string {
-	urlMap := make(map[string]struct{})
+func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []string, fileURIs []string, err error) {
+	rawMap := make(map[string]struct{})
+	fileMap := make(map[string]struct{})
 	cm := pg.composer.CharactersMap
 
-	// デフォルトキャラクターの参照URL
-	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
-		urlMap[def.ReferenceURL] = struct{}{}
-	}
-
-	// 各パネルの参照画像
-	for _, p := range panels {
-		if p.ReferenceURL != "" {
-			urlMap[p.ReferenceURL] = struct{}{}
+	// 補助マップへの登録用関数
+	add := func(raw, file string) {
+		if raw != "" {
+			if _, ok := rawMap[raw]; !ok {
+				rawMap[raw] = struct{}{}
+				rawURLs = append(rawURLs, raw)
+			}
+		}
+		if file != "" {
+			if _, ok := fileMap[file]; !ok {
+				fileMap[file] = struct{}{}
+				fileURIs = append(fileURIs, file)
+			}
 		}
 	}
 
-	// 順序を一定にするためにソート
-	urls := make([]string, 0, len(urlMap))
-	for url := range urlMap {
-		urls = append(urls, url)
-	}
-	sort.Strings(urls)
+	charIDsToCollect := make(map[string]string)
+	panelURLsToCollect := make(map[string]struct{})
 
-	return urls
+	// --- 1. 収集フェーズ (ロックなし) ---
+
+	// デフォルトキャラクターを特定（2人の立ち絵を想定）
+	defaultChar := cm.GetDefault()
+
+	for _, p := range panels {
+		// 話者アセットのIDを収集（デフォルトキャラ以外）
+		if char := cm.GetCharacter(p.SpeakerID); char != nil {
+			if defaultChar == nil || char.ID != defaultChar.ID {
+				charIDsToCollect[char.ID] = char.ReferenceURL
+			}
+		}
+		// パネル固有アセットを収集（デフォルトキャラのURLと重複しない場合のみ）
+		if p.ReferenceURL != "" {
+			if defaultChar == nil || p.ReferenceURL != defaultChar.ReferenceURL {
+				panelURLsToCollect[p.ReferenceURL] = struct{}{}
+			}
+		}
+	}
+
+	// --- 2. マップアクセスフェーズ (ロックあり) ---
+	pg.composer.mu.RLock()
+	defer pg.composer.mu.RUnlock()
+
+	// A. まず【最優先】でデフォルトキャラクターを 0番目 に登録
+	if defaultChar != nil && defaultChar.ReferenceURL != "" {
+		uri, ok := pg.composer.CharacterResourceMap[defaultChar.ID]
+		if !ok {
+			return nil, nil, fmt.Errorf("default character resource not found in cache: %s", defaultChar.ID)
+		}
+		add(defaultChar.ReferenceURL, uri)
+	}
+
+	// B. 残りのリソースを収集（ここではまだスライスに追加されるだけ）
+	// ソート順を安定させるため、一時的なスライスを作成
+	var otherRawEntries []string
+	var otherFileEntries []string
+
+	// キャラクターリソースの取得
+	for id, refURL := range charIDsToCollect {
+		uri, ok := pg.composer.CharacterResourceMap[id]
+		if !ok && refURL != "" {
+			return nil, nil, fmt.Errorf("character resource not found in cache: ID %s", id)
+		}
+		if refURL != "" {
+			otherRawEntries = append(otherRawEntries, refURL)
+			otherFileEntries = append(otherFileEntries, uri)
+		}
+	}
+	// パネルリソースの取得
+	for refURL := range panelURLsToCollect {
+		uri, ok := pg.composer.PanelResourceMap[refURL]
+		if !ok {
+			return nil, nil, fmt.Errorf("panel resource not found in cache: URL %s", refURL)
+		}
+		otherRawEntries = append(otherRawEntries, refURL)
+		otherFileEntries = append(otherFileEntries, uri)
+	}
+
+	// --- 3. ソートと結合フェーズ (ロックなし) ---
+
+	// デフォルト以外のリソースをソートして決定論的な順序にする
+	sort.Strings(otherRawEntries)
+	sort.Strings(otherFileEntries)
+
+	// 0番目（デフォルト）の後に、ソート済みの残りを追加
+	for i := range otherRawEntries {
+		add(otherRawEntries[i], otherFileEntries[i])
+	}
+
+	return rawURLs, fileURIs, nil
 }
 
 // chunkPanels はパネルのスライスを指定されたサイズごとに分割します。
@@ -147,12 +220,10 @@ func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	cm := pg.composer.CharactersMap
 
-	// 1. デフォルトキャラクターのSeedを最優先
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
 	}
 
-	// 2. 登場するキャラクターから有効なSeedを検索
 	for _, p := range panels {
 		char := cm.GetCharacter(p.SpeakerID)
 		if char != nil && char.Seed > 0 {
@@ -160,9 +231,8 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 		}
 	}
 
-	// 3. フォールバック（警告ログを復元）
 	const fallbackSeed = 1000
-	slog.Warn("No character-specific seed found, using fallback seed. This may affect visual consistency.",
+	slog.Warn("No character-specific seed found, using fallback seed.",
 		"fallback_seed", fallbackSeed,
 		"panel_count", len(panels),
 	)
