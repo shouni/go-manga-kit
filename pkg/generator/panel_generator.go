@@ -25,7 +25,6 @@ func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
 // Execute は、並列処理を用いてパネル群を生成します。
 // 事前にキャラクターリソースを準備し、各パネルの画像生成を並行して実行します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-	// リソースの事前準備
 	if err := pg.prepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
@@ -43,7 +42,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				return err
 			}
 
-			// キャラクター解決（デフォルトキャラへのフォールバック含む）
 			char := cm.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
 				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
@@ -51,19 +49,18 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
 
-			// 解決後の char.ID をキーに URI を取得
 			pg.composer.mu.RLock()
 			fileURI := pg.composer.CharacterResourceMap[char.ID]
 			pg.composer.mu.RUnlock()
 
-			// ログフィールド名を character_id に修正し、実体と一致させる
+			// character_name を追加し、デバッグ性を向上
 			logger := slog.With(
 				"panel_index", i+1,
 				"character_id", char.ID,
+				"character_name", char.Name,
 				"seed", finalSeed,
 				"use_file_api", fileURI != "",
 			)
-
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
@@ -90,7 +87,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 }
 
 // prepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
-// singleflight を利用して、同一キャラクターの重複アップロード（APIコール）を完全に阻止します。
 func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := pg.composer.CharactersMap
@@ -100,32 +96,29 @@ func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels 
 		speakerID := id
 
 		eg.Go(func() error {
-			// キャラクター解決
 			char := cm.GetCharacterWithDefault(speakerID)
 			if char == nil || char.ReferenceURL == "" {
 				return nil
 			}
 			resolvedCharID := char.ID
 
-			// singleflight.Do により、同じ resolvedCharID に対する処理が複数走っている場合、
-			// 最初の1つだけが実行され、他はその完了（結果）を待ちます。
+			// singleflight を使い、同じ resolvedCharID に対する処理を集約
 			_, err, _ := pg.composer.uploadGroup.Do(resolvedCharID, func() (interface{}, error) {
-				// 1. 既に他の singleflight 呼び出しによって完了しているかチェック
+				// singleflight 呼び出し前に既にマップに存在するか最終チェック
 				pg.composer.mu.RLock()
-				uri, ok := pg.composer.CharacterResourceMap[resolvedCharID]
+				existingURI, ok := pg.composer.CharacterResourceMap[resolvedCharID]
 				pg.composer.mu.RUnlock()
 				if ok {
-					return uri, nil
+					return existingURI, nil
 				}
 
-				// 2. アップロード実行（重い I/O 処理）
-				// ロックの外で実行されるため、異なるキャラクターのアップロードは並列に進みます
+				// 重いアップロード処理（ここが同時に呼ばれるのは singleflight により resolvedCharID ごとに1回のみ）
 				uploadedURI, uploadErr := pg.composer.AssetManager.UploadFile(egCtx, char.ReferenceURL)
 				if uploadErr != nil {
 					return nil, uploadErr
 				}
 
-				// 3. マップに書き込み
+				// 書き込みのみロック
 				pg.composer.mu.Lock()
 				pg.composer.CharacterResourceMap[resolvedCharID] = uploadedURI
 				pg.composer.mu.Unlock()
