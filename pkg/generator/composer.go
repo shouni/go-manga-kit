@@ -134,7 +134,7 @@ func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, reference
 
 	res, ok := val.(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected type from upload group: expected string, got %T", val)
+		return "", fmt.Errorf("unexpected type from upload group for key %q: expected string, got %T", key, val)
 	}
 	return res, nil
 }

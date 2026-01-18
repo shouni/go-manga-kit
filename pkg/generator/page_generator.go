@@ -28,10 +28,10 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 
 	// アセットの事前並列アップロード（これらが成功していることが後続の前提条件）
 	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to prepare character resources: %w", err)
 	}
 	if err := pg.composer.PreparePanelResources(ctx, manga.Panels); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to prepare panel resources: %w", err)
 	}
 
 	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
