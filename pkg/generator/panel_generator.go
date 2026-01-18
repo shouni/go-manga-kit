@@ -25,7 +25,7 @@ func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
 // Execute は、並列処理を用いてパネル群を生成します。
 // 事前にキャラクターリソースを準備し、各パネルの画像生成を並行して実行します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-	// 1. リソースの事前準備
+	// リソースの事前準備（並列アップロードを実行）
 	if err := pg.prepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
@@ -45,13 +45,11 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 			char := cm.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
-				// エラーメッセージを詳細化：デフォルトキャラも不在であることを明記
 				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
 			}
 
 			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
 
-			// 読み取りは RLock (Read Lock) で並列実行を許可
 			pg.composer.mu.RLock()
 			fileURI := pg.composer.characterResourceMap[char.ID]
 			pg.composer.mu.RUnlock()
@@ -70,7 +68,8 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				AspectRatio:    PanelAspectRatio,
 			})
 			if err != nil {
-				return fmt.Errorf("panel %d generation failed: %w", i+1, err)
+				// エラーメッセージに speaker_id を含めてデバッグ効率を向上
+				return fmt.Errorf("panel %d (speaker_id: %s) generation failed: %w", i+1, char.ID, err)
 			}
 
 			logger.Info("Panel generation completed", "duration", time.Since(startTime).Round(time.Millisecond))
@@ -83,8 +82,9 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 }
 
 // prepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
-// 二重アップロードを防ぐため、チェックと書き込みをアトミックに実行します。
+// 各キャラクターのアップロード処理を errgroup により並列で実行し、ロックの保持時間を最小化します。
 func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
+	// マップの遅延初期化
 	pg.composer.mu.Lock()
 	if pg.composer.characterResourceMap == nil {
 		pg.composer.characterResourceMap = make(map[string]string)
@@ -93,29 +93,40 @@ func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels 
 
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	cm := pg.composer.CharactersMap
+	eg, egCtx := errgroup.WithContext(ctx)
 
-	for _, speakerID := range uniqueSpeakerIDs {
-		char := cm.GetCharacterWithDefault(speakerID)
-		if char == nil || char.ReferenceURL == "" {
-			continue
-		}
+	for _, id := range uniqueSpeakerIDs {
+		speakerID := id // ループ変数のキャプチャ
 
-		// 二重アップロード（競合）を防止するため、存在確認から書き込みまでを Lock で保護
-		pg.composer.mu.Lock()
-		if _, ok := pg.composer.characterResourceMap[speakerID]; ok {
-			pg.composer.mu.Unlock()
-			continue
-		}
+		eg.Go(func() error {
+			// まず Read ロックで存在確認
+			pg.composer.mu.RLock()
+			_, ok := pg.composer.characterResourceMap[speakerID]
+			pg.composer.mu.RUnlock()
+			if ok {
+				return nil
+			}
 
-		// 時間のかかる API 呼び出し中もロックを保持することで、同一 speakerID の重複リクエストを完全に阻止
-		uri, err := pg.composer.AssetManager.UploadFile(ctx, char.ReferenceURL)
-		if err != nil {
-			pg.composer.mu.Unlock()
-			return fmt.Errorf("failed to upload asset for speaker %s: %w", speakerID, err)
-		}
+			char := cm.GetCharacterWithDefault(speakerID)
+			if char == nil || char.ReferenceURL == "" {
+				return nil
+			}
 
-		pg.composer.characterResourceMap[speakerID] = uri
-		pg.composer.mu.Unlock()
+			// 時間のかかる API 呼び出しはロックの外で実行（並列 I/O を許容）
+			uri, err := pg.composer.AssetManager.UploadFile(egCtx, char.ReferenceURL)
+			if err != nil {
+				return fmt.Errorf("failed to upload asset for speaker %s: %w", speakerID, err)
+			}
+
+			// 書き込み時に Lock を取得し、再度存在確認（ダブルチェック）
+			pg.composer.mu.Lock()
+			defer pg.composer.mu.Unlock()
+			if _, ok := pg.composer.characterResourceMap[speakerID]; !ok {
+				pg.composer.characterResourceMap[speakerID] = uri
+			}
+			return nil
+		})
 	}
-	return nil
+
+	return eg.Wait()
 }
