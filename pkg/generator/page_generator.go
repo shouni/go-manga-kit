@@ -31,33 +31,27 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		return nil, nil
 	}
 
-	// 1ページあたりの最大パネル数に基づいてチャンク分割
 	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
 	totalPages := len(panelGroups)
 	seed := pg.determineDefaultSeed(manga.Panels)
 
-	// 結果格納用スライスと並列実行の制御
 	allResponses := make([]*imagedom.ImageResponse, totalPages)
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for i, group := range panelGroups {
-		i, group := i, group // ループ変数のキャプチャ
 		currentPageNum := i + 1
 
 		eg.Go(func() error {
-			// レートリミッターで API 負荷を調整
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return fmt.Errorf("rate limiter wait error: %w", err)
 			}
 
-			// チャンク化されたページデータの作成
 			subManga := domain.MangaResponse{
 				Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, currentPageNum, totalPages),
 				Description: manga.Description,
 				Panels:      group,
 			}
 
-			// 構造化ロギング（デバッグしやすい情報を網羅）
 			logger := slog.With(
 				"page_number", currentPageNum,
 				"total_pages", totalPages,
@@ -153,10 +147,12 @@ func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	cm := pg.composer.CharactersMap
 
+	// 1. デフォルトキャラクターのSeedを最優先
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
 	}
 
+	// 2. 登場するキャラクターから有効なSeedを検索
 	for _, p := range panels {
 		char := cm.GetCharacter(p.SpeakerID)
 		if char != nil && char.Seed > 0 {
@@ -164,6 +160,12 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 		}
 	}
 
+	// 3. フォールバック（警告ログを復元）
 	const fallbackSeed = 1000
+	slog.Warn("No character-specific seed found, using fallback seed. This may affect visual consistency.",
+		"fallback_seed", fallbackSeed,
+		"panel_count", len(panels),
+	)
+
 	return fallbackSeed
 }
