@@ -60,8 +60,10 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			logger := slog.With(
 				"panel_index", i+1,
 				"character_id", char.ID,
+				"seed", finalSeed,
 				"use_file_api", fileURI != "",
 			)
+
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
