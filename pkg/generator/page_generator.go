@@ -103,6 +103,12 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		FileAPIURIs:    fileURIs,
 	}
 
+	slog.Info("Requesting AI image generation",
+		"seed", seed,
+		"resource_count", len(fileURIs),
+		"use_file_api", len(fileURIs),
+	)
+
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
