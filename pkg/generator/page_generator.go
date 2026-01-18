@@ -111,6 +111,7 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []stri
 	fileMap := make(map[string]struct{})
 	cm := pg.composer.CharactersMap
 
+	// 補助マップへの登録用関数
 	add := func(raw, file string) {
 		if raw != "" {
 			if _, ok := rawMap[raw]; !ok {
@@ -129,42 +130,76 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (rawURLs []stri
 	charIDsToCollect := make(map[string]string)
 	panelURLsToCollect := make(map[string]struct{})
 
-	// 1. 収集フェーズ (ロックなし)
-	if def := cm.GetDefault(); def != nil {
-		charIDsToCollect[def.ID] = def.ReferenceURL
-	}
+	// --- 1. 収集フェーズ (ロックなし) ---
+
+	// デフォルトキャラクターを特定（2人の立ち絵を想定）
+	defaultChar := cm.GetDefault()
+
 	for _, p := range panels {
+		// 話者アセットのIDを収集（デフォルトキャラ以外）
 		if char := cm.GetCharacter(p.SpeakerID); char != nil {
-			charIDsToCollect[char.ID] = char.ReferenceURL
+			if defaultChar == nil || char.ID != defaultChar.ID {
+				charIDsToCollect[char.ID] = char.ReferenceURL
+			}
 		}
+		// パネル固有アセットを収集（デフォルトキャラのURLと重複しない場合のみ）
 		if p.ReferenceURL != "" {
-			panelURLsToCollect[p.ReferenceURL] = struct{}{}
+			if defaultChar == nil || p.ReferenceURL != defaultChar.ReferenceURL {
+				panelURLsToCollect[p.ReferenceURL] = struct{}{}
+			}
 		}
 	}
 
-	// 2. マップアクセスフェーズ (ロックあり)
-	// キーの存在チェックを行い、「静かな失敗」を防止する。
+	// --- 2. マップアクセスフェーズ (ロックあり) ---
 	pg.composer.mu.RLock()
 	defer pg.composer.mu.RUnlock()
 
+	// A. まず【最優先】でデフォルトキャラクターを 0番目 に登録
+	if defaultChar != nil && defaultChar.ReferenceURL != "" {
+		uri, ok := pg.composer.CharacterResourceMap[defaultChar.ID]
+		if !ok {
+			return nil, nil, fmt.Errorf("default character resource not found in cache: %s", defaultChar.ID)
+		}
+		add(defaultChar.ReferenceURL, uri)
+	}
+
+	// B. 残りのリソースを収集（ここではまだスライスに追加されるだけ）
+	// ソート順を安定させるため、一時的なスライスを作成
+	var otherRawEntries []string
+	var otherFileEntries []string
+
+	// キャラクターリソースの取得
 	for id, refURL := range charIDsToCollect {
 		uri, ok := pg.composer.CharacterResourceMap[id]
 		if !ok && refURL != "" {
-			return nil, nil, fmt.Errorf("character resource not found in cache for ID %s (URL: %s)", id, refURL)
+			return nil, nil, fmt.Errorf("character resource not found in cache: ID %s", id)
 		}
-		add(refURL, uri)
+		if refURL != "" {
+			otherRawEntries = append(otherRawEntries, refURL)
+			otherFileEntries = append(otherFileEntries, uri)
+		}
 	}
+	// パネルリソースの取得
 	for refURL := range panelURLsToCollect {
 		uri, ok := pg.composer.PanelResourceMap[refURL]
 		if !ok {
-			return nil, nil, fmt.Errorf("panel resource not found in cache for URL: %s", refURL)
+			return nil, nil, fmt.Errorf("panel resource not found in cache: URL %s", refURL)
 		}
-		add(refURL, uri)
+		otherRawEntries = append(otherRawEntries, refURL)
+		otherFileEntries = append(otherFileEntries, uri)
 	}
 
-	// 3. ソートフェーズ (ロックなし)
-	sort.Strings(rawURLs)
-	sort.Strings(fileURIs)
+	// --- 3. ソートと結合フェーズ (ロックなし) ---
+
+	// デフォルト以外のリソースをソートして決定論的な順序にする
+	sort.Strings(otherRawEntries)
+	sort.Strings(otherFileEntries)
+
+	// 0番目（デフォルト）の後に、ソート済みの残りを追加
+	for i := range otherRawEntries {
+		add(otherRawEntries[i], otherFileEntries[i])
+	}
+
 	return rawURLs, fileURIs, nil
 }
 

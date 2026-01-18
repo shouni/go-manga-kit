@@ -50,6 +50,17 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 	cm := mc.CharactersMap
 	eg, egCtx := errgroup.WithContext(ctx)
 
+	// まずデフォルトキャラクターを確実にアップロード対象にする
+	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
+		eg.Go(func() error {
+			_, err := mc.getOrUploadAsset(egCtx, def.ID, def.ReferenceURL)
+			if err != nil {
+				return fmt.Errorf("failed to prepare default character asset: %w", err)
+			}
+			return nil
+		})
+	}
+
 	for _, id := range uniqueSpeakerIDs {
 		speakerID := id
 		eg.Go(func() error {

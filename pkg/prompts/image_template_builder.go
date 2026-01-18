@@ -95,10 +95,14 @@ func (pb *ImagePromptBuilder) pagePromptVer2(panels []domain.Panel, refURLs []st
 
 	// --- 2. User Prompt の構築 (具体的なページの内容) ---
 	var us strings.Builder
-	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(panels)))
+	// リソースの役割をAIに明示する
+	us.WriteString("### VISUAL DATA MAPPING ###\n")
+	us.WriteString("- input_file_0: PRIMARY CHARACTER DESIGN SHEET (Standard style and appearance)\n")
+	if len(refURLs) > 1 {
+		us.WriteString(fmt.Sprintf("- input_file_1 to input_file_%d: Specific pose or scene references.\n\n", len(refURLs)-1))
+	}
 
-	// キャラクター定義セクション
-	us.WriteString(BuildCharacterIdentitySection(pb.characterMap))
+	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(panels)))
 
 	// 大ゴマの決定
 	numPanels := len(panels)
@@ -115,14 +119,14 @@ func (pb *ImagePromptBuilder) pagePromptVer2(panels []domain.Panel, refURLs []st
 		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
 
 		// 1. まずは常に「全体の基準（input_file_0）」を意識させる
-		us.WriteString("- BASE_STYLE: Consistently follow the art style of input_file_0.\n")
+		us.WriteString("- CHARACTER_VISUAL: Strictly follow the character designs in input_file_0.\n")
 
 		// パネル個別のReferenceURLがある場合のみ、そのURLが「何番目の画像か」を特定して指示する
 		if panel.ReferenceURL != "" {
 			// refURLsの中から一致するインデックスを探すロジックが必要なのだ
 			for idx, url := range refURLs {
 				if url == panel.ReferenceURL {
-					us.WriteString(fmt.Sprintf("- SPECIFIC_POSE_REFERENCE: Follow the pose/layout of input_file_%d.\n", idx))
+					us.WriteString(fmt.Sprintf("- REFERENCE_DATA: Follow the visual layout/pose of input_file_%d.\n", idx))
 					break
 				}
 			}
