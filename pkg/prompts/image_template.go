@@ -8,18 +8,8 @@ import (
 )
 
 const (
-	// NegativePanelPrompt は、パネル用のネガティブプロンプトです。
-	NegativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
-	// NegativeMangaPagePrompt は、ページ用のネガティブプロンプトです。
-	NegativeMangaPagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
 	// CinematicTags クオリティ向上のための共通タグ
 	CinematicTags = "cinematic composition, high resolution, sharp focus, 8k"
-
-	// MangaStructureHeader は作画の全体構造を定義します。
-	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
-- STRUCTURE: A professional Japanese manga spread with clear frame borders.
-- READING ORDER: Right-to-Left, Top-to-Bottom.
-- GUTTERS: Ultra-thin, crisp hairline dividers. NO OVERLAPPING. Each panel is a separate scene.`
 
 	// RenderingStyle は共通の画風を定義します。
 	RenderingStyle = `### GLOBAL VISUAL STYLE ###

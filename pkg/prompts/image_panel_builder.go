@@ -7,6 +7,11 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
+const (
+	// NegativePanelPrompt は、パネル用のネガティブプロンプトです。
+	NegativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy"
+)
+
 // BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
 func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64) {
 	// --- 1. System Prompt の構築 ---

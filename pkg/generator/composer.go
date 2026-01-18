@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/prompts"
 
 	"github.com/shouni/gemini-image-kit/pkg/generator"
 	"golang.org/x/sync/errgroup"
@@ -16,7 +17,7 @@ import (
 type MangaComposer struct {
 	AssetManager         generator.AssetManager
 	ImageGenerator       generator.ImageGenerator
-	PromptBuilder        ImagePromptBuilder
+	PromptBuilder        *prompts.ImagePromptBuilder
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
@@ -29,7 +30,7 @@ type MangaComposer struct {
 func NewMangaComposer(
 	assetMgr generator.AssetManager,
 	imgGen generator.ImageGenerator,
-	pb ImagePromptBuilder,
+	pb *prompts.ImagePromptBuilder,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
 ) *MangaComposer {
