@@ -25,7 +25,7 @@ func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
 // Execute は、並列処理を用いてパネル群を生成します。
 // 事前にキャラクターリソースを準備し、各パネルの画像生成を並行して実行します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-	if err := prepareCharacterResources(ctx, pg.composer, panels); err != nil {
+	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
 
