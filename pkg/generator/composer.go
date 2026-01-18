@@ -71,15 +71,30 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 
 // getOrUploadAsset は内部的なキャッシュを利用し、必要に応じてアップロードを実行します（非公開メソッド）。
 func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, referenceURL string) (string, error) {
-	// singleflight.Do は同一キーに対して、このコールバックを「同時に一度」しか実行しません。
+	// RLock でキャッシュ（マップ）を素早く確認
+	mc.mu.RLock()
+	uri, ok := mc.CharacterResourceMap[charID]
+	mc.mu.RUnlock()
+	if ok {
+		return uri, nil
+	}
+
 	val, err, _ := mc.uploadGroup.Do(charID, func() (interface{}, error) {
-		// 1. アップロード実行（重い I/O 処理）
+		// ingleflight で待機中に他のゴルーチンがアップロードを完了させている可能性があるため、コールバック内で再度マップを確認
+		mc.mu.RLock()
+		existingURI, ok := mc.CharacterResourceMap[charID]
+		mc.mu.RUnlock()
+		if ok {
+			return existingURI, nil
+		}
+
+		// 本当に未アップロードの場合のみ、重い I/O 処理を実行
 		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
 		if uploadErr != nil {
 			return nil, uploadErr
 		}
 
-		// 2. マップに結果を保存
+		// 結果を永続的なキャッシュマップに保存
 		mc.mu.Lock()
 		mc.CharacterResourceMap[charID] = uploadedURI
 		mc.mu.Unlock()
@@ -91,7 +106,7 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 		return "", err
 	}
 
-	uri, ok := val.(string)
+	uri, ok = val.(string)
 	if !ok {
 		return "", fmt.Errorf("unexpected return type from singleflight: %T", val)
 	}
