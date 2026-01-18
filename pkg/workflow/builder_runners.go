@@ -36,7 +36,7 @@ func (b *Builder) BuildDesignRunner() (DesignRunner, error) {
 func (b *Builder) BuildPanelImageRunner() (PanelImageRunner, error) {
 	panelsGen := generator.NewPanelGenerator(b.mangaComposer)
 
-	return runner.NewMangaPanelImageRunner(b.cfg, panelsGen, b.writer), nil
+	return runner.NewMangaPanelRunner(b.cfg, panelsGen, b.writer), nil
 }
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。

@@ -2,14 +2,10 @@ package generator
 
 import (
 	"context"
-	"sync"
 
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/gemini-image-kit/pkg/generator"
-	"golang.org/x/sync/singleflight"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -40,16 +36,4 @@ type PanelsImageGenerator interface {
 // パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
 type PagesImageGenerator interface {
 	Execute(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error)
-}
-
-type MangaComposer struct {
-	AssetManager         generator.AssetManager
-	ImageGenerator       generator.ImageGenerator
-	PromptBuilder        ImagePromptBuilder
-	CharactersMap        mangadom.CharactersMap
-	RateLimiter          *rate.Limiter
-	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
-	panelResourceMap     map[int]string    // PanelIndex (or ID) -> FileAPIURI
-	mu                   sync.RWMutex
-	uploadGroup          singleflight.Group //
 }

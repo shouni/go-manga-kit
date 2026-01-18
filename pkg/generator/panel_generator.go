@@ -25,7 +25,7 @@ func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
 // Execute は、並列処理を用いてパネル群を生成します。
 // 事前にキャラクターリソースを準備し、各パネルの画像生成を並行して実行します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
-	if err := pg.prepareCharacterResources(ctx, panels); err != nil {
+	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
 
@@ -84,55 +84,4 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	}
 
 	return images, eg.Wait()
-}
-
-// prepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
-func (pg *PanelGenerator) prepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
-	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
-	cm := pg.composer.CharactersMap
-	eg, egCtx := errgroup.WithContext(ctx)
-
-	for _, id := range uniqueSpeakerIDs {
-		speakerID := id
-
-		eg.Go(func() error {
-			char := cm.GetCharacterWithDefault(speakerID)
-			if char == nil || char.ReferenceURL == "" {
-				return nil
-			}
-			resolvedCharID := char.ID
-
-			// singleflight を使い、同じ resolvedCharID に対する処理を集約
-			_, err, _ := pg.composer.uploadGroup.Do(resolvedCharID, func() (interface{}, error) {
-				// singleflight 呼び出し前に既にマップに存在するか最終チェック
-				pg.composer.mu.RLock()
-				existingURI, ok := pg.composer.CharacterResourceMap[resolvedCharID]
-				pg.composer.mu.RUnlock()
-				if ok {
-					return existingURI, nil
-				}
-
-				// 重いアップロード処理（ここが同時に呼ばれるのは singleflight により resolvedCharID ごとに1回のみ）
-				uploadedURI, uploadErr := pg.composer.AssetManager.UploadFile(egCtx, char.ReferenceURL)
-				if uploadErr != nil {
-					return nil, uploadErr
-				}
-
-				// 書き込みのみロック
-				pg.composer.mu.Lock()
-				pg.composer.CharacterResourceMap[resolvedCharID] = uploadedURI
-				pg.composer.mu.Unlock()
-
-				return uploadedURI, nil
-			})
-
-			if err != nil {
-				return fmt.Errorf("failed to prepare asset for character %s (resolved from speaker %s): %w", resolvedCharID, speakerID, err)
-			}
-
-			return nil
-		})
-	}
-
-	return eg.Wait()
 }
