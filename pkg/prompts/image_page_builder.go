@@ -8,13 +8,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
-type ResourceMap struct {
-	CharacterFiles map[string]int
-	PanelFiles     map[string]int
-	OrderedURIs    []string
-	OrderedURLs    []string
-}
-
+// --- Constants & Types ---
 const (
 	// NegativePagePrompt は生成から除外したい要素を定義します。
 	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
@@ -30,15 +24,22 @@ const (
 - READING FLOW: Right-to-Left, Top-to-Bottom.`
 )
 
+type ResourceMap struct {
+	CharacterFiles map[string]int
+	PanelFiles     map[string]int
+	OrderedURIs    []string
+	OrderedURLs    []string
+}
+
 // BuildMangaPagePrompt はメインのプロンプト構築フローを管理します。
 func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (string, string) {
 	numPanels := len(panels)
 	bigPanelIdx := pb.calculateBigPanelIndex(numPanels)
 
-	// システムプロンプトの構築
+	// 1. システムプロンプトの構築
 	systemPrompt := pb.buildSystemPrompt()
 
-	// ユーザープロンプトの構築（各セクションをメソッド化）
+	// 2. ユーザープロンプトの構築
 	var us strings.Builder
 	pb.writeBasicRequirements(&us, numPanels)
 	pb.writeLayoutStructure(&us, numPanels)
@@ -50,7 +51,6 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 
 // --- Internal Helper Methods ---
 
-// buildSystemPrompt はシステムの基本ルールを構築します。
 func (pb *ImagePromptBuilder) buildSystemPrompt() string {
 	const instr = "You are a master digital artist. You MUST follow the exact panel count and layout rules. Character identity MUST match the character master reference files."
 	parts := []string{instr, MangaStructureHeader, RenderingStyle, CinematicTags}
@@ -60,7 +60,6 @@ func (pb *ImagePromptBuilder) buildSystemPrompt() string {
 	return strings.Join(parts, "\n\n")
 }
 
-// writeBasicRequirements はページ全体の基本要求を書き込みます。
 func (pb *ImagePromptBuilder) writeBasicRequirements(w *strings.Builder, num int) {
 	w.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
 	w.WriteString("- OUTPUT: ONE single portrait manga page image.\n")
@@ -68,7 +67,6 @@ func (pb *ImagePromptBuilder) writeBasicRequirements(w *strings.Builder, num int
 	fmt.Fprintf(w, "- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n\n", num, num)
 }
 
-// writeLayoutStructure はレイアウトと配置マップを書き込みます。
 func (pb *ImagePromptBuilder) writeLayoutStructure(w *strings.Builder, num int) {
 	w.WriteString("## MANDATORY PAGE STRUCTURE\n")
 	w.WriteString("- READING ORDER: Japanese Style (Right-to-Left, then Top-to-Bottom).\n")
@@ -92,7 +90,6 @@ func (pb *ImagePromptBuilder) writeLayoutStructure(w *strings.Builder, num int) 
 	w.WriteString("- FRAME STYLE: Deep black borders. GUTTERS: Pure white.\n\n")
 }
 
-// writeCharacterReferences はキャラクターの参照情報を書き込みます。
 func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *ResourceMap) {
 	w.WriteString("## CHARACTER MASTER REFERENCES\n")
 
@@ -100,7 +97,8 @@ func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *R
 		id  string
 		idx int
 	}
-	var refs []charRef
+	// パフォーマンス改善: キャパシティを事前に確保
+	refs := make([]charRef, 0, len(rm.CharacterFiles))
 	for id, idx := range rm.CharacterFiles {
 		refs = append(refs, charRef{id, idx})
 	}
@@ -119,14 +117,12 @@ func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *R
 	w.WriteString("\n")
 }
 
-// writePanelBreakdown は各パネルの詳細指示をループで書き込みます。
 func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []domain.Panel, rm *ResourceMap, bigIdx int) {
 	num := len(panels)
 	w.WriteString("## PANEL BREAKDOWN\n")
 	for i, panel := range panels {
 		panelNum := i + 1
 
-		// ラベルと位置の判定
 		label, pos := "Standard", ""
 		if i == bigIdx {
 			if num == 1 {
@@ -144,32 +140,53 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 
 		fmt.Fprintf(w, "### PANEL %d [%s]\n- POSITION: %s\n", panelNum, label, pos)
 
-		// キャラクターとアクション
+		// キャラクターIDと表示名
 		char := pb.characterMap.GetCharacter(panel.SpeakerID)
-		charName := panel.SpeakerID
+		displayName := panel.SpeakerID
+		charFileIdx := -1
 		if char != nil {
-			charName = char.Name
+			displayName = char.Name
+			if idx, ok := rm.CharacterFiles[char.ID]; ok {
+				charFileIdx = idx
+			}
 		}
 
+		// アクション指示
 		action := sanitizeInline(panel.VisualAnchor)
-		action = strings.ReplaceAll(action, panel.SpeakerID, charName)
-
+		action = strings.ReplaceAll(action, panel.SpeakerID, displayName)
 		charRefStr := ""
-		if idx, ok := rm.CharacterFiles[panel.SpeakerID]; ok {
-			charRefStr = fmt.Sprintf(" (Match input_file_%d)", idx)
+		if charFileIdx != -1 {
+			charRefStr = fmt.Sprintf(" (Match input_file_%d)", charFileIdx)
 		}
 
-		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", charName, action, charRefStr)
+		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", displayName, action, charRefStr)
 
-		// セリフ
+		// ポーズ参照ロジックの復元
+		if panel.ReferenceURL != "" {
+			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
+				fmt.Fprintf(w, "- POSE_REF: Use input_file_%d for BODY/POSE/ANATOMY only. IGNORE face/hair/colors from this file.\n", fileIdx)
+				if charFileIdx != -1 {
+					fmt.Fprintf(w, "- IDENTITY_FIX: Face/hair/eyes MUST match input_file_%d exactly.\n", charFileIdx)
+				}
+			}
+		}
+
+		// セリフ詳細指示の復元
 		if panel.Dialogue != "" {
-			fmt.Fprintf(w, "- SPEECH: \"%s\"\n", formatDialogue(panel.Dialogue))
+			fmt.Fprintf(w, "- SPEECH: Speech bubble for [%s].\n", displayName)
+			fmt.Fprintf(w, "  - TEXT_TO_RENDER: \"%s\"\n", formatDialogue(panel.Dialogue))
+			w.WriteString("  - TYPOGRAPHY: Use professional Japanese manga font (Gothic or Mincho style).\n")
+			w.WriteString("  - LANGUAGE: Japanese characters. Ensure each Kanji/Kana is rendered accurately and legibly.\n")
 		}
 		w.WriteString("\n")
 	}
 }
 
-// calculateBigPanelIndex は拡大表示するパネルのインデックスを返します。
+// [Minor] GoDocコメントの追加
+// calculateBigPanelIndex は拡大表示するパネルのインデックスを計算して返します。
+// パネル数が1の場合は0を返します。
+// パネル数が1より大きく奇数の場合は、最後のパネルのインデックス (num - 1) を返します。
+// それ以外の場合（0、偶数）は、拡大パネルなしを示す-1を返します。
 func (pb *ImagePromptBuilder) calculateBigPanelIndex(num int) int {
 	if num == 1 {
 		return 0
