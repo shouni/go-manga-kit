@@ -150,6 +150,15 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			}
 		}
 
+		// セリフ詳細指示の復元
+		if panel.Dialogue != "" {
+			fmt.Fprintf(w, "- SPEECH: Speech bubble for [%s].\n", displayName)
+			fmt.Fprintf(w, "  - TEXT_TO_RENDER: \"%s\"\n", formatDialogue(panel.Dialogue))
+			w.WriteString("  - TYPOGRAPHY: Use professional Japanese manga font (Gothic or Mincho style).\n")
+			w.WriteString("  - LANGUAGE: Japanese characters. Ensure each Kanji/Kana is rendered accurately and legibly.\n")
+		}
+		w.WriteString("\n")
+
 		// アクション指示
 		sceneDescription := sanitizeInline(panel.VisualAnchor)
 		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
@@ -169,15 +178,6 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 				}
 			}
 		}
-
-		// セリフ詳細指示の復元
-		if panel.Dialogue != "" {
-			fmt.Fprintf(w, "- SPEECH: Speech bubble for [%s].\n", displayName)
-			fmt.Fprintf(w, "  - TEXT_TO_RENDER: \"%s\"\n", formatDialogue(panel.Dialogue))
-			w.WriteString("  - TYPOGRAPHY: Use professional Japanese manga font (Gothic or Mincho style).\n")
-			w.WriteString("  - LANGUAGE: Japanese characters. Ensure each Kanji/Kana is rendered accurately and legibly.\n")
-		}
-		w.WriteString("\n")
 	}
 }
 
