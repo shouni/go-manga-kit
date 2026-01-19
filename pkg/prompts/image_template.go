@@ -9,7 +9,7 @@ import (
 
 const (
 	// CinematicTags クオリティ向上のための共通タグ
-	CinematicTags = "cinematic composition, high resolution, sharp focus, 8k"
+	CinematicTags = "cinematic composition, high resolution, sharp focus, 4k"
 
 	// RenderingStyle は共通の画風を定義します。
 	RenderingStyle = `### GLOBAL VISUAL STYLE ###

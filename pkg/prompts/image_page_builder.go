@@ -8,55 +8,54 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
-// ResourceMap は、AIに送信するファイルとプロンプト上のインデックスの対応を管理します。
 type ResourceMap struct {
-	CharacterFiles map[string]int // SpeakerID -> input_file_N のインデックス
-	PanelFiles     map[string]int // ReferenceURL -> input_file_N のインデックス
-	OrderedURIs    []string       // 最終的に File API に送る URI のリスト
-	OrderedURLs    []string       // 最終的に ReferenceURLs に入れる URL のリスト
+	CharacterFiles map[string]int
+	PanelFiles     map[string]int
+	OrderedURIs    []string
+	OrderedURLs    []string
 }
 
 const (
-	// NegativePagePrompt 品質低下を防ぐためのネガティブプロンプトを強化
-	NegativePagePrompt = "color, realistic photos, 3d render, watermark, text, signature, sketch, deformed faces, bad anatomy, disfigured, poorly drawn face, mutation, extra limb, ugly, disgusting, poorly drawn hands, missing limb, floating limbs, disconnected limbs, malformed hands, blurry, mutated hands, fingers"
+	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, text, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands"
 
-	// MangaStructureHeader マンガの構造（白黒、枠線、余白）をより具体的に定義
-	MangaStructureHeader = `### FORMAT RULES: PROFESSIONAL MANGA PAGE ###
-- STYLE: High-contrast black and white Japanese Manga. Use G-Pen ink lines and screentones.
+	MangaStructureHeader = `### FORMAT RULES: FULL COLOR ANIME MANGA ###
+- STYLE: Vibrant Full Color Digital Anime Style. High saturation, cinematic lighting.
+- RENDERING: Sharp clean lineart with professional digital coloring. NO screentones, NO monochrome hatching.
+- COLORING: Full palette, vivid saturation, consistent with character reference sheets.
 - LAYOUT: Strict multi-panel composition. NO merging panels.
 - BORDERS: Deep black, crisp frame borders for EVERY panel.
 - GUTTERS: Pure white space between panels.
 - READING FLOW: Right-to-Left, Top-to-Bottom.`
 )
 
-// BuildMangaPagePrompt は、ResourceMap を使用して高精度なプロンプトを構築します。
+// BuildMangaPagePrompt は、ResourceMap を使用して「フルカラー・キャラ一貫性」を両立したプロンプトを構築します。
 func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string) {
-	// --- 1. System Prompt (画風・構造の強制・役割付与) ---
-	const mangaSystemInstruction = "You are a master manga artist (Mangaka). You excel at dynamic composition, expressive line art, and coherent storytelling."
+	// --- 1. System Prompt (カラーアニメ・役割の固定) ---
+	const mangaSystemInstruction = "You are a master digital artist specialized in full-color anime manga. You produce professional, high-saturation pages with cinematic lighting. You must ignore any monochrome elements in references and convert everything to vibrant digital color."
 
 	systemParts := []string{
 		mangaSystemInstruction,
-		MangaStructureHeader,
-		RenderingStyle,
-		CinematicTags,
+		MangaStructureHeader, // 定義済みのカラー版ヘッダー
+		RenderingStyle,       // 定義済みのカラー版スタイル
+		CinematicTags,        // 定義済みの共通タグ
 	}
 	if pb.defaultSuffix != "" {
 		systemParts = append(systemParts, fmt.Sprintf("### ARTISTIC STYLE ###\n%s", pb.defaultSuffix))
 	}
 	systemPrompt = strings.Join(systemParts, "\n\n")
 
-	// --- 2. User Prompt (ページ固有の指示) ---
+	// --- 2. User Prompt (フルカラーページ固有の指示) ---
 	var us strings.Builder
 
-	// ページの全体像を先に提示
-	us.WriteString(fmt.Sprintf("# PAGE REQUEST\nCreate a strictly segmented manga page with EXACTLY %d panels.\n\n", len(panels)))
+	us.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
+	us.WriteString("- OUTPUT TYPE: STRICTLY VIBRANT FULL COLOR.\n")
+	us.WriteString(fmt.Sprintf("- PANEL COUNT: Exactly %d distinct panels.\n\n", len(panels)))
 
-	// キャラクター定義 (Reference Sheet)
-	// プロンプトの先頭で定義することで一貫性を高める
-	us.WriteString("## CHARACTER REFERENCE SHEET\n")
+	// キャラクター定義 (立ち絵のカラーパレットを正とする)
+	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED COLOR PALETTE)\n")
 	for sID, fileIdx := range rm.CharacterFiles {
 		displayName := sID
-		visualDesc := "Distinct character features" // デフォルト
+		visualDesc := "vivid anime color palette"
 
 		if char := pb.characterMap.GetCharacter(sID); char != nil {
 			displayName = char.Name
@@ -64,64 +63,62 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 				visualDesc = strings.Join(char.VisualCues, ", ")
 			}
 		}
-		// ファイル参照とテキスト記述を強力に結びつける
-		us.WriteString(fmt.Sprintf("- REF_ID [%s]: Look at input_file_%d. Traits: {%s}\n", displayName, fileIdx, visualDesc))
+		// 「色」を input_file_N から引き継ぐことを明示
+		us.WriteString(fmt.Sprintf("- SUBJECT [%s]: Face and Color MUST follow input_file_%d. (Traits: %s)\n", displayName, fileIdx, visualDesc))
 	}
 	us.WriteString("\n")
 
-	// 大ゴマの決定（ランダム）
+	// 大ゴマの決定
 	numPanels := len(panels)
 	bigPanelIndex := -1
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
 	}
 
-	us.WriteString("## PANEL BREAKDOWN\n")
+	us.WriteString("## PANEL BREAKDOWN (EXECUTE IN COLOR)\n")
 	for i, panel := range panels {
 		panelNum := i + 1
-
-		// パネルごとのヘッダー作成
-		// 大ゴマか通常かによってカメラワークの重み付けを変える指示を入れる
-		panelSize := "Standard Size"
-		shotFocus := "Medium Shot" // デフォルト
+		panelSize := "Standard"
 		if i == bigPanelIndex {
-			panelSize = "LARGE IMPACT PANEL"
-			shotFocus = "Dynamic Angle / Close-up or Wide Detailed Shot"
+			panelSize = "LARGE IMPACT"
 		}
 
 		us.WriteString(fmt.Sprintf("### PANEL %d [%s]\n", panelNum, panelSize))
 
-		// キャラクター名の解決
 		displayName := panel.SpeakerID
+		charFileIdx := -1
 		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
 			displayName = char.Name
+			charFileIdx = rm.CharacterFiles[char.ID]
 		}
 
-		// シーン描写の構築
-		// 単純な置換だけでなく、主語を明確にする
 		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
+		// キャラクターの特徴（VisualCues）を取得
+		charCues := ""
+		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil && len(char.VisualCues) > 0 {
+			charCues = fmt.Sprintf(" (Visual identity from input_file_%d: %s)", rm.CharacterFiles[panel.SpeakerID], strings.Join(char.VisualCues, ", "))
+		}
 
-		// 構造化された指示ブロック
-		us.WriteString(fmt.Sprintf("- FOCUS: %s\n", shotFocus))
+		// プロンプト書き出し
+		us.WriteString("- RENDER: FULL COLOR with Rich Saturation.\n")
 		us.WriteString(fmt.Sprintf("- SUBJECT: %s\n", displayName))
-		us.WriteString(fmt.Sprintf("- ACTION: %s\n", sceneDescription))
+		// ACTION 1行に集約
+		us.WriteString(fmt.Sprintf("- ACTION: %s%s\n", sceneDescription, charCues))
 
-		// ポーズ参照がある場合
 		if panel.ReferenceURL != "" {
 			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
-				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for composition/anatomy only. Keep face of [%s].\n", fileIdx, displayName))
+				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for BODY ANATOMY ONLY. IGNORE colors/textures from this file.\n", fileIdx))
+				if charFileIdx != -1 {
+					us.WriteString(fmt.Sprintf("- IDENTITY_FIX: Force [%s]'s hair, eye color, and face to match input_file_%d exactly.\n", displayName, charFileIdx))
+				}
 			}
 		}
 
-		// セリフ/フキダシ指示
-		// テキスト描画はAIにとって難しいので、明確な引用符と配置指示を与える
+		// セリフ指示
 		if panel.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- SPEECH: Place a dialogue bubble near [%s]. Text contents: \"%s\"\n", displayName, panel.Dialogue))
-		} else {
-			us.WriteString("- SPEECH: No dialogue in this panel.\n")
+			us.WriteString(fmt.Sprintf("- SPEECH: Render a clear bubble for [%s] with text: \"%s\"\n", displayName, panel.Dialogue))
 		}
-
-		us.WriteString("\n") // パネル間の空行
+		us.WriteString("\n")
 	}
 
 	userPrompt = us.String()
