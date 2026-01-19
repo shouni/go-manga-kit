@@ -24,13 +24,12 @@ func sanitizeInline(s string) string {
 	return s
 }
 
-// ダイアログは "..." で囲うと壊れることがあるので、区切りトークンを使う
-func wrapDialogue(s string) string {
+// ダイアログの正規化のみを行う（記号は付けない）
+func formatDialogue(s string) string {
 	s = sanitizeInline(s)
-	// <<< >>> の中に入れる前提で、万一含まれていたら逃がす
-	s = strings.ReplaceAll(s, "<<<", "<< <")
-	s = strings.ReplaceAll(s, ">>>", "> >>")
-	return "<<< " + s + " >>>"
+	// AIが混乱するため、中のダブルクォートはシングルクォートに逃がす
+	s = strings.ReplaceAll(s, "\"", "'")
+	return s
 }
 
 const (
@@ -183,7 +182,14 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 		}
 
 		if panel.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- SPEECH: Speech bubble for [%s]. Put ONLY this dialogue text inside the bubble (no other text anywhere): %s\n", displayName, wrapDialogue(panel.Dialogue)))
+			cleanText := formatDialogue(panel.Dialogue)
+
+			us.WriteString(fmt.Sprintf("- SPEECH: Speech bubble for [%s].\n", displayName))
+			us.WriteString(fmt.Sprintf("  - TEXT_TO_RENDER: \"%s\"\n", cleanText))
+			// フォントと正確性
+			us.WriteString("  - TYPOGRAPHY: Use professional Japanese manga font (Gothic or Mincho style).\n")
+			us.WriteString("  - LANGUAGE: Japanese characters. Ensure each Kanji/Kana is rendered accurately and legibly.\n")
+			us.WriteString("  - STYLE: High-quality typesetting. No digital noise inside the text.\n")
 		}
 
 		if i == numPanels-1 {
