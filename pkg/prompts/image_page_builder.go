@@ -18,19 +18,19 @@ type ResourceMap struct {
 
 const (
 	// NegativePagePrompt は、ページ用のネガティブプロンプトです。
-	//	NegativePagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
-	NegativePagePrompt = "deformed faces, low-quality faces, blurry features, extra limbs, distorted anatomy, messy lineart"
+	NegativePagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
+	//NegativePagePrompt = "deformed faces, low-quality faces, blurry features, extra limbs, distorted anatomy, messy lineart"
 
 	// MangaStructureHeader は作画の全体構造を定義します。
-	//	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
-	//- STRUCTURE: A professional Japanese manga spread with clear frame borders.
-	//- READING ORDER: Right-to-Left, Top-to-Bottom.
-	//- GUTTERS: Ultra-thin, crisp hairline dividers. NO OVERLAPPING. Each panel is a separate scene.`
+	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
+	- STRUCTURE: A professional Japanese manga spread with clear frame borders.
+	- READING ORDER: Right-to-Left, Top-to-Bottom.
+	- GUTTERS: Ultra-thin, crisp hairline dividers. NO OVERLAPPING. Each panel is a separate scene.`
 
-	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE ###
-- FRAME BORDERS: Every panel must have solid, visible black borders.
-- GUTTERS: Use clear white spacing between panels. NO overlapping or merging.
-- LAYOUT: Strictly separate each numbered panel into its own spatial area.`
+	//	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE ###
+	//- FRAME BORDERS: Every panel must have solid, visible black borders.
+	//- GUTTERS: Use clear white spacing between panels. NO overlapping or merging.
+	//- LAYOUT: Strictly separate each numbered panel into its own spatial area.`
 )
 
 // BuildMangaPagePrompt は、ResourceMap を使用して高精度なプロンプトを構築します。
