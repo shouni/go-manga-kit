@@ -206,14 +206,14 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	}
 	cm := pg.composer.CharactersMap
 
+	// パネルの最初のキャラのseed
+	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
+		return char.Seed
+	}
+
 	// デフォルトのキャラseed
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
-	}
-
-	// 最初のの話者のseed
-	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
-		return char.Seed
 	}
 
 	return defaultSeed
