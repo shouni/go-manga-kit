@@ -67,15 +67,39 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 	us.WriteString("- COLOR: STRICTLY VIBRANT FULL COLOR. NO monochrome, NO screentones.\n")
 	us.WriteString(fmt.Sprintf("- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n", len(panels), len(panels)))
 
-	// レイアウト固定（2列グリッド）
-	us.WriteString("- LAYOUT GRID: 2 columns. Reading order is Right-to-Left within each row, Top-to-Bottom across rows.\n")
-	if len(panels) > 1 && len(panels)%2 == 1 {
-		us.WriteString(fmt.Sprintf("- LAST PANEL RULE: PANEL %d is FULL-WIDTH at the bottom (spans both columns). All other panels are standard size.\n", len(panels)))
-	} else {
-		us.WriteString("- PANEL SIZE RULE: All panels are standard and uniform. No inset panels, no split panels.\n")
+	// --- LAYOUT & READING FLOW ---
+	us.WriteString("## MANDATORY PAGE STRUCTURE\n")
+	us.WriteString("- OUTPUT FORMAT: A single vertical manga page.\n")
+	us.WriteString("- GRID SYSTEM: 2-column grid. All panels must be contained within this single image.\n")
+	us.WriteString("- READING ORDER: Japanese Style (Right-to-Left, then Top-to-Bottom).\n")
+
+	numPanels := len(panels)
+	// パネル配置の具体的なマッピングを教える
+	us.WriteString("- PANEL PLACEMENT MAP:\n")
+	for i := 0; i < numPanels; i++ {
+		panelNum := i + 1
+		// 奇数パネルの最後が FULL-WIDTH の場合
+		if numPanels%2 == 1 && i == numPanels-1 {
+			us.WriteString(fmt.Sprintf("  * PANEL %d: BOTTOM ROW, FULL-WIDTH (spans across both columns).\n", panelNum))
+		} else {
+			row := (i / 2) + 1
+			side := "RIGHT"
+			if i%2 == 1 {
+				side = "LEFT"
+			}
+			us.WriteString(fmt.Sprintf("  * PANEL %d: ROW %d, %s column.\n", panelNum, row, side))
+		}
 	}
-	us.WriteString("- BORDERS: deep black crisp borders for EVERY panel. GUTTERS: pure white.\n")
-	us.WriteString("- ABSOLUTE BAN: no extra frames, no decorative mini-panels, no panels inside panels.\n\n")
+
+	if numPanels > 1 && numPanels%2 == 1 {
+		us.WriteString(fmt.Sprintf("- SPECIAL RULE: PANEL %d is a wide cinematic panel at the bottom. All other panels are standard sized in 2 columns.\n", numPanels))
+	} else {
+		us.WriteString("- PANEL SIZE: All panels are standard, uniform, and balanced in the 2-column grid.\n")
+	}
+
+	us.WriteString("- FRAME STYLE: Deep black, crisp borders for EVERY panel. NO overlapping frames.\n")
+	us.WriteString("- GUTTERS: Pure white gutters between all panels.\n")
+	us.WriteString("- ABSOLUTE BAN: Do NOT add extra frames, decorative small panels, or any panels inside other panels.\n\n")
 
 	// --- CHARACTER MASTER REFERENCES（順序を安定化：fileIdx昇順） ---
 	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED IDENTITY + COLOR PALETTE)\n")
@@ -111,7 +135,6 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 	us.WriteString("\n")
 
 	// big panel はランダムだと事故るので、ここでは "奇数なら最終だけ横長" で固定
-	numPanels := len(panels)
 	bigPanelIndex := -1
 	if numPanels > 1 && numPanels%2 == 1 {
 		bigPanelIndex = numPanels - 1
