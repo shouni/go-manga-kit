@@ -15,12 +15,12 @@
 
 ## ✨ コア・コンセプト (Core Concepts)
 
-* **🧬 Triple-Layer Consistency**: 
-    * キャラクター固有の **Seed値** をキャンバスの土台とし、**File API 参照画像** で外見を固定、さらに **VisualCues（言語指示）** で詳細を補完する3層の制御機構。
+* **🧬 3-Factor Consistency Control**:
+    * キャラクターの一貫性を担保するため、**Seed値**（基盤）、**File API参照画像**（外見）、**VisualCues/言語指示**（詳細）の3要素を組み合わせて制御します。
 * **📐 Strict Layout & Count Control**: 
     * 「指定されたコマ数を厳密に守る」ためのプロンプト・ガードレールを搭載。`FINAL PANEL` 指示等により、AIによる勝手なコマ追加を抑制します。
-* **🎨 Vibrant Color Enforcement**:
-    * モノクロ化を徹底排除。参照画像が白黒やラフスケッチであっても、鮮やかなデジタルアニメ調の彩色を強制します。
+* **🎨 Vibrant Color Guidance**:
+    * モノクロ化を抑制。参照画像が白黒やラフスケッチであっても、プロンプト技術により鮮やかなデジタルアニメ調の彩色を強く誘導します。
 * **⚡ Smart Asset Management**: 
     * `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
 
@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | **1. Designing** | `DesignRunner` | キャラのDNA（Seed/特徴）を固定し、デザインシートを生成。 |
 | **2. Scripting** | `ScriptRunner` | 原稿から、キャラ・セリフ・構図を含むJSON台本を生成。 |
-| **3. Panel Gen** | `PanelImageRunner` | 各パネルを、キャラ固有Seedを用いて個別に高精度生成。 |
+| **3. Panel Gen** | `PanelImageRunner` |各パネルを、キャラ固有Seedを用いて個別に高精度生成。 |
 | **4. Publishing** | `PublishRunner` | 画像とテキストを統合し、HTML/Markdown等で出力。 |
 | **5. Page Gen** | `PageImageRunner` | 台本に基づき、ページ単位で再レイアウト・一括作画。 |
 
@@ -60,7 +60,7 @@ go-manga-kit/
 sequenceDiagram
     participant APP as Application
     participant Runner as runner.PageImageRunner
-    participant Builder as prompts.ImagePromptBuilder
+    participant Builder as Prompt Builder
     participant API as Gemini API (Nano Banana)
 
     Note over APP, Runner: 1. アセット準備 & Seed特定
@@ -73,7 +73,7 @@ sequenceDiagram
 
     Note over Runner, API: 3. ページ一括生成
     Runner->>API: GenerateContent(Prompt + Seed + FileURIs)
-    Note right of API: 立ち絵を参照しつつ指定コマ数で描画
+    Note over Runner, API: APIは立ち絵を参照し、指定されたコマ数でページを描画
     API-->>Runner: 生成画像データ (Full Color)
     Runner-->>APP: []ImageResponse
 
