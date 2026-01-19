@@ -21,7 +21,9 @@ func sanitizeInline(s string) string {
 // formatDialogue はダイアログの正規化のみを行います。
 func formatDialogue(s string) string {
 	s = sanitizeInline(s)
-	// AIの混乱を防ぐため、ダブルクォートをシングルクォートに逃がします
+	// プロンプト内で "TEXT_TO_RENDER: "..." のようにテキストをダブルクォートで囲むため、
+	// 内部にダブルクォートが含まれていると構文エラーを引き起こし、AIの解釈を妨げる可能性があります。
+	// これを防ぐため、内部のダブルクォートはシングルクォートに置換します。
 	s = strings.ReplaceAll(s, "\"", "'")
 	return s
 }

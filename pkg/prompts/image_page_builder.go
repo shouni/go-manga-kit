@@ -152,14 +152,14 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 		}
 
 		// アクション指示
-		action := sanitizeInline(panel.VisualAnchor)
-		action = strings.ReplaceAll(action, panel.SpeakerID, displayName)
+		sceneDescription := sanitizeInline(panel.VisualAnchor)
+		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
 		charRefStr := ""
 		if charFileIdx != -1 {
 			charRefStr = fmt.Sprintf(" (Match input_file_%d)", charFileIdx)
 		}
 
-		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", displayName, action, charRefStr)
+		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", displayName, sceneDescription, charRefStr)
 
 		// ポーズ参照ロジックの復元
 		if panel.ReferenceURL != "" {
@@ -182,7 +182,6 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 	}
 }
 
-// [Minor] GoDocコメントの追加
 // calculateBigPanelIndex は拡大表示するパネルのインデックスを計算して返します。
 // パネル数が1の場合は0を返します。
 // パネル数が1より大きく奇数の場合は、最後のパネルのインデックス (num - 1) を返します。
