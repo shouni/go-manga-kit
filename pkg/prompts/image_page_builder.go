@@ -16,10 +16,10 @@ type ResourceMap struct {
 }
 
 const (
-	// NegativePagePrompt コマ数が勝手に増えるのを防ぐワード（extra panels 等）を追加
+	// NegativePagePrompt: カラー維持とコマ数固定のために強化
 	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, text, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
 
-	// MangaStructureHeader レイアウトの厳格性を強調
+	// MangaStructureHeader: フルカラーとレイアウトの強制
 	MangaStructureHeader = `### FORMAT RULES: FULL COLOR ANIME MANGA ###
 - STYLE: Vibrant Full Color Digital Anime Style. High saturation, cinematic lighting.
 - RENDERING: Sharp clean lineart with professional digital coloring. NO screentones.
@@ -31,8 +31,8 @@ const (
 )
 
 func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string) {
-	// --- 1. System Prompt ---
-	const mangaSystemInstruction = "You are a master digital artist. You follow the exact panel count requested. You never add extra panels beyond what is instructed."
+	// --- 1. System Prompt (役割とルールの固定) ---
+	const mangaSystemInstruction = "You are a master digital artist. You follow the exact panel count requested. You prioritize the visual identity from reference files over the current seed's defaults."
 
 	systemParts := []string{
 		mangaSystemInstruction,
@@ -45,15 +45,15 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 	}
 	systemPrompt = strings.Join(systemParts, "\n\n")
 
-	// --- 2. User Prompt ---
+	// --- 2. User Prompt (ページ固有の指示) ---
 	var us strings.Builder
 
-	// コマ数指示を「STRICTLY ONLY」で強調
 	us.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
 	us.WriteString("- OUTPUT TYPE: STRICTLY VIBRANT FULL COLOR.\n")
+	// コマ数指示を最優先
 	us.WriteString(fmt.Sprintf("- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n\n", len(panels), len(panels)))
 
-	// キャラクター定義
+	// キャラクター定義 (立ち絵のカラーパレットを強制)
 	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED COLOR PALETTE)\n")
 	for sID, fileIdx := range rm.CharacterFiles {
 		displayName := sID
@@ -65,7 +65,8 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 				visualDesc = strings.Join(char.VisualCues, ", ")
 			}
 		}
-		us.WriteString(fmt.Sprintf("- SUBJECT [%s]: Face and Color MUST follow input_file_%d. (Traits: %s)\n", displayName, fileIdx, visualDesc))
+		// シード値の癖（別人化）を上書きするための指示を追加
+		us.WriteString(fmt.Sprintf("- SUBJECT [%s]: Face, Hair, and Color MUST follow input_file_%d. Traits: {%s}. Override any seed-based defaults with this reference.\n", displayName, fileIdx, visualDesc))
 	}
 	us.WriteString("\n")
 
@@ -83,7 +84,6 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 			panelSize = "LARGE IMPACT"
 		}
 
-		// パネルヘッダーに「これが何枚目か」と「最後かどうか」を明示
 		status := ""
 		if i == numPanels-1 {
 			status = " - FINAL PANEL"
@@ -98,9 +98,13 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 		}
 
 		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
+
+		// キャラクター特徴と参照ファイル番号をACTIONに統合
 		charCues := ""
-		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil && len(char.VisualCues) > 0 {
-			charCues = fmt.Sprintf(" (Visual identity from input_file_%d: %s)", rm.CharacterFiles[panel.SpeakerID], strings.Join(char.VisualCues, ", "))
+		if charFileIdx != -1 {
+			if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil && len(char.VisualCues) > 0 {
+				charCues = fmt.Sprintf(" (Visual Identity from input_file_%d: %s)", charFileIdx, strings.Join(char.VisualCues, ", "))
+			}
 		}
 
 		us.WriteString("- RENDER: FULL COLOR.\n")
@@ -109,6 +113,7 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 
 		if panel.ReferenceURL != "" {
 			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
+				// ポーズ参照元が白黒や別人の場合を考慮した強い指示
 				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for BODY ANATOMY ONLY. IGNORE colors/face from this file.\n", fileIdx))
 				if charFileIdx != -1 {
 					us.WriteString(fmt.Sprintf("- IDENTITY_FIX: Force [%s]'s hair, eyes, and face to match input_file_%d exactly.\n", displayName, charFileIdx))
@@ -120,7 +125,6 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 			us.WriteString(fmt.Sprintf("- SPEECH: Render a clear bubble for [%s] with text: \"%s\"\n", displayName, panel.Dialogue))
 		}
 
-		// 最後のパネルの後に停止を命じる
 		if i == numPanels-1 {
 			us.WriteString("- STOP: This is the end of the page. Do not draw any more content after this frame.\n")
 		}
