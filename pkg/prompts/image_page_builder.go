@@ -141,10 +141,9 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 		fmt.Fprintf(w, "### PANEL %d [%s]\n- POSITION: %s\n", panelNum, label, pos)
 
 		// キャラクターIDと表示名
-		char := pb.characterMap.GetCharacter(panel.SpeakerID)
 		displayName := panel.SpeakerID
 		charFileIdx := -1
-		if char != nil {
+		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
 			displayName = char.Name
 			if idx, ok := rm.CharacterFiles[char.ID]; ok {
 				charFileIdx = idx
