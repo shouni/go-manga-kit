@@ -198,16 +198,23 @@ func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain
 	return chunks
 }
 
+// determineDefaultSeed 利用可能なキャラクターデータに基づいて、マンガパネル生成のデフォルトシード値を決定します
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
+	const defaultSeed = 1000
 	if len(panels) == 0 {
-		return 1000
+		return defaultSeed
 	}
 	cm := pg.composer.CharactersMap
-	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
-		return char.Seed
-	}
+
+	// デフォルトのキャラseed
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
 	}
-	return 1000
+
+	// 最初のの話者のseed
+	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
+		return char.Seed
+	}
+
+	return defaultSeed
 }
