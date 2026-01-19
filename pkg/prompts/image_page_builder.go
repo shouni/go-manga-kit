@@ -15,21 +15,6 @@ type ResourceMap struct {
 	OrderedURLs    []string
 }
 
-// sanitizeInline は文字列をプロンプトに埋め込む前の最低限の正規化を行います。
-func sanitizeInline(s string) string {
-	s = strings.ReplaceAll(s, "\n", " ")
-	s = strings.ReplaceAll(s, "\r", " ")
-	return strings.TrimSpace(s)
-}
-
-// formatDialogue はダイアログの正規化のみを行います。
-func formatDialogue(s string) string {
-	s = sanitizeInline(s)
-	// AIの混乱を防ぐため、ダブルクォートをシングルクォートに逃がします
-	s = strings.ReplaceAll(s, "\"", "'")
-	return s
-}
-
 const (
 	// NegativePagePrompt は生成から除外したい要素を定義します。
 	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
@@ -45,194 +30,152 @@ const (
 - READING FLOW: Right-to-Left, Top-to-Bottom.`
 )
 
-// BuildMangaPagePrompt は漫画の1ページを生成するためのシステムプロンプトとユーザープロンプトを構築します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string) {
-	const mangaSystemInstruction = "You are a master digital artist. You MUST follow the exact panel count and layout rules. Character identity MUST match the character master reference files."
-
-	systemParts := []string{
-		mangaSystemInstruction,
-		MangaStructureHeader,
-		RenderingStyle,
-		CinematicTags,
-	}
-	if pb.defaultSuffix != "" {
-		systemParts = append(systemParts, fmt.Sprintf("### ARTISTIC STYLE ###\n%s", pb.defaultSuffix))
-	}
-	systemPrompt = strings.Join(systemParts, "\n\n")
-
-	var us strings.Builder
+// BuildMangaPagePrompt はメインのプロンプト構築フローを管理します。
+func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (string, string) {
 	numPanels := len(panels)
+	bigPanelIdx := pb.calculateBigPanelIndex(numPanels)
 
-	// --- 1. 基本要求 ---
-	us.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
-	us.WriteString("- OUTPUT: ONE single portrait manga page image.\n")
-	us.WriteString("- COLOR: STRICTLY VIBRANT FULL COLOR. NO monochrome, NO screentones.\n")
-	us.WriteString(fmt.Sprintf("- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n\n", numPanels, numPanels))
+	// システムプロンプトの構築
+	systemPrompt := pb.buildSystemPrompt()
 
-	// --- 2. レイアウト指示 ---
-	us.WriteString("## MANDATORY PAGE STRUCTURE\n")
-	us.WriteString("- OUTPUT FORMAT: A single vertical manga page.\n")
-	us.WriteString("- GRID SYSTEM: 2-column grid (except for single panel pages).\n")
-	us.WriteString("- READING ORDER: Japanese Style (Right-to-Left, then Top-to-Bottom).\n")
+	// ユーザープロンプトの構築（各セクションをメソッド化）
+	var us strings.Builder
+	pb.writeBasicRequirements(&us, numPanels)
+	pb.writeLayoutStructure(&us, numPanels)
+	pb.writeCharacterReferences(&us, rm)
+	pb.writePanelBreakdown(&us, panels, rm, bigPanelIdx)
 
-	us.WriteString("- PANEL PLACEMENT MAP:\n")
-	if numPanels == 1 {
-		us.WriteString("  * PANEL 1: SINGLE FULL-PAGE PANEL (covers entire image area).\n")
+	return us.String(), systemPrompt
+}
+
+// --- Internal Helper Methods ---
+
+// buildSystemPrompt はシステムの基本ルールを構築します。
+func (pb *ImagePromptBuilder) buildSystemPrompt() string {
+	const instr = "You are a master digital artist. You MUST follow the exact panel count and layout rules. Character identity MUST match the character master reference files."
+	parts := []string{instr, MangaStructureHeader, RenderingStyle, CinematicTags}
+	if pb.defaultSuffix != "" {
+		parts = append(parts, fmt.Sprintf("### ARTISTIC STYLE ###\n%s", pb.defaultSuffix))
+	}
+	return strings.Join(parts, "\n\n")
+}
+
+// writeBasicRequirements はページ全体の基本要求を書き込みます。
+func (pb *ImagePromptBuilder) writeBasicRequirements(w *strings.Builder, num int) {
+	w.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
+	w.WriteString("- OUTPUT: ONE single portrait manga page image.\n")
+	w.WriteString("- COLOR: STRICTLY VIBRANT FULL COLOR. NO monochrome, NO screentones.\n")
+	fmt.Fprintf(w, "- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n\n", num, num)
+}
+
+// writeLayoutStructure はレイアウトと配置マップを書き込みます。
+func (pb *ImagePromptBuilder) writeLayoutStructure(w *strings.Builder, num int) {
+	w.WriteString("## MANDATORY PAGE STRUCTURE\n")
+	w.WriteString("- READING ORDER: Japanese Style (Right-to-Left, then Top-to-Bottom).\n")
+	w.WriteString("- PANEL PLACEMENT MAP:\n")
+
+	if num == 1 {
+		w.WriteString("  * PANEL 1: SINGLE FULL-PAGE PANEL (covers entire image area).\n")
 	} else {
-		for i := 0; i < numPanels; i++ {
-			panelNum := i + 1
-			if numPanels%2 == 1 && i == numPanels-1 {
-				us.WriteString(fmt.Sprintf("  * PANEL %d: BOTTOM ROW, FULL-WIDTH (spans across both columns).\n", panelNum))
+		for i := 0; i < num; i++ {
+			if num%2 == 1 && i == num-1 {
+				fmt.Fprintf(w, "  * PANEL %d: BOTTOM ROW, FULL-WIDTH.\n", i+1)
 			} else {
-				row := (i / 2) + 1
-				side := "RIGHT"
+				row, side := (i/2)+1, "RIGHT"
 				if i%2 == 1 {
 					side = "LEFT"
 				}
-				us.WriteString(fmt.Sprintf("  * PANEL %d: ROW %d, %s column.\n", panelNum, row, side))
+				fmt.Fprintf(w, "  * PANEL %d: ROW %d, %s column.\n", i+1, row, side)
 			}
 		}
 	}
+	w.WriteString("- FRAME STYLE: Deep black borders. GUTTERS: Pure white.\n\n")
+}
 
-	if numPanels == 1 {
-		us.WriteString("- PANEL SIZE: One large dramatic cinematic frame.\n")
-	} else if numPanels > 1 && numPanels%2 == 1 {
-		us.WriteString(fmt.Sprintf("- SPECIAL RULE: PANEL %d is a wide cinematic panel at the bottom. All other panels are standard sized in 2 columns.\n", numPanels))
-	} else {
-		us.WriteString("- PANEL SIZE: All panels are standard, uniform, and balanced in the 2-column grid.\n")
-	}
-
-	us.WriteString("- FRAME STYLE: Deep black, crisp borders for EVERY panel. NO overlapping frames.\n")
-	us.WriteString("- GUTTERS: Pure white gutters between all panels.\n")
-	us.WriteString("- ABSOLUTE BAN: Do NOT add extra frames, decorative small panels, or any panels inside other panels.\n\n")
-
-	// --- 3. キャラクター参照設定 (順序の安定化) ---
-	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED IDENTITY + COLOR PALETTE)\n")
+// writeCharacterReferences はキャラクターの参照情報を書き込みます。
+func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *ResourceMap) {
+	w.WriteString("## CHARACTER MASTER REFERENCES\n")
 
 	type charRef struct {
 		id  string
 		idx int
 	}
-	refs := make([]charRef, 0, len(rm.CharacterFiles))
+	var refs []charRef
 	for id, idx := range rm.CharacterFiles {
-		refs = append(refs, charRef{id: id, idx: idx})
+		refs = append(refs, charRef{id, idx})
 	}
 	sort.Slice(refs, func(i, j int) bool { return refs[i].idx < refs[j].idx })
 
 	for _, r := range refs {
-		sID := r.id
-		fileIdx := r.idx
-		displayName := sID
-		visualDesc := "vivid anime color palette"
-
-		if char := pb.characterMap.GetCharacter(sID); char != nil {
-			displayName = char.Name
+		name, cues := r.id, "vivid anime color palette"
+		if char := pb.characterMap.GetCharacter(r.id); char != nil {
+			name = char.Name
 			if len(char.VisualCues) > 0 {
-				visualDesc = strings.Join(char.VisualCues, ", ")
+				cues = strings.Join(char.VisualCues, ", ")
 			}
 		}
-		us.WriteString(fmt.Sprintf(
-			"- SUBJECT [%s]: Identity (face, hair, eyes, colors) MUST match input_file_%d exactly. Traits: {%s}. This reference OVERRIDES seed/style drift.\n",
-			displayName, fileIdx, visualDesc,
-		))
+		fmt.Fprintf(w, "- SUBJECT [%s]: Match input_file_%d. Traits: {%s}.\n", name, r.idx, cues)
 	}
-	us.WriteString("\n")
+	w.WriteString("\n")
+}
 
-	// --- 4. パネルごとの詳細指示 ---
-	// bigPanelIndex の整合性を確保
-	bigPanelIndex := -1
-	if numPanels == 1 {
-		bigPanelIndex = 0
-	} else if numPanels > 1 && numPanels%2 == 1 {
-		bigPanelIndex = numPanels - 1
-	}
-
-	us.WriteString("## PANEL BREAKDOWN (STRICT COUNT + FIXED LAYOUT)\n")
+// writePanelBreakdown は各パネルの詳細指示をループで書き込みます。
+func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []domain.Panel, rm *ResourceMap, bigIdx int) {
+	num := len(panels)
+	w.WriteString("## PANEL BREAKDOWN\n")
 	for i, panel := range panels {
 		panelNum := i + 1
 
-		panelSizeLabel := "Standard"
-		if i == bigPanelIndex {
-			if numPanels == 1 {
-				panelSizeLabel = "FULL-PAGE"
+		// ラベルと位置の判定
+		label, pos := "Standard", ""
+		if i == bigIdx {
+			if num == 1 {
+				label, pos = "FULL-PAGE", "Entire page area"
 			} else {
-				panelSizeLabel = "FULL-WIDTH IMPACT (spans both columns)"
+				label, pos = "FULL-WIDTH IMPACT", "Bottom row, full width"
 			}
-		}
-
-		status := ""
-		if i == numPanels-1 && numPanels > 1 {
-			status = " - FINAL PANEL"
-		}
-		us.WriteString(fmt.Sprintf("### PANEL %d [%s]%s\n", panelNum, panelSizeLabel, status))
-
-		// 位置指示の不整合を排除
-		if numPanels == 1 {
-			us.WriteString("- POSITION: Entire page area.\n")
-		} else if i == bigPanelIndex {
-			us.WriteString("- POSITION: Bottom row, full width.\n")
 		} else {
-			row := (i / 2) + 1
 			side := "RIGHT"
 			if i%2 == 1 {
 				side = "LEFT"
 			}
-			us.WriteString(fmt.Sprintf("- POSITION: Row %d, %s column.\n", row, side))
+			pos = fmt.Sprintf("Row %d, %s column", (i/2)+1, side)
 		}
 
-		// キャラクター名の決定とファイル参照
-		displayName := panel.SpeakerID
-		charFileIdx := -1
-		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
-			displayName = char.Name
-			if idx, ok := rm.CharacterFiles[char.ID]; ok {
-				charFileIdx = idx
-			}
+		fmt.Fprintf(w, "### PANEL %d [%s]\n- POSITION: %s\n", panelNum, label, pos)
+
+		// キャラクターとアクション
+		char := pb.characterMap.GetCharacter(panel.SpeakerID)
+		charName := panel.SpeakerID
+		if char != nil {
+			charName = char.Name
 		}
 
-		// シーン記述のサニタイズと置換
-		sceneDescription := sanitizeInline(panel.VisualAnchor)
-		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
+		action := sanitizeInline(panel.VisualAnchor)
+		action = strings.ReplaceAll(action, panel.SpeakerID, charName)
 
-		charCues := ""
-		if charFileIdx != -1 {
-			if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil && len(char.VisualCues) > 0 {
-				charCues = fmt.Sprintf(" (Identity MUST match input_file_%d: %s)", charFileIdx, strings.Join(char.VisualCues, ", "))
-			} else {
-				charCues = fmt.Sprintf(" (Identity MUST match input_file_%d)", charFileIdx)
-			}
+		charRefStr := ""
+		if idx, ok := rm.CharacterFiles[panel.SpeakerID]; ok {
+			charRefStr = fmt.Sprintf(" (Match input_file_%d)", idx)
 		}
 
-		us.WriteString("- RENDER: FULL COLOR.\n")
-		us.WriteString(fmt.Sprintf("- SUBJECT: %s\n", displayName))
-		us.WriteString(fmt.Sprintf("- ACTION: %s%s\n", sceneDescription, charCues))
+		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", charName, action, charRefStr)
 
-		// ポーズ参照 (ReferenceURL)
-		if panel.ReferenceURL != "" {
-			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
-				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for BODY/POSE/ANATOMY only. IGNORE face/hair/colors from this file.\n", fileIdx))
-				if charFileIdx != -1 {
-					us.WriteString(fmt.Sprintf("- IDENTITY_FIX: Face/hair/eyes MUST match input_file_%d exactly.\n", charFileIdx))
-				}
-			}
-		}
-
-		// セリフ指示
+		// セリフ
 		if panel.Dialogue != "" {
-			cleanText := formatDialogue(panel.Dialogue)
-			us.WriteString(fmt.Sprintf("- SPEECH: Speech bubble for [%s].\n", displayName))
-			us.WriteString(fmt.Sprintf("  - TEXT_TO_RENDER: \"%s\"\n", cleanText))
-			us.WriteString("  - TYPOGRAPHY: Use professional Japanese manga font.\n")
-			us.WriteString("  - LANGUAGE: Japanese characters. Ensure accuracy and legibility.\n")
-			us.WriteString("  - STYLE: High-quality typesetting.\n")
+			fmt.Fprintf(w, "- SPEECH: \"%s\"\n", formatDialogue(panel.Dialogue))
 		}
-
-		if i == numPanels-1 {
-			us.WriteString("- STOP: End of page. Do not draw any additional panels/frames after this.\n")
-		}
-		us.WriteString("\n")
+		w.WriteString("\n")
 	}
+}
 
-	userPrompt = us.String()
-	return userPrompt, systemPrompt
+// calculateBigPanelIndex は拡大表示するパネルのインデックスを返します。
+func (pb *ImagePromptBuilder) calculateBigPanelIndex(num int) int {
+	if num == 1 {
+		return 0
+	}
+	if num > 1 && num%2 == 1 {
+		return num - 1
+	}
+	return -1
 }
