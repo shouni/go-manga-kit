@@ -3,6 +3,7 @@ package prompts
 import (
 	"fmt"
 	"math/rand/v2"
+	"sort"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -15,11 +16,28 @@ type ResourceMap struct {
 	OrderedURLs    []string
 }
 
-const (
-	// NegativePagePrompt: カラー維持とコマ数固定のために強化
-	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, text, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
+// 文字列をプロンプトに埋め込む前の最低限の正規化（改行・ダブルクォート事故を減らす）
+func sanitizeInline(s string) string {
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	s = strings.TrimSpace(s)
+	return s
+}
 
-	// MangaStructureHeader: フルカラーとレイアウトの強制
+// ダイアログは "..." で囲うと壊れることがあるので、区切りトークンを使う
+func wrapDialogue(s string) string {
+	s = sanitizeInline(s)
+	// <<< >>> の中に入れる前提で、万一含まれていたら逃がす
+	s = strings.ReplaceAll(s, "<<<", "<< <")
+	s = strings.ReplaceAll(s, ">>>", "> >>")
+	return "<<< " + s + " >>>"
+}
+
+const (
+	// NegativePagePrompt
+	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
+
+	// MangaStructureHeader
 	MangaStructureHeader = `### FORMAT RULES: FULL COLOR ANIME MANGA ###
 - STYLE: Vibrant Full Color Digital Anime Style. High saturation, cinematic lighting.
 - RENDERING: Sharp clean lineart with professional digital coloring. NO screentones.
@@ -31,8 +49,7 @@ const (
 )
 
 func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string) {
-	// --- 1. System Prompt (役割とルールの固定) ---
-	const mangaSystemInstruction = "You are a master digital artist. You follow the exact panel count requested. You prioritize the visual identity from reference files over the current seed's defaults."
+	const mangaSystemInstruction = "You are a master digital artist. You MUST follow the exact panel count and layout rules. Character identity MUST match the character master reference files."
 
 	systemParts := []string{
 		mangaSystemInstruction,
@@ -45,17 +62,39 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 	}
 	systemPrompt = strings.Join(systemParts, "\n\n")
 
-	// --- 2. User Prompt (ページ固有の指示) ---
 	var us strings.Builder
-
 	us.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
-	us.WriteString("- OUTPUT TYPE: STRICTLY VIBRANT FULL COLOR.\n")
-	// コマ数指示を最優先
-	us.WriteString(fmt.Sprintf("- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n\n", len(panels), len(panels)))
+	us.WriteString("- OUTPUT: ONE single portrait manga page image.\n")
+	us.WriteString("- COLOR: STRICTLY VIBRANT FULL COLOR. NO monochrome, NO screentones.\n")
+	us.WriteString(fmt.Sprintf("- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n", len(panels), len(panels)))
 
-	// キャラクター定義 (立ち絵のカラーパレットを強制)
-	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED COLOR PALETTE)\n")
-	for sID, fileIdx := range rm.CharacterFiles {
+	// レイアウト固定（2列グリッド）
+	us.WriteString("- LAYOUT GRID: 2 columns. Reading order is Right-to-Left within each row, Top-to-Bottom across rows.\n")
+	if len(panels) > 1 && len(panels)%2 == 1 {
+		us.WriteString(fmt.Sprintf("- LAST PANEL RULE: PANEL %d is FULL-WIDTH at the bottom (spans both columns). All other panels are standard size.\n", len(panels)))
+	} else {
+		us.WriteString("- PANEL SIZE RULE: All panels are standard and uniform. No inset panels, no split panels.\n")
+	}
+	us.WriteString("- BORDERS: deep black crisp borders for EVERY panel. GUTTERS: pure white.\n")
+	us.WriteString("- ABSOLUTE BAN: no extra frames, no decorative mini-panels, no panels inside panels.\n\n")
+
+	// --- CHARACTER MASTER REFERENCES（順序を安定化：fileIdx昇順） ---
+	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED IDENTITY + COLOR PALETTE)\n")
+
+	type charRef struct {
+		id  string
+		idx int
+	}
+	refs := make([]charRef, 0, len(rm.CharacterFiles))
+	for id, idx := range rm.CharacterFiles {
+		refs = append(refs, charRef{id: id, idx: idx})
+	}
+	sort.Slice(refs, func(i, j int) bool { return refs[i].idx < refs[j].idx })
+
+	for _, r := range refs {
+		sID := r.id
+		fileIdx := r.idx
+
 		displayName := sID
 		visualDesc := "vivid anime color palette"
 
@@ -65,23 +104,29 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 				visualDesc = strings.Join(char.VisualCues, ", ")
 			}
 		}
-		// シード値の癖（別人化）を上書きするための指示を追加
-		us.WriteString(fmt.Sprintf("- SUBJECT [%s]: Face, Hair, and Color MUST follow input_file_%d. Traits: {%s}. Override any seed-based defaults with this reference.\n", displayName, fileIdx, visualDesc))
+		us.WriteString(fmt.Sprintf(
+			"- SUBJECT [%s]: Identity (face, hair, eyes, colors) MUST match input_file_%d exactly. Traits: {%s}. This reference OVERRIDES seed/style drift.\n",
+			displayName, fileIdx, visualDesc,
+		))
 	}
 	us.WriteString("\n")
 
+	// big panel はランダムだと事故るので、ここでは "奇数なら最終だけ横長" で固定
 	numPanels := len(panels)
 	bigPanelIndex := -1
-	if numPanels > 0 {
-		bigPanelIndex = rand.IntN(numPanels)
+	if numPanels > 1 && numPanels%2 == 1 {
+		bigPanelIndex = numPanels - 1
+	} else if numPanels > 0 {
+		_ = rand.IntN(numPanels)
 	}
 
-	us.WriteString("## PANEL BREAKDOWN (STRICT COUNT EXECUTION)\n")
+	us.WriteString("## PANEL BREAKDOWN (STRICT COUNT + FIXED LAYOUT)\n")
 	for i, panel := range panels {
 		panelNum := i + 1
+
 		panelSize := "Standard"
 		if i == bigPanelIndex {
-			panelSize = "LARGE IMPACT"
+			panelSize = "FULL-WIDTH IMPACT (spans both columns)"
 		}
 
 		status := ""
@@ -90,20 +135,37 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 		}
 		us.WriteString(fmt.Sprintf("### PANEL %d [%s]%s\n", panelNum, panelSize, status))
 
+		// 位置を明示（モデルの誤解を減らす）
+		if i == bigPanelIndex {
+			us.WriteString("- POSITION: Bottom row, full width.\n")
+		} else {
+			row := (i / 2) + 1
+			col := "RIGHT"
+			if i%2 == 1 {
+				col = "LEFT"
+			}
+			us.WriteString(fmt.Sprintf("- POSITION: Row %d, %s column.\n", row, col))
+		}
+
 		displayName := panel.SpeakerID
 		charFileIdx := -1
 		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
 			displayName = char.Name
-			charFileIdx = rm.CharacterFiles[char.ID]
+			if idx, ok := rm.CharacterFiles[char.ID]; ok {
+				charFileIdx = idx
+			}
 		}
 
-		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
+		sceneDescription := sanitizeInline(panel.VisualAnchor)
+		// 置換は必要なら残す（IDが本文に混ざる場合は事故りやすいので、将来的にはプレースホルダ推奨）
+		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
 
-		// キャラクター特徴と参照ファイル番号をACTIONに統合
 		charCues := ""
 		if charFileIdx != -1 {
 			if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil && len(char.VisualCues) > 0 {
-				charCues = fmt.Sprintf(" (Visual Identity from input_file_%d: %s)", charFileIdx, strings.Join(char.VisualCues, ", "))
+				charCues = fmt.Sprintf(" (Identity MUST match input_file_%d: %s)", charFileIdx, strings.Join(char.VisualCues, ", "))
+			} else {
+				charCues = fmt.Sprintf(" (Identity MUST match input_file_%d)", charFileIdx)
 			}
 		}
 
@@ -113,20 +175,19 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 
 		if panel.ReferenceURL != "" {
 			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
-				// ポーズ参照元が白黒や別人の場合を考慮した強い指示
-				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for BODY ANATOMY ONLY. IGNORE colors/face from this file.\n", fileIdx))
+				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for BODY/POSE/ANATOMY only. IGNORE face/hair/colors from this file.\n", fileIdx))
 				if charFileIdx != -1 {
-					us.WriteString(fmt.Sprintf("- IDENTITY_FIX: Force [%s]'s hair, eyes, and face to match input_file_%d exactly.\n", displayName, charFileIdx))
+					us.WriteString(fmt.Sprintf("- IDENTITY_FIX: Face/hair/eyes MUST match input_file_%d exactly.\n", charFileIdx))
 				}
 			}
 		}
 
 		if panel.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- SPEECH: Render a clear bubble for [%s] with text: \"%s\"\n", displayName, panel.Dialogue))
+			us.WriteString(fmt.Sprintf("- SPEECH: Speech bubble for [%s]. Put ONLY this dialogue text inside the bubble (no other text anywhere): %s\n", displayName, wrapDialogue(panel.Dialogue)))
 		}
 
 		if i == numPanels-1 {
-			us.WriteString("- STOP: This is the end of the page. Do not draw any more content after this frame.\n")
+			us.WriteString("- STOP: End of page. Do not draw any additional panels/frames after this.\n")
 		}
 		us.WriteString("\n")
 	}
