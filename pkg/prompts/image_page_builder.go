@@ -17,26 +17,23 @@ type ResourceMap struct {
 }
 
 const (
-	// NegativePagePrompt は、ページ用のネガティブプロンプトです。
-	NegativePagePrompt = "deformed faces, mismatched eyes, cross-eyed, low-quality faces, blurry facial features, melting faces, extra limbs, merged panels, messy lineart, distorted anatomy"
-	//NegativePagePrompt = "deformed faces, low-quality faces, blurry features, extra limbs, distorted anatomy, messy lineart"
+	// NegativePagePrompt 品質低下を防ぐためのネガティブプロンプトを強化
+	NegativePagePrompt = "color, realistic photos, 3d render, watermark, text, signature, sketch, deformed faces, bad anatomy, disfigured, poorly drawn face, mutation, extra limb, ugly, disgusting, poorly drawn hands, missing limb, floating limbs, disconnected limbs, malformed hands, blurry, mutated hands, fingers"
 
-	// MangaStructureHeader は作画の全体構造を定義します。
-	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE COMPOSITION ###
-	- STRUCTURE: A professional Japanese manga spread with clear frame borders.
-	- READING ORDER: Right-to-Left, Top-to-Bottom.
-	- GUTTERS: Ultra-thin, crisp hairline dividers. NO OVERLAPPING. Each panel is a separate scene.`
-
-	//	MangaStructureHeader = `### MANDATORY FORMAT: MULTI-PANEL MANGA PAGE ###
-	//- FRAME BORDERS: Every panel must have solid, visible black borders.
-	//- GUTTERS: Use clear white spacing between panels. NO overlapping or merging.
-	//- LAYOUT: Strictly separate each numbered panel into its own spatial area.`
+	// MangaStructureHeader マンガの構造（白黒、枠線、余白）をより具体的に定義
+	MangaStructureHeader = `### FORMAT RULES: PROFESSIONAL MANGA PAGE ###
+- STYLE: High-contrast black and white Japanese Manga. Use G-Pen ink lines and screentones.
+- LAYOUT: Strict multi-panel composition. NO merging panels.
+- BORDERS: Deep black, crisp frame borders for EVERY panel.
+- GUTTERS: Pure white space between panels.
+- READING FLOW: Right-to-Left, Top-to-Bottom.`
 )
 
 // BuildMangaPagePrompt は、ResourceMap を使用して高精度なプロンプトを構築します。
 func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string) {
-	// --- 1. System Prompt (画風・構造の強制) ---
-	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
+	// --- 1. System Prompt (画風・構造の強制・役割付与) ---
+	const mangaSystemInstruction = "You are a master manga artist (Mangaka). You excel at dynamic composition, expressive line art, and coherent storytelling."
+
 	systemParts := []string{
 		mangaSystemInstruction,
 		MangaStructureHeader,
@@ -44,130 +41,89 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 		CinematicTags,
 	}
 	if pb.defaultSuffix != "" {
-		systemParts = append(systemParts, fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix))
+		systemParts = append(systemParts, fmt.Sprintf("### ARTISTIC STYLE ###\n%s", pb.defaultSuffix))
 	}
 	systemPrompt = strings.Join(systemParts, "\n\n")
 
 	// --- 2. User Prompt (ページ固有の指示) ---
 	var us strings.Builder
-	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels.\n", len(panels)))
 
-	// [重要] キャラクターの見た目定義セクション
-	us.WriteString("### CHARACTER VISUAL MASTER DEFINITIONS ###\n")
+	// ページの全体像を先に提示
+	us.WriteString(fmt.Sprintf("# PAGE REQUEST\nCreate a strictly segmented manga page with EXACTLY %d panels.\n\n", len(panels)))
+
+	// キャラクター定義 (Reference Sheet)
+	// プロンプトの先頭で定義することで一貫性を高める
+	us.WriteString("## CHARACTER REFERENCE SHEET\n")
 	for sID, fileIdx := range rm.CharacterFiles {
 		displayName := sID
+		visualDesc := "Distinct character features" // デフォルト
+
 		if char := pb.characterMap.GetCharacter(sID); char != nil {
 			displayName = char.Name
-			// ビジュアル情報を付加
-			cues := strings.Join(char.VisualCues, ", ")
-			us.WriteString(fmt.Sprintf("- SUBJECT [%s]: Follow identity in input_file_%d. Visual features: {%s}\n", displayName, fileIdx, cues))
-		} else {
-			us.WriteString(fmt.Sprintf("- SUBJECT [%s]: Follow identity in input_file_%d.\n", displayName, fileIdx))
+			if len(char.VisualCues) > 0 {
+				visualDesc = strings.Join(char.VisualCues, ", ")
+			}
 		}
+		// ファイル参照とテキスト記述を強力に結びつける
+		us.WriteString(fmt.Sprintf("- REF_ID [%s]: Look at input_file_%d. Traits: {%s}\n", displayName, fileIdx, visualDesc))
 	}
 	us.WriteString("\n")
 
-	// 大ゴマの決定
+	// 大ゴマの決定（ランダム）
 	numPanels := len(panels)
 	bigPanelIndex := -1
 	if numPanels > 0 {
 		bigPanelIndex = rand.IntN(numPanels)
 	}
 
+	us.WriteString("## PANEL BREAKDOWN\n")
 	for i, panel := range panels {
 		panelNum := i + 1
-		isBig := (i == bigPanelIndex)
 
-		// パネルヘッダー
-		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
-		us.WriteString("- FRAME_RULE: Keep all content strictly inside black borders. NO overlapping.\n")
+		// パネルごとのヘッダー作成
+		// 大ゴマか通常かによってカメラワークの重み付けを変える指示を入れる
+		panelSize := "Standard Size"
+		shotFocus := "Medium Shot" // デフォルト
+		if i == bigPanelIndex {
+			panelSize = "LARGE IMPACT PANEL"
+			shotFocus = "Dynamic Angle / Close-up or Wide Detailed Shot"
+		}
 
-		// キャラクター名の正規化
+		us.WriteString(fmt.Sprintf("### PANEL %d [%s]\n", panelNum, panelSize))
+
+		// キャラクター名の解決
 		displayName := panel.SpeakerID
 		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
 			displayName = char.Name
 		}
 
-		// [改善点] セリフの描画指示 (優先順位：高)
-		if panel.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- SPEECH_BUBBLE: Render a clear dialogue bubble for [%s] with text: \"%s\"\n", displayName, panel.Dialogue))
-		}
+		// シーン描写の構築
+		// 単純な置換だけでなく、主語を明確にする
+		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
 
-		// [改善点] ポーズ参照の紐付け
+		// 構造化された指示ブロック
+		us.WriteString(fmt.Sprintf("- FOCUS: %s\n", shotFocus))
+		us.WriteString(fmt.Sprintf("- SUBJECT: %s\n", displayName))
+		us.WriteString(fmt.Sprintf("- ACTION: %s\n", sceneDescription))
+
+		// ポーズ参照がある場合
 		if panel.ReferenceURL != "" {
 			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
-				us.WriteString(fmt.Sprintf("- POSE_REFERENCE: Use input_file_%d for layout/posing. Ensure [%s]'s face matches their character master file.\n", fileIdx, displayName))
+				us.WriteString(fmt.Sprintf("- POSE_REF: Use input_file_%d for composition/anatomy only. Keep face of [%s].\n", fileIdx, displayName))
 			}
 		}
 
-		// シーン描写
-		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
-		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", sceneDescription))
-		us.WriteString("\n")
-	}
-
-	userPrompt = us.String()
-	return userPrompt, systemPrompt
-}
-
-// promptVer1 は、UserPrompt（具体的内容）と SystemPrompt（構造・画風）を分けて生成します。
-func (pb *ImagePromptBuilder) promptVer1(panels []domain.Panel, refURLs []string) (userPrompt string, systemPrompt string) {
-	// --- 1. System Prompt の構築 (AIの役割・画風・基本構造) ---
-	const mangaSystemInstruction = "You are a professional manga artist. Create a multi-panel layout. "
-
-	systemParts := []string{
-		mangaSystemInstruction,
-		MangaStructureHeader,
-		RenderingStyle,
-		CinematicTags,
-	}
-	if pb.defaultSuffix != "" {
-		styleDNA := fmt.Sprintf("### GLOBAL VISUAL STYLE ###\n%s", pb.defaultSuffix)
-		systemParts = append(systemParts, styleDNA)
-	}
-	systemPrompt = strings.Join(systemParts, "\n\n")
-
-	// --- 2. User Prompt の構築 (具体的なページの内容) ---
-	var us strings.Builder
-	us.WriteString(fmt.Sprintf("- TOTAL PANELS: Generate exactly %d distinct panels on this single page.\n", len(panels)))
-
-	// キャラクター定義セクション
-	us.WriteString(BuildCharacterIdentitySection(pb.characterMap))
-
-	// 大ゴマの決定
-	numPanels := len(panels)
-	bigPanelIndex := -1
-	if numPanels > 0 {
-		bigPanelIndex = rand.IntN(numPanels)
-	}
-
-	// 各パネルの指示を構築
-	for i, panel := range panels {
-		panelNum := i + 1
-		isBig := (i == bigPanelIndex)
-
-		us.WriteString(BuildPanelHeader(panelNum, numPanels, isBig))
-
-		// 参照指示 (posing and layout)
-		if i < len(refURLs) {
-			us.WriteString(fmt.Sprintf("- REFERENCE: Use input_file_%d for visual guidance on posing and layout.\n", panelNum))
-		}
-
-		// --- キャラクター解決と名前の正規化 ---
-		displayName := panel.SpeakerID
-		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
-			displayName = char.Name
-		}
-
-		sceneDescription := strings.ReplaceAll(panel.VisualAnchor, panel.SpeakerID, displayName)
-
-		us.WriteString(fmt.Sprintf("- ACTION/SCENE: %s\n", sceneDescription))
+		// セリフ/フキダシ指示
+		// テキスト描画はAIにとって難しいので、明確な引用符と配置指示を与える
 		if panel.Dialogue != "" {
-			us.WriteString(fmt.Sprintf("- DIALOGUE_CONTEXT: [%s] says \"%s\"\n", displayName, panel.Dialogue))
+			us.WriteString(fmt.Sprintf("- SPEECH: Place a dialogue bubble near [%s]. Text contents: \"%s\"\n", displayName, panel.Dialogue))
+		} else {
+			us.WriteString("- SPEECH: No dialogue in this panel.\n")
 		}
-		us.WriteString("\n")
-	}
-	userPrompt = us.String()
 
+		us.WriteString("\n") // パネル間の空行
+	}
+
+	userPrompt = us.String()
 	return userPrompt, systemPrompt
 }
