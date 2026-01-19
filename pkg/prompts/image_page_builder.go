@@ -30,7 +30,7 @@ const (
 
 // BuildMangaPagePrompt は、ResourceMap を使用して「フルカラー・キャラ一貫性」を両立したプロンプトを構築します。
 func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string) {
-	// --- 1. System Prompt (カラーアニメ・役割の固定) ---
+	// --- 1. System Prompt の構築 ---
 	const mangaSystemInstruction = "You are a master digital artist specialized in full-color anime manga. You produce professional, high-saturation pages with cinematic lighting. You must ignore any monochrome elements in references and convert everything to vibrant digital color."
 
 	systemParts := []string{
@@ -44,14 +44,14 @@ func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *Re
 	}
 	systemPrompt = strings.Join(systemParts, "\n\n")
 
-	// --- 2. User Prompt (フルカラーページ固有の指示) ---
+	// --- 2. User Prompt の構築 ---
 	var us strings.Builder
 
 	us.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
 	us.WriteString("- OUTPUT TYPE: STRICTLY VIBRANT FULL COLOR.\n")
 	us.WriteString(fmt.Sprintf("- PANEL COUNT: Exactly %d distinct panels.\n\n", len(panels)))
 
-	// キャラクター定義 (立ち絵のカラーパレットを正とする)
+	// キャラクター定義
 	us.WriteString("## CHARACTER MASTER REFERENCES (FIXED COLOR PALETTE)\n")
 	for sID, fileIdx := range rm.CharacterFiles {
 		displayName := sID
