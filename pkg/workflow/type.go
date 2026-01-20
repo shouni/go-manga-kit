@@ -19,10 +19,10 @@ const (
 )
 
 type ManagerArgs struct {
-	Config       config.Config
-	HTTPClient   httpkit.ClientInterface
-	IOFactory    remoteio.IOFactory
-	CharMap      domain.CharactersMap
-	ScriptPrompt prompts.ScriptPrompt
-	ImagePrompt  prompts.ImagePrompt
+	Config        config.Config
+	HTTPClient    httpkit.ClientInterface
+	IOFactory     remoteio.IOFactory
+	CharactersMap domain.CharactersMap
+	ScriptPrompt  prompts.ScriptPrompt
+	ImagePrompt   prompts.ImagePrompt
 }

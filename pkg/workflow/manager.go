@@ -55,12 +55,12 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, err
 	}
 
-	iPrompt, err := initializeImagePrompt(args.ImagePrompt, args.CharMap, args.Config.StyleSuffix)
+	iPrompt, err := initializeImagePrompt(args.ImagePrompt, args.CharactersMap, args.Config.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, reader, args.CharMap)
+	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, reader, args.CharactersMap)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
