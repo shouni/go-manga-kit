@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// [修正] maxInputSize を int 型として定義。スライス操作との互換性を確保。
+	// maxInputSize は読み込みを許可する最大テキストサイズ (5MB) です。
 	maxInputSize = 5 * 1024 * 1024
 	// maxErrorResponseLength はエラーログに含める応答抜粋の最大文字数です。
 	maxErrorResponseLength = 200
@@ -103,14 +103,13 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 	}
 	defer rc.Close()
 
-	// int64 へのキャストを行いつつ LimitReader を構成
 	limitedReader := io.LimitReader(rc, int64(maxInputSize))
 	content, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return "", fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
 	}
 
-	// 制限サイズまで読み込んだ後、さらに1バイトの読み込みを試みて切り捨ての有無を確認
+	// 追加の読み込みを試みて切り捨てを判定
 	oneMoreByte := make([]byte, 1)
 	n, readErr := rc.Read(oneMoreByte)
 	if readErr != nil && readErr != io.EOF {
@@ -135,7 +134,7 @@ func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (strin
 
 	truncatedText, wasTruncated := limitStringSize(text, maxInputSize)
 	if wasTruncated {
-		slog.WarnContext(ctx, "Web入力が制限サイズを超えたため切り捨てます",
+		slog.WarnContext(ctx, "Web入力が制限サイズを超えたため切り捨てられました",
 			"url", url,
 			"limit_bytes", maxInputSize)
 	}
@@ -167,7 +166,6 @@ func limitStringSize(s string, limit int) (string, bool) {
 	}
 
 	end := limit
-	// 切り捨て位置がマルチバイト文字の途中になるのを防ぐため、文字の開始バイトまで遡って調整する
 	for end > 0 && !utf8.RuneStart(s[end]) {
 		end--
 	}
