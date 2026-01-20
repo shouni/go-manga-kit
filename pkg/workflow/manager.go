@@ -28,7 +28,7 @@ type Manager struct {
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, scriptPrompt prompts.ScriptPrompt, imagePrompt prompts.ImagePrompt, charData []byte) (*Manager, error) {
+func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, charData []byte, scriptPrompt prompts.ScriptPrompt, imagePrompt prompts.ImagePrompt) (*Manager, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
@@ -50,7 +50,12 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		return nil, fmt.Errorf("failed to parse character data: %w", err)
 	}
 
-	prompt, err := initializeImagePrompt(imagePrompt, chars, cfg.StyleSuffix)
+	sPrompt, err := initializeScriptPrompt(scriptPrompt)
+	if err != nil {
+		return nil, err
+	}
+
+	iPrompt, err := initializeImagePrompt(imagePrompt, chars, cfg.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +71,8 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		reader:        reader,
 		writer:        writer,
 		aiClient:      aiClient,
-		imagePrompt:   prompt,
+		scriptPrompt:  sPrompt,
+		imagePrompt:   iPrompt,
 		mangaComposer: mangaComposer,
 	}, nil
 }
