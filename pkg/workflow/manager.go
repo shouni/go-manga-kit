@@ -47,12 +47,12 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, err
 	}
 
-	sPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
+	scriptPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	iPrompt, err := initializeImagePrompt(args.ImagePrompt, args.CharactersMap, args.Config.StyleSuffix)
+	imagePromptBuilder, err := initializeImagePrompt(args.ImagePrompt, args.CharactersMap, args.Config.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
@@ -68,8 +68,8 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		reader:        args.Reader,
 		writer:        args.Writer,
 		aiClient:      aiClient,
-		scriptPrompt:  sPrompt,
-		imagePrompt:   iPrompt,
+		scriptPrompt:  scriptPrompt,
+		imagePrompt:   imagePromptBuilder,
 		mangaComposer: mangaComposer,
 	}, nil
 }
