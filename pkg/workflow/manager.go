@@ -27,15 +27,12 @@ type Manager struct {
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, reader remoteio.InputReader, writer remoteio.OutputWriter, imagePrompt prompts.ImagePrompt, charData []byte) (*Manager, error) {
+func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, imagePrompt prompts.ImagePrompt, charData []byte) (*Manager, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
-	if reader == nil {
-		return nil, fmt.Errorf("reader は必須です")
-	}
-	if writer == nil {
-		return nil, fmt.Errorf("writer は必須です")
+	if ioFactory == nil {
+		return nil, fmt.Errorf("IOFactory は必須です")
 	}
 
 	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
@@ -43,6 +40,8 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		return nil, err
 	}
 
+	reader, _ := ioFactory.InputReader()
+	writer, _ := ioFactory.OutputWriter()
 	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charData)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
