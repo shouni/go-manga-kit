@@ -15,11 +15,15 @@ import (
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
 	composer *MangaComposer
+	pb       prompts.ImagePrompt
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanelGenerator(composer *MangaComposer) *PanelGenerator {
-	return &PanelGenerator{composer: composer}
+func NewPanelGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PanelGenerator {
+	return &PanelGenerator{
+		composer: composer,
+		pb:       pb,
+	}
 }
 
 // Execute は、並列処理を用いてパネル群を生成します。
@@ -32,7 +36,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	pb := pg.composer.PromptBuilder
 	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
@@ -47,7 +50,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
 			}
 
-			userPrompt, systemPrompt, finalSeed := pb.BuildPanelPrompt(panel, char.ID)
+			userPrompt, systemPrompt, finalSeed := pg.pb.BuildPanel(panel, char.ID)
 
 			pg.composer.mu.RLock()
 			fileURI := pg.composer.CharacterResourceMap[char.ID]

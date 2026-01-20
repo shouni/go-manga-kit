@@ -22,7 +22,7 @@ var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 type MangaScriptRunner struct {
 	cfg           config.Config
 	extractor     *extract.Extractor
-	promptBuilder prompts.PromptBuilder
+	promptBuilder prompts.ScriptPrompt
 	aiClient      gemini.GenerativeModel
 	reader        remoteio.InputReader
 }
@@ -31,7 +31,7 @@ type MangaScriptRunner struct {
 func NewMangaScriptRunner(
 	cfg config.Config,
 	ext *extract.Extractor,
-	pb prompts.PromptBuilder,
+	pb prompts.ScriptPrompt,
 	ai gemini.GenerativeModel,
 	r remoteio.InputReader,
 ) *MangaScriptRunner {

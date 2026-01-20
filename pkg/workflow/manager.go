@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/shouni/go-manga-kit/pkg/config"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+	"github.com/shouni/go-manga-kit/pkg/prompts"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -17,40 +19,63 @@ import (
 type Manager struct {
 	cfg           config.Config
 	httpClient    httpkit.ClientInterface
-	aiClient      gemini.GenerativeModel
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
+	aiClient      gemini.GenerativeModel
+	scriptPrompt  prompts.ScriptPrompt
+	imagePrompt   prompts.ImagePrompt
 	mangaComposer *generator.MangaComposer
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Manager, error) {
-	if httpClient == nil {
+func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
+	if args.HTTPClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
-	if reader == nil {
-		return nil, fmt.Errorf("reader は必須です")
+	if args.IOFactory == nil {
+		return nil, fmt.Errorf("IOFactory は必須です")
 	}
-	if writer == nil {
-		return nil, fmt.Errorf("writer は必須です")
+	if args.CharactersMap == nil {
+		return nil, fmt.Errorf("CharactersMap は必須です")
 	}
 
-	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
+	reader, err := args.IOFactory.InputReader()
+	if err != nil {
+		return nil, fmt.Errorf("InputReader の取得に失敗しました: %w", err)
+	}
+	writer, err := args.IOFactory.OutputWriter()
+	if err != nil {
+		return nil, fmt.Errorf("OutputWriter の取得に失敗しました: %w", err)
+	}
+
+	aiClient, err := initializeAIClient(ctx, args.Config.GeminiAPIKey)
 	if err != nil {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charData)
+	sPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
+	if err != nil {
+		return nil, err
+	}
+
+	iPrompt, err := initializeImagePrompt(args.ImagePrompt, args.CharactersMap, args.Config.StyleSuffix)
+	if err != nil {
+		return nil, err
+	}
+
+	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, reader, args.CharactersMap)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
 	return &Manager{
-		cfg:           cfg,
-		httpClient:    httpClient,
-		aiClient:      aiClient,
+		cfg:           args.Config,
+		httpClient:    args.HTTPClient,
 		reader:        reader,
 		writer:        writer,
+		aiClient:      aiClient,
+		scriptPrompt:  sPrompt,
+		imagePrompt:   iPrompt,
 		mangaComposer: mangaComposer,
 	}, nil
 }
@@ -66,4 +91,29 @@ func initializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
 	}
 	return aiClient, nil
+}
+
+// initializeScriptPrompt は ScriptPrompt ビルダーを初期化します。
+// 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
+func initializeScriptPrompt(scriptPrompt prompts.ScriptPrompt) (prompts.ScriptPrompt, error) {
+	if scriptPrompt != nil {
+		return scriptPrompt, nil
+	}
+
+	pb, err := prompts.NewTextPromptBuilder()
+	if err != nil {
+		return nil, fmt.Errorf("TextPromptBuilder の新規作成に失敗しました: %w", err)
+	}
+
+	return pb, nil
+}
+
+// initializeImagePrompt は ImagePromptBuilderを初期化します。
+// 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
+func initializeImagePrompt(imagePrompt prompts.ImagePrompt, charMap domain.CharactersMap, styleSuffix string) (prompts.ImagePrompt, error) {
+	if imagePrompt != nil {
+		return imagePrompt, nil
+	}
+
+	return prompts.NewImagePromptBuilder(charMap, styleSuffix), nil
 }

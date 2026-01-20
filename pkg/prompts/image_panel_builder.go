@@ -12,8 +12,8 @@ const (
 	NegativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy, monochrome, black and white, greyscale"
 )
 
-// BuildPanelPrompt は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildPanelPrompt(panel domain.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64) {
+// BuildPanel は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
+func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64) {
 	// --- 1. System Prompt の構築 ---
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene with vibrant digital coloring."
 

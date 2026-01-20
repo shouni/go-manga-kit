@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
 
@@ -19,12 +18,7 @@ func (m *Manager) BuildScriptRunner() (ScriptRunner, error) {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
 	}
 
-	pb, err := prompts.NewTextPromptBuilder()
-	if err != nil {
-		return nil, fmt.Errorf("prompt builder の作成に失敗しました: %w", err)
-	}
-
-	return runner.NewMangaScriptRunner(m.cfg, extractor, pb, m.aiClient, m.reader), nil
+	return runner.NewMangaScriptRunner(m.cfg, extractor, m.scriptPrompt, m.aiClient, m.reader), nil
 }
 
 // BuildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
@@ -34,14 +28,14 @@ func (m *Manager) BuildDesignRunner() (DesignRunner, error) {
 
 // BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *Manager) BuildPanelImageRunner() (PanelImageRunner, error) {
-	panelsGen := generator.NewPanelGenerator(m.mangaComposer)
+	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.imagePrompt)
 
 	return runner.NewMangaPanelRunner(m.cfg, panelsGen, m.writer), nil
 }
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *Manager) BuildPageImageRunner() (PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(m.mangaComposer)
+	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt)
 
 	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
 }

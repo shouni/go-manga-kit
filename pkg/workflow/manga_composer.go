@@ -7,7 +7,6 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/time/rate"
 
 	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
@@ -23,16 +22,9 @@ func buildMangaComposer(
 	httpClient httpkit.ClientInterface,
 	aiClient gemini.GenerativeModel,
 	reader remoteio.InputReader,
-	charData []byte,
+	chars domain.CharactersMap,
 ) (*generator.MangaComposer, error) {
-
-	// 1. キャラクターデータの解析
-	chars, err := domain.GetCharacters(charData)
-	if err != nil {
-		return nil, fmt.Errorf("キャラクターデータの解析に失敗しました: %w", err)
-	}
-
-	// 2. 画像生成エンジンの初期化
+	// 画像生成エンジンの初期化
 	core, err := initializeCore(reader, httpClient, aiClient)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
@@ -42,12 +34,10 @@ func buildMangaComposer(
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
-	pb := prompts.NewImagePromptBuilder(chars, cfg.StyleSuffix)
 
 	return generator.NewMangaComposer(
 		assetManager,
 		imageGenerator,
-		pb,
 		chars,
 		rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
 	), nil

@@ -16,7 +16,6 @@ import (
 type MangaComposer struct {
 	AssetManager         generator.AssetManager
 	ImageGenerator       generator.ImageGenerator
-	PromptBuilder        ImagePromptBuilder
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
@@ -29,14 +28,12 @@ type MangaComposer struct {
 func NewMangaComposer(
 	assetMgr generator.AssetManager,
 	imgGen generator.ImageGenerator,
-	pb ImagePromptBuilder,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
 ) *MangaComposer {
 	return &MangaComposer{
 		AssetManager:         assetMgr,
 		ImageGenerator:       imgGen,
-		PromptBuilder:        pb,
 		CharactersMap:        cm,
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),
@@ -46,36 +43,36 @@ func NewMangaComposer(
 
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
-	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
-	cm := mc.CharactersMap
-	eg, egCtx := errgroup.WithContext(ctx)
+	targetIDs := make(map[string]struct{})
 
-	// まずデフォルトキャラクターを確実にアップロード対象にする
-	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
-		eg.Go(func() error {
-			_, err := mc.getOrUploadAsset(egCtx, def.ID, def.ReferenceURL)
-			if err != nil {
-				return fmt.Errorf("failed to prepare default character asset: %w", err)
-			}
-			return nil
-		})
+	// デフォルトキャラクターをアップロード対象に追加
+	if def := mc.CharactersMap.GetDefault(); def != nil && def.ReferenceURL != "" {
+		targetIDs[def.ID] = struct{}{}
 	}
 
-	for _, id := range uniqueSpeakerIDs {
-		speakerID := id
+	// パネルで使用されているキャラクターをアップロード対象に追加
+	for _, id := range domain.Panels(panels).UniqueSpeakerIDs() {
+		targetIDs[id] = struct{}{}
+	}
+
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	for id := range targetIDs {
+		charID := id // ループ変数のキャプチャ
 		eg.Go(func() error {
-			char := cm.GetCharacterWithDefault(speakerID)
+			char := mc.CharactersMap.GetCharacterWithDefault(charID)
 			if char == nil || char.ReferenceURL == "" {
 				return nil
 			}
 
 			_, err := mc.getOrUploadAsset(egCtx, char.ID, char.ReferenceURL)
 			if err != nil {
-				return fmt.Errorf("failed to prepare character asset %s: %w", char.ID, err)
+				return fmt.Errorf("キャラクター '%s' のリソース準備に失敗しました: %w", charID, err)
 			}
 			return nil
 		})
 	}
+
 	return eg.Wait()
 }
 

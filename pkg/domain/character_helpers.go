@@ -1,12 +1,16 @@
 package domain
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 	"strings"
+
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // GetCharacter は、指定されたID（またはその小文字版）からキャラクター情報を特定します。
@@ -70,13 +74,29 @@ func (m CharactersMap) GetCharacterWithDefault(ID string) *Character {
 	return nil
 }
 
-// GetCharacters はJSONバイト列からキャラクターマップをパースして返します。
-func GetCharacters(charactersJSON []byte) (CharactersMap, error) {
-	var chars CharactersMap
-	if err := json.Unmarshal(charactersJSON, &chars); err != nil {
-		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
+// LoadCharacterMap は指定されたパスからキャラクター設定を読み込みます。
+func LoadCharacterMap(ctx context.Context, reader remoteio.InputReader, path string) (CharactersMap, error) {
+	if path == "" {
+		return nil, fmt.Errorf("キャラクター設定のパスが空です")
 	}
-	return chars, nil
+
+	rc, err := reader.Open(ctx, path)
+	if err != nil {
+		return nil, fmt.Errorf("キャラクター設定ファイルを開けませんでした (path: %s): %w", path, err)
+	}
+	defer rc.Close()
+
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, fmt.Errorf("キャラクター設定ファイルの読み込みに失敗しました (path: %s): %w", path, err)
+	}
+
+	charsMap, err := getCharacters(data)
+	if err != nil {
+		return nil, fmt.Errorf("キャラクター設定の解析に失敗しました (path: %s): %w", path, err)
+	}
+
+	return charsMap, nil
 }
 
 // GetSeedFromString は文字列から決定論的なシード値を生成します。
@@ -86,4 +106,13 @@ func GetSeedFromString(s string) int64 {
 	}
 	hash := sha256.Sum256([]byte(s))
 	return int64(binary.BigEndian.Uint64(hash[:8]))
+}
+
+// getCharacters はJSONバイト列からキャラクターマップをパースして返します。
+func getCharacters(charactersJSON []byte) (CharactersMap, error) {
+	var charsMap CharactersMap
+	if err := json.Unmarshal(charactersJSON, &charsMap); err != nil {
+		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
+	}
+	return charsMap, nil
 }

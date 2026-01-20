@@ -31,8 +31,8 @@ type ResourceMap struct {
 	OrderedURLs    []string
 }
 
-// BuildMangaPagePrompt はメインのプロンプト構築フローを管理します。
-func (pb *ImagePromptBuilder) BuildMangaPagePrompt(panels []domain.Panel, rm *ResourceMap) (string, string) {
+// BuildPage はメインのプロンプト構築フローを管理します。
+func (pb *ImagePromptBuilder) BuildPage(panels []domain.Panel, rm *ResourceMap) (string, string) {
 	numPanels := len(panels)
 	bigPanelIdx := pb.calculateBigPanelIndex(numPanels)
 

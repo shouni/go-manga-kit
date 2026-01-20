@@ -7,13 +7,13 @@ import (
 // ImagePromptBuilder は、キャラクター情報を考慮してAIプロンプトを構築します。
 type ImagePromptBuilder struct {
 	characterMap  domain.CharactersMap
-	defaultSuffix string // "anime style, high quality" 等の共通サフィックス
+	defaultSuffix string // 例: "anime style, high quality"
 }
 
 // NewImagePromptBuilder は新しい PromptBuilder を生成します。
-func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImagePromptBuilder {
+func NewImagePromptBuilder(characterMap domain.CharactersMap, suffix string) *ImagePromptBuilder {
 	return &ImagePromptBuilder{
-		characterMap:  chars,
+		characterMap:  characterMap,
 		defaultSuffix: suffix,
 	}
 }
