@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -54,13 +55,13 @@ func NewMangaScriptRunner(
 }
 
 // Run は Web ページまたは GCS から内容を抽出し、Gemini を用いて漫画の台本 JSON を生成します。
-func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode string) (*domain.MangaResponse, error) {
-	slog.Info("ScriptRunner: 処理を開始", "url", scriptURL)
+func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode string) (*domain.MangaResponse, error) {
+	slog.Info("ScriptRunner: 処理を開始", "url", sourceURL)
 
-	// 1. ソースからテキストを取得 (取得ロジックを分離)
-	inputText, err := sr.getTextFromSource(ctx, scriptURL)
+	// 1. ソースからテキストを取得
+	inputText, err := sr.getTextFromSource(ctx, sourceURL)
 	if err != nil {
-		return nil, err // 内部で詳細なエラーがラップ済み
+		return nil, err
 	}
 
 	// 2. プロンプトの構築
@@ -71,7 +72,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode str
 	}
 
 	// 3. Gemini API を呼び出し
-	slog.Info("ScriptRunner: Gemini APIを呼び出し中", "モデル", sr.cfg.GeminiModel)
+	slog.Info("ScriptRunner: Gemini APIを呼び出し中", "model", sr.cfg.GeminiModel)
 	resp, err := sr.aiClient.GenerateContent(ctx, sr.cfg.GeminiModel, finalPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("Geminiによるコンテンツ生成に失敗しました: %w", err)
@@ -109,26 +110,32 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 	}
 
 	if int64(len(content)) >= maxInputSize {
-		slog.WarnContext(ctx, "GCS入力が制限サイズに達したため切り捨てられました", "url", url, "limit", maxInputSize)
+		slog.WarnContext(ctx, "GCS入力が制限サイズに達したため切り捨てられました",
+			"url", url,
+			"limit_bytes", maxInputSize)
 	}
 	return string(content), nil
 }
 
-// readFromWeb は Web サイトからテキストを抽出し、サイズ制限を適用します。
+// readFromWeb は Web サイトからテキストを抽出し、メモリ効率を考慮してサイズ制限を適用します。
 func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (string, error) {
 	text, _, err := sr.extractor.FetchAndExtractText(ctx, url)
 	if err != nil {
 		return "", fmt.Errorf("URLからのテキスト抽出に失敗しました: %w", err)
 	}
 
-	// Web 抽出結果にもサイズ制限を適用 (メモリ保護)
-	if int64(len(text)) > maxInputSize {
-		slog.WarnContext(ctx, "Web入力が制限サイズを超えたため切り捨てます", "url", url, "limit", maxInputSize)
-		// rune単位で安全に切り捨て
-		runes := []rune(text)
-		if int64(len(string(runes))) > maxInputSize {
-			text = string(runes[:maxInputSize/4]) // 簡易的な安全策として文字数で制限
+	// バイト単位でチェックし、効率的に安全な位置で切り捨てる
+	if len(text) > maxInputSize {
+		slog.WarnContext(ctx, "Web入力が制限サイズを超えたため切り捨てます",
+			"url", url,
+			"limit_bytes", maxInputSize)
+
+		end := maxInputSize
+		// マルチバイト文字の途中で切断されるのを防ぐため、有効なルーンの開始位置まで遡る
+		for end > 0 && !utf8.RuneStart(text[end]) {
+			end--
 		}
+		text = text[:end]
 	}
 	return text, nil
 }
@@ -152,18 +159,19 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, e
 
 	var manga domain.MangaResponse
 	if err := json.Unmarshal([]byte(rawJSON), &manga); err != nil {
-		// マジックナンバーを排除した定数を使用
-		return nil, fmt.Errorf("AI応答JSONの解析に失敗しました (抜粋: %q): %w", truncateString(raw, maxErrorResponseLength), err)
+		return nil, fmt.Errorf("AI応答JSONの解析に失敗しました (抜粋: %q): %w",
+			truncateString(raw, maxErrorResponseLength), err)
 	}
 
 	return &manga, nil
 }
 
-// truncateString は文字列を指定された最大長で安全に切り捨てます。
+// truncateString は指定された長さで文字列を安全に切り捨てます。
 func truncateString(s string, maxLen int) string {
-	runes := []rune(s)
-	if len(runes) <= maxLen {
+	if utf8.RuneCountInString(s) <= maxLen {
 		return s
 	}
+	// 安全な切り捨てのためにルーン単位で処理
+	runes := []rune(s)
 	return string(runes[:maxLen]) + "..."
 }
