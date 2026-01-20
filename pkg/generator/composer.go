@@ -44,11 +44,10 @@ func NewMangaComposer(
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
 	uniqueSpeakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
-	cm := mc.CharactersMap
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	// まずデフォルトキャラクターを確実にアップロード対象にする
-	if def := cm.GetDefault(); def != nil && def.ReferenceURL != "" {
+	if def := mc.CharactersMap.GetDefault(); def != nil && def.ReferenceURL != "" {
 		eg.Go(func() error {
 			_, err := mc.getOrUploadAsset(egCtx, def.ID, def.ReferenceURL)
 			if err != nil {
@@ -61,7 +60,7 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 	for _, id := range uniqueSpeakerIDs {
 		speakerID := id
 		eg.Go(func() error {
-			char := cm.GetCharacterWithDefault(speakerID)
+			char := mc.CharactersMap.GetCharacterWithDefault(speakerID)
 			if char == nil || char.ReferenceURL == "" {
 				return nil
 			}
