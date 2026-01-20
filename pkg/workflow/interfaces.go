@@ -9,7 +9,7 @@ import (
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
-// Workflow は、さまざまな漫画処理ランナー（実行環境）を構築するためのビルダー・インターフェースを定義します。
+// Workflow は、漫画生成ワークフローの各工程を担当するRunnerを構築するためのインターフェースを定義します。
 type Workflow interface {
 	BuildDesignRunner() (DesignRunner, error)
 	BuildScriptRunner() (ScriptRunner, error)

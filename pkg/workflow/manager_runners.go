@@ -13,8 +13,8 @@ import (
 )
 
 // BuildScriptRunner は、台本生成を担当する Runner を作成します。
-func (b *Manager) BuildScriptRunner() (ScriptRunner, error) {
-	extractor, err := extract.NewExtractor(b.httpClient)
+func (m *Manager) BuildScriptRunner() (ScriptRunner, error) {
+	extractor, err := extract.NewExtractor(m.httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
 	}
@@ -24,30 +24,30 @@ func (b *Manager) BuildScriptRunner() (ScriptRunner, error) {
 		return nil, fmt.Errorf("prompt builder の作成に失敗しました: %w", err)
 	}
 
-	return runner.NewMangaScriptRunner(b.cfg, extractor, pb, b.aiClient, b.reader), nil
+	return runner.NewMangaScriptRunner(m.cfg, extractor, pb, m.aiClient, m.reader), nil
 }
 
 // BuildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
-func (b *Manager) BuildDesignRunner() (DesignRunner, error) {
-	return runner.NewMangaDesignRunner(b.cfg, b.mangaComposer, b.writer), nil
+func (m *Manager) BuildDesignRunner() (DesignRunner, error) {
+	return runner.NewMangaDesignRunner(m.cfg, m.mangaComposer, m.writer), nil
 }
 
 // BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
-func (b *Manager) BuildPanelImageRunner() (PanelImageRunner, error) {
-	panelsGen := generator.NewPanelGenerator(b.mangaComposer)
+func (m *Manager) BuildPanelImageRunner() (PanelImageRunner, error) {
+	panelsGen := generator.NewPanelGenerator(m.mangaComposer)
 
-	return runner.NewMangaPanelRunner(b.cfg, panelsGen, b.writer), nil
+	return runner.NewMangaPanelRunner(m.cfg, panelsGen, m.writer), nil
 }
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
-func (b *Manager) BuildPageImageRunner() (PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(b.mangaComposer)
+func (m *Manager) BuildPageImageRunner() (PageImageRunner, error) {
+	pagesGen := generator.NewPageGenerator(m.mangaComposer)
 
-	return runner.NewMangaPageRunner(b.cfg, pagesGen, b.reader, b.writer), nil
+	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
 }
 
 // BuildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
-func (b *Manager) BuildPublishRunner() (PublishRunner, error) {
+func (m *Manager) BuildPublishRunner() (PublishRunner, error) {
 	htmlCfg := builder.BuilderConfig{
 		EnableHardWraps: true,
 		Mode:            "webtoon",
@@ -61,6 +61,6 @@ func (b *Manager) BuildPublishRunner() (PublishRunner, error) {
 		return nil, fmt.Errorf("md2htmlRunner の初期化に失敗しました: %w", err)
 	}
 
-	pub := publisher.NewMangaPublisher(b.mangaComposer.CharactersMap, b.writer, md2htmlRunner)
-	return runner.NewDefaultPublisherRunner(b.cfg, pub), nil
+	pub := publisher.NewMangaPublisher(m.mangaComposer.CharactersMap, m.writer, md2htmlRunner)
+	return runner.NewDefaultPublisherRunner(m.cfg, pub), nil
 }

@@ -12,7 +12,7 @@ import (
 	"google.golang.org/genai"
 )
 
-// New は、設定とキャラクター定義を基に新しい Builder を初期化します。
+// New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Manager, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
@@ -26,7 +26,7 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 
 	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
 	if err != nil {
-		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました")
+		return nil, err
 	}
 
 	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charData)
