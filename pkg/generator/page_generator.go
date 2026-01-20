@@ -94,7 +94,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	}
 
 	// 2. プロンプト構築 (ResourceMap を渡すように pb 側を調整済みと想定)
-	userPrompt, systemPrompt := pg.pb.BuildMPage(manga.Panels, resMap)
+	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
 
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,

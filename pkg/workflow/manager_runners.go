@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
 
@@ -19,12 +18,7 @@ func (m *Manager) BuildScriptRunner() (ScriptRunner, error) {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
 	}
 
-	pb, err := prompts.NewTextPromptBuilder()
-	if err != nil {
-		return nil, fmt.Errorf("prompt builder の作成に失敗しました: %w", err)
-	}
-
-	return runner.NewMangaScriptRunner(m.cfg, extractor, pb, m.aiClient, m.reader), nil
+	return runner.NewMangaScriptRunner(m.cfg, extractor, m.scriptPrompt, m.aiClient, m.reader), nil
 }
 
 // BuildDesignRunner は、キャラクターデザインを担当する Runner を作成します。

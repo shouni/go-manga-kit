@@ -22,12 +22,13 @@ type Manager struct {
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
 	aiClient      gemini.GenerativeModel
+	scriptPrompt  prompts.ScriptPrompt
 	imagePrompt   prompts.ImagePrompt
 	mangaComposer *generator.MangaComposer
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, imagePrompt prompts.ImagePrompt, charData []byte) (*Manager, error) {
+func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, scriptPrompt prompts.ScriptPrompt, imagePrompt prompts.ImagePrompt, charData []byte) (*Manager, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
@@ -43,12 +44,18 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		return nil, err
 	}
 
-	prompt, err := initializeImagePrompt(imagePrompt, charData, cfg.StyleSuffix)
+	// charDataをここで一度だけパースする
+	chars, err := domain.GetCharacters(charData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse character data: %w", err)
+	}
+
+	prompt, err := initializeImagePrompt(imagePrompt, chars, cfg.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charData)
+	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, chars)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
@@ -77,17 +84,27 @@ func initializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 	return aiClient, nil
 }
 
-// initializeImagePrompt は ImagePromptBuilderを初期化します。
-func initializeImagePrompt(imagePrompt prompts.ImagePrompt, charData []byte, styleSuffix string) (prompts.ImagePrompt, error) {
-	chars, err := domain.GetCharacters(charData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get characters from data: %w", err)
+// initializeScriptPrompt は ScriptPrompt ビルダーを初期化します。
+// 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
+func initializeScriptPrompt(scriptPrompt prompts.ScriptPrompt) (prompts.ScriptPrompt, error) {
+	if scriptPrompt != nil {
+		return scriptPrompt, nil
 	}
 
-	pb := imagePrompt
-	if pb == nil {
-		pb = prompts.NewImagePromptBuilder(chars, styleSuffix)
+	pb, err := prompts.NewTextPromptBuilder()
+	if err != nil {
+		return nil, fmt.Errorf("TextPromptBuilder の新規作成に失敗しました: %w", err)
 	}
 
 	return pb, nil
+}
+
+// initializeImagePrompt は ImagePromptBuilderを初期化します。
+// 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
+func initializeImagePrompt(imagePrompt prompts.ImagePrompt, chars domain.CharactersMap, styleSuffix string) (prompts.ImagePrompt, error) {
+	if imagePrompt != nil {
+		return imagePrompt, nil
+	}
+
+	return prompts.NewImagePromptBuilder(chars, styleSuffix), nil
 }

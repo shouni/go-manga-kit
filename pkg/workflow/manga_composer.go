@@ -22,16 +22,9 @@ func buildMangaComposer(
 	httpClient httpkit.ClientInterface,
 	aiClient gemini.GenerativeModel,
 	reader remoteio.InputReader,
-	charData []byte,
+	chars domain.CharactersMap,
 ) (*generator.MangaComposer, error) {
-
-	// 1. キャラクターデータの解析
-	chars, err := domain.GetCharacters(charData)
-	if err != nil {
-		return nil, fmt.Errorf("キャラクターデータの解析に失敗しました: %w", err)
-	}
-
-	// 2. 画像生成エンジンの初期化
+	// 画像生成エンジンの初期化
 	core, err := initializeCore(reader, httpClient, aiClient)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)

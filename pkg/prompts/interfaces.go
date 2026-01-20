@@ -2,9 +2,9 @@ package prompts
 
 import mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 
-// TextPrompt は、AIプロンプトを構築する契約です。
-type TextPrompt interface {
-	// Build は、指定されたモードとデータに基づいてプロンプト文字列を生成します。
+// ScriptPrompt は、AIプロンプトを構築する契約です。
+type ScriptPrompt interface {
+	// Build は、指定されたモード（例: "summary", "character_dialogue"）とデータに基づいてプロンプト文字列を生成します。
 	Build(mode string, data TemplateData) (string, error)
 }
 
