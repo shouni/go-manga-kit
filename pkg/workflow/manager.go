@@ -28,46 +28,46 @@ type Manager struct {
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, charMap domain.CharactersMap, scriptPrompt prompts.ScriptPrompt, imagePrompt prompts.ImagePrompt) (*Manager, error) {
-	if httpClient == nil {
+func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
+	if args.HTTPClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
-	if ioFactory == nil {
+	if args.IOFactory == nil {
 		return nil, fmt.Errorf("IOFactory は必須です")
 	}
 
-	reader, err := ioFactory.InputReader()
+	reader, err := args.IOFactory.InputReader()
 	if err != nil {
 		return nil, fmt.Errorf("InputReader の取得に失敗しました: %w", err)
 	}
-	writer, err := ioFactory.OutputWriter()
+	writer, err := args.IOFactory.OutputWriter()
 	if err != nil {
 		return nil, fmt.Errorf("OutputWriter の取得に失敗しました: %w", err)
 	}
 
-	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
+	aiClient, err := initializeAIClient(ctx, args.Config.GeminiAPIKey)
 	if err != nil {
 		return nil, err
 	}
 
-	sPrompt, err := initializeScriptPrompt(scriptPrompt)
+	sPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	iPrompt, err := initializeImagePrompt(imagePrompt, charMap, cfg.StyleSuffix)
+	iPrompt, err := initializeImagePrompt(args.ImagePrompt, args.CharMap, args.Config.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charMap)
+	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, reader, args.CharMap)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
 	return &Manager{
-		cfg:           cfg,
-		httpClient:    httpClient,
+		cfg:           args.Config,
+		httpClient:    args.HTTPClient,
 		reader:        reader,
 		writer:        writer,
 		aiClient:      aiClient,
