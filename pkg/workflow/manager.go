@@ -35,6 +35,9 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	if args.IOFactory == nil {
 		return nil, fmt.Errorf("IOFactory は必須です")
 	}
+	if args.CharactersMap == nil {
+		return nil, fmt.Errorf("CharactersMap は必須です")
+	}
 
 	reader, err := args.IOFactory.InputReader()
 	if err != nil {
