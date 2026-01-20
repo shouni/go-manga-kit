@@ -18,6 +18,8 @@ import (
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
+const maxInputSize = 5 * 1024 * 1024
+
 var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 
 type MangaScriptRunner struct {
@@ -52,26 +54,28 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode str
 	var inputText string
 	var err error
 
-	// ソースの種類に応じてテキストを取得
+	// 1. ソースの種類に応じてテキストを取得
 	if remoteio.IsGCSURI(scriptURL) {
 		rc, err := sr.reader.Open(ctx, scriptURL)
 		if err != nil {
-			return nil, fmt.Errorf("GCSファイルのオープンに失敗しました: %w", err)
+			return nil, fmt.Errorf("failed to open GCS file: %w", err)
 		}
 		defer rc.Close()
 
-		content, err := io.ReadAll(rc)
+		// 巨大ファイルによるOOM防止のため LimitReader を使用
+		limitedReader := io.LimitReader(rc, maxInputSize)
+		content, err := io.ReadAll(limitedReader)
 		if err != nil {
-			return nil, fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
+			return nil, fmt.Errorf("failed to read content from GCS: %w", err)
 		}
 		inputText = string(content)
 	} else {
+		// Web抽出時もエラーラッピングの一貫性を保持
 		inputText, err = sr.extractContent(ctx, scriptURL)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to extract content from URL: %w", err)
 		}
 	}
-
 	// TemplateData 構造体を使用して InputText を流し込みます
 	templateData := prompts.TemplateData{InputText: inputText}
 	finalPrompt, promptErr := sr.promptBuilder.Build(mode, templateData)
