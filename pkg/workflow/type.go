@@ -21,7 +21,8 @@ const (
 type ManagerArgs struct {
 	Config        config.Config
 	HTTPClient    httpkit.ClientInterface
-	IOFactory     remoteio.IOFactory
+	Reader        remoteio.InputReader
+	Writer        remoteio.OutputWriter
 	CharactersMap domain.CharactersMap
 	ScriptPrompt  prompts.ScriptPrompt
 	ImagePrompt   prompts.ImagePrompt
