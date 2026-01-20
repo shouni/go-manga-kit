@@ -91,12 +91,12 @@ func LoadCharacterMap(ctx context.Context, reader remoteio.InputReader, path str
 		return nil, fmt.Errorf("キャラクター設定ファイルの読み込みに失敗しました (path: %s): %w", path, err)
 	}
 
-	char, err := getCharacters(data)
+	charsMap, err := getCharacters(data)
 	if err != nil {
 		return nil, fmt.Errorf("キャラクター設定の解析に失敗しました (path: %s): %w", path, err)
 	}
 
-	return char, nil
+	return charsMap, nil
 }
 
 // GetSeedFromString は文字列から決定論的なシード値を生成します。
@@ -110,9 +110,9 @@ func GetSeedFromString(s string) int64 {
 
 // getCharacters はJSONバイト列からキャラクターマップをパースして返します。
 func getCharacters(charactersJSON []byte) (CharactersMap, error) {
-	var chars CharactersMap
-	if err := json.Unmarshal(charactersJSON, &chars); err != nil {
+	var charsMap CharactersMap
+	if err := json.Unmarshal(charactersJSON, &charsMap); err != nil {
 		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
 	}
-	return chars, nil
+	return charsMap, nil
 }
