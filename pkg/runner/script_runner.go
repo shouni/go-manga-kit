@@ -109,7 +109,8 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 		return "", fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
 	}
 
-	if int64(len(content)) >= maxInputSize {
+	// LimitReader を使用しているため、サイズが上限と一致すれば切り捨てが発生したと判断
+	if int64(len(content)) == maxInputSize {
 		slog.WarnContext(ctx, "GCS入力が制限サイズに達したため切り捨てられました",
 			"url", url,
 			"limit_bytes", maxInputSize)
@@ -117,21 +118,19 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 	return string(content), nil
 }
 
-// readFromWeb は Web サイトからテキストを抽出し、メモリ効率を考慮してサイズ制限を適用します。
+// readFromWeb は Web サイトからテキストを抽出し、サイズ制限を適用します。
 func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (string, error) {
 	text, _, err := sr.extractor.FetchAndExtractText(ctx, url)
 	if err != nil {
 		return "", fmt.Errorf("URLからのテキスト抽出に失敗しました: %w", err)
 	}
 
-	// バイト単位でチェックし、効率的に安全な位置で切り捨てる
-	if len(text) > maxInputSize {
+	if int64(len(text)) > maxInputSize {
 		slog.WarnContext(ctx, "Web入力が制限サイズを超えたため切り捨てます",
 			"url", url,
 			"limit_bytes", maxInputSize)
 
 		end := maxInputSize
-		// マルチバイト文字の途中で切断されるのを防ぐため、有効なルーンの開始位置まで遡る
 		for end > 0 && !utf8.RuneStart(text[end]) {
 			end--
 		}
@@ -148,6 +147,8 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, e
 	if matches := jsonBlockRegex.FindStringSubmatch(raw); len(matches) > 1 {
 		rawJSON = matches[1]
 	} else {
+		// フォールバック: Markdownブロックが見つからない場合、最初と最後の波括弧で囲まれた部分をJSONとして抽出する。
+		// 注意: 本文中に波括弧が含まれると、不正なJSONを切り出す可能性があるベストエフォートな処理。
 		first := strings.Index(raw, "{")
 		last := strings.LastIndex(raw, "}")
 		if first != -1 && last != -1 && last > first {
@@ -168,10 +169,10 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, e
 
 // truncateString は指定された長さで文字列を安全に切り捨てます。
 func truncateString(s string, maxLen int) string {
-	if utf8.RuneCountInString(s) <= maxLen {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
 		return s
 	}
-	// 安全な切り捨てのためにルーン単位で処理
-	runes := []rune(s)
+	// slice 済み runes を用いることで二重スキャンを回避
 	return string(runes[:maxLen]) + "..."
 }
