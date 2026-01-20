@@ -12,6 +12,10 @@ import (
 	"google.golang.org/genai"
 )
 
+const (
+	defaultGeminiTemperature = float32(0.1)
+)
+
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Manager, error) {
 	if httpClient == nil {
@@ -46,7 +50,6 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 
 // initializeAIClient は gemini クライアントを初期化します。
 func initializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeModel, error) {
-	const defaultGeminiTemperature = float32(0.2)
 	clientConfig := gemini.Config{
 		APIKey:      apiKey,
 		Temperature: genai.Ptr(defaultGeminiTemperature),
