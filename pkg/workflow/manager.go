@@ -38,6 +38,9 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	if args.Writer == nil {
 		return nil, fmt.Errorf("OutputWriter は必須です")
 	}
+	if args.CharactersMap == nil {
+		return nil, fmt.Errorf("CharactersMap は必須です")
+	}
 
 	aiClient, err := initializeAIClient(ctx, args.Config.GeminiAPIKey)
 	if err != nil {
