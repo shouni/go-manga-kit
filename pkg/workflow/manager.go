@@ -52,7 +52,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, err
 	}
 
-	imagePromptBuilder, err := initializeImagePrompt(args.ImagePrompt, args.CharactersMap, args.Config.StyleSuffix)
+	imagePrompt, err := initializeImagePrompt(args.ImagePrompt, args.CharactersMap, args.Config.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		writer:        args.Writer,
 		aiClient:      aiClient,
 		scriptPrompt:  scriptPrompt,
-		imagePrompt:   imagePromptBuilder,
+		imagePrompt:   imagePrompt,
 		mangaComposer: mangaComposer,
 	}, nil
 }
