@@ -89,7 +89,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 
 // getTextFromSource はソースの種類を判定し、制限サイズ内でテキストを取得します。
 func (sr *MangaScriptRunner) getTextFromSource(ctx context.Context, sourceURL string) (string, error) {
-	if remoteio.IsGCSURI(sourceURL) {
+	if remoteio.IsRemoteURI(sourceURL) {
 		return sr.readFromGCS(ctx, sourceURL)
 	}
 	return sr.readFromWeb(ctx, sourceURL)
@@ -109,8 +109,10 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 		return "", fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
 	}
 
-	// [Major] 境界値判定のバグ修正:
-	// 上限まで読み込んだ後、さらに1バイト読み込みを試みて切り捨ての有無を確認する
+	// io.LimitReaderは指定サイズを超えた読み込みをエラーなく停止させるため、
+	// 入力が実際に制限サイズを超えて切り捨てられたかを判断できません。
+	// そこで、制限サイズまで読み込んだ後、さらに1バイトの読み込みを試みます。
+	// これに成功した場合（n > 0）、元の入力が制限を超えていたと判断できます。
 	oneMoreByte := make([]byte, 1)
 	n, readErr := rc.Read(oneMoreByte)
 	if readErr != nil && readErr != io.EOF {
@@ -146,7 +148,6 @@ func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (strin
 func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, error) {
 	jsonStr := extractJSONString(raw)
 	if jsonStr == "" {
-		// [Minor] 正常系フローの一部であるため Warn から Info に変更
 		slog.Info("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
 			"response_snippet", truncateString(raw, 100))
 		jsonStr = raw
@@ -168,7 +169,7 @@ func limitStringSize(s string, limit int64) (string, bool) {
 	}
 
 	end := limit
-	// [Minor] マルチバイト文字の途中で切り捨てないよう、UTF-8の文字の開始バイトまで遡る
+	// 切り捨て位置がマルチバイト文字の途中になるのを防ぐため、文字の開始バイトまで遡って調整する
 	for end > 0 && !utf8.RuneStart(s[end]) {
 		end--
 	}
