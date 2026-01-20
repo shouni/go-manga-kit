@@ -1,32 +1,21 @@
 package workflow
 
 import (
+	"context"
 	"fmt"
+
+	"github.com/shouni/go-manga-kit/pkg/config"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-manga-kit/pkg/config"
-	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
+	"google.golang.org/genai"
 )
 
-// Builder は、ワークフローの各工程を担う Runner 群を構築・管理します。
-type Builder struct {
-	cfg           config.Config
-	httpClient    httpkit.ClientInterface
-	aiClient      gemini.GenerativeModel
-	reader        remoteio.InputReader
-	writer        remoteio.OutputWriter
-	mangaComposer *generator.MangaComposer
-}
-
-// NewBuilder は、設定とキャラクター定義を基に新しい Builder を初期化します。
-func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient gemini.GenerativeModel, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Builder, error) {
+// New は、設定とキャラクター定義を基に新しい Builder を初期化します。
+func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Manager, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
-	}
-	if aiClient == nil {
-		return nil, fmt.Errorf("aiClient は必須です")
 	}
 	if reader == nil {
 		return nil, fmt.Errorf("reader は必須です")
@@ -34,12 +23,18 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 	if writer == nil {
 		return nil, fmt.Errorf("writer は必須です")
 	}
+
+	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
+	if err != nil {
+		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました")
+	}
+
 	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charData)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
-	return &Builder{
+	return &Manager{
 		cfg:           cfg,
 		httpClient:    httpClient,
 		aiClient:      aiClient,
@@ -47,4 +42,18 @@ func NewBuilder(cfg config.Config, httpClient httpkit.ClientInterface, aiClient 
 		writer:        writer,
 		mangaComposer: mangaComposer,
 	}, nil
+}
+
+// initializeAIClient は gemini クライアントを初期化します。
+func initializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeModel, error) {
+	const defaultGeminiTemperature = float32(0.2)
+	clientConfig := gemini.Config{
+		APIKey:      apiKey,
+		Temperature: genai.Ptr(defaultGeminiTemperature),
+	}
+	aiClient, err := gemini.NewClient(ctx, clientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
+	}
+	return aiClient, nil
 }
