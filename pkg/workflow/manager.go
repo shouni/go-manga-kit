@@ -19,11 +19,11 @@ import (
 type Manager struct {
 	cfg           config.Config
 	httpClient    httpkit.ClientInterface
-	aiClient      gemini.GenerativeModel
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
-	mangaComposer *generator.MangaComposer
+	aiClient      gemini.GenerativeModel
 	imagePrompt   prompts.ImagePrompt
+	mangaComposer *generator.MangaComposer
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
@@ -35,34 +35,32 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		return nil, fmt.Errorf("IOFactory は必須です")
 	}
 
+	reader, _ := ioFactory.InputReader()
+	writer, _ := ioFactory.OutputWriter()
+
 	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
 	if err != nil {
 		return nil, err
 	}
 
-	reader, _ := ioFactory.InputReader()
-	writer, _ := ioFactory.OutputWriter()
+	prompt, err := initializeImagePrompt(imagePrompt, charData, cfg.StyleSuffix)
+	if err != nil {
+		return nil, err
+	}
+
 	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charData)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
-	prompt := imagePrompt
-	if imagePrompt != nil {
-		prompt, err = initializeImagePrompt(charData, cfg.StyleSuffix)
-		if err != nil {
-			return nil, fmt.Errorf("プロンプトマネージャーの初期化に失敗しました: %w", err)
-		}
-	}
-
 	return &Manager{
 		cfg:           cfg,
 		httpClient:    httpClient,
-		aiClient:      aiClient,
 		reader:        reader,
 		writer:        writer,
-		mangaComposer: mangaComposer,
+		aiClient:      aiClient,
 		imagePrompt:   prompt,
+		mangaComposer: mangaComposer,
 	}, nil
 }
 
@@ -80,9 +78,16 @@ func initializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeMo
 }
 
 // initializeImagePrompt は ImagePromptBuilderを初期化します。
-func initializeImagePrompt(charData []byte, styleSuffix string) (prompts.ImagePrompt, error) {
-	chars, _ := domain.GetCharacters(charData)
-	pb := prompts.NewImagePromptBuilder(chars, styleSuffix)
+func initializeImagePrompt(imagePrompt prompts.ImagePrompt, charData []byte, styleSuffix string) (prompts.ImagePrompt, error) {
+	chars, err := domain.GetCharacters(charData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get characters from data: %w", err)
+	}
+
+	pb := imagePrompt
+	if pb == nil {
+		pb = prompts.NewImagePromptBuilder(chars, styleSuffix)
+	}
 
 	return pb, nil
 }
