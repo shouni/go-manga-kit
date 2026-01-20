@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// maxInputSize は読み込みを許可する最大テキストサイズ (5MB) です。
+	// [修正] maxInputSize を int 型として定義。スライス操作との互換性を確保。
 	maxInputSize = 5 * 1024 * 1024
 	// maxErrorResponseLength はエラーログに含める応答抜粋の最大文字数です。
 	maxErrorResponseLength = 200
@@ -103,16 +103,14 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 	}
 	defer rc.Close()
 
-	limitedReader := io.LimitReader(rc, maxInputSize)
+	// int64 へのキャストを行いつつ LimitReader を構成
+	limitedReader := io.LimitReader(rc, int64(maxInputSize))
 	content, err := io.ReadAll(limitedReader)
 	if err != nil {
 		return "", fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
 	}
 
-	// io.LimitReaderは指定サイズを超えた読み込みをエラーなく停止させるため、
-	// 入力が実際に制限サイズを超えて切り捨てられたかを判断できません。
-	// そこで、制限サイズまで読み込んだ後、さらに1バイトの読み込みを試みます。
-	// これに成功した場合（n > 0）、元の入力が制限を超えていたと判断できます。
+	// 制限サイズまで読み込んだ後、さらに1バイトの読み込みを試みて切り捨ての有無を確認
 	oneMoreByte := make([]byte, 1)
 	n, readErr := rc.Read(oneMoreByte)
 	if readErr != nil && readErr != io.EOF {
@@ -148,7 +146,7 @@ func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (strin
 func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, error) {
 	jsonStr := extractJSONString(raw)
 	if jsonStr == "" {
-		slog.Info("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
+		slog.Warn("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
 			"response_snippet", truncateString(raw, 100))
 		jsonStr = raw
 	}
@@ -163,8 +161,8 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, e
 }
 
 // limitStringSize は文字列を最大バイトサイズに切り捨て、UTF-8文字境界を維持します。
-func limitStringSize(s string, limit int64) (string, bool) {
-	if int64(len(s)) <= limit {
+func limitStringSize(s string, limit int) (string, bool) {
+	if len(s) <= limit {
 		return s, false
 	}
 
