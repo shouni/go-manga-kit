@@ -11,9 +11,9 @@ type ImagePromptBuilder struct {
 }
 
 // NewImagePromptBuilder は新しい PromptBuilder を生成します。
-func NewImagePromptBuilder(chars domain.CharactersMap, suffix string) *ImagePromptBuilder {
+func NewImagePromptBuilder(charMap domain.CharactersMap, suffix string) *ImagePromptBuilder {
 	return &ImagePromptBuilder{
-		characterMap:  chars,
+		characterMap:  charMap,
 		defaultSuffix: suffix,
 	}
 }

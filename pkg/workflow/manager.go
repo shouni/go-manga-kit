@@ -28,7 +28,7 @@ type Manager struct {
 }
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, charData []byte, scriptPrompt prompts.ScriptPrompt, imagePrompt prompts.ImagePrompt) (*Manager, error) {
+func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, ioFactory remoteio.IOFactory, charMap domain.CharactersMap, scriptPrompt prompts.ScriptPrompt, imagePrompt prompts.ImagePrompt) (*Manager, error) {
 	if httpClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
@@ -50,23 +50,17 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		return nil, err
 	}
 
-	// charDataをここで一度だけパースする
-	chars, err := domain.GetCharacters(charData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse character data: %w", err)
-	}
-
 	sPrompt, err := initializeScriptPrompt(scriptPrompt)
 	if err != nil {
 		return nil, err
 	}
 
-	iPrompt, err := initializeImagePrompt(imagePrompt, chars, cfg.StyleSuffix)
+	iPrompt, err := initializeImagePrompt(imagePrompt, charMap, cfg.StyleSuffix)
 	if err != nil {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, chars)
+	mangaComposer, err := buildMangaComposer(cfg, httpClient, aiClient, reader, charMap)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
@@ -113,10 +107,10 @@ func initializeScriptPrompt(scriptPrompt prompts.ScriptPrompt) (prompts.ScriptPr
 
 // initializeImagePrompt は ImagePromptBuilderを初期化します。
 // 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
-func initializeImagePrompt(imagePrompt prompts.ImagePrompt, chars domain.CharactersMap, styleSuffix string) (prompts.ImagePrompt, error) {
+func initializeImagePrompt(imagePrompt prompts.ImagePrompt, charMap domain.CharactersMap, styleSuffix string) (prompts.ImagePrompt, error) {
 	if imagePrompt != nil {
 		return imagePrompt, nil
 	}
 
-	return prompts.NewImagePromptBuilder(chars, styleSuffix), nil
+	return prompts.NewImagePromptBuilder(charMap, styleSuffix), nil
 }
