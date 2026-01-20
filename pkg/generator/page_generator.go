@@ -15,10 +15,14 @@ import (
 
 type PageGenerator struct {
 	composer *MangaComposer
+	pb       prompts.ImagePrompt
 }
 
-func NewPageGenerator(composer *MangaComposer) *PageGenerator {
-	return &PageGenerator{composer: composer}
+func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PageGenerator {
+	return &PageGenerator{
+		composer: composer,
+		pb:       pb,
+	}
 }
 
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
@@ -83,8 +87,6 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 }
 
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
-	pb := pg.composer.PromptBuilder
-
 	// 1. リソース収集とインデックスマッピングの作成
 	resMap, err := pg.collectResources(manga.Panels)
 	if err != nil {
@@ -92,7 +94,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	}
 
 	// 2. プロンプト構築 (ResourceMap を渡すように pb 側を調整済みと想定)
-	userPrompt, systemPrompt := pb.BuildMangaPagePrompt(manga.Panels, resMap)
+	userPrompt, systemPrompt := pg.pb.BuildMPage(manga.Panels, resMap)
 
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,

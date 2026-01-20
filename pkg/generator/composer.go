@@ -16,7 +16,6 @@ import (
 type MangaComposer struct {
 	AssetManager         generator.AssetManager
 	ImageGenerator       generator.ImageGenerator
-	PromptBuilder        ImagePromptBuilder
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
@@ -29,14 +28,12 @@ type MangaComposer struct {
 func NewMangaComposer(
 	assetMgr generator.AssetManager,
 	imgGen generator.ImageGenerator,
-	pb ImagePromptBuilder,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
 ) *MangaComposer {
 	return &MangaComposer{
 		AssetManager:         assetMgr,
 		ImageGenerator:       imgGen,
-		PromptBuilder:        pb,
 		CharactersMap:        cm,
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),

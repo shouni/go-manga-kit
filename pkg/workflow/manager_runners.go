@@ -34,14 +34,14 @@ func (m *Manager) BuildDesignRunner() (DesignRunner, error) {
 
 // BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *Manager) BuildPanelImageRunner() (PanelImageRunner, error) {
-	panelsGen := generator.NewPanelGenerator(m.mangaComposer)
+	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.imagePrompt)
 
 	return runner.NewMangaPanelRunner(m.cfg, panelsGen, m.writer), nil
 }
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *Manager) BuildPageImageRunner() (PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(m.mangaComposer)
+	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt)
 
 	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
 }
