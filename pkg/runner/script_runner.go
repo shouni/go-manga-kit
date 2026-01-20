@@ -95,7 +95,7 @@ func (sr *MangaScriptRunner) getTextFromSource(ctx context.Context, sourceURL st
 	return sr.readFromWeb(ctx, sourceURL)
 }
 
-// readFromGCS は GCS からファイルを読み込みます。
+// readFromGCS は GCS からファイルを読み込み、正確にサイズ制限を確認します。
 func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (string, error) {
 	rc, err := sr.reader.Open(ctx, url)
 	if err != nil {
@@ -109,11 +109,20 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 		return "", fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
 	}
 
-	if int64(len(content)) == maxInputSize {
+	// [Major] 境界値判定のバグ修正:
+	// 上限まで読み込んだ後、さらに1バイト読み込みを試みて切り捨ての有無を確認する
+	oneMoreByte := make([]byte, 1)
+	n, readErr := rc.Read(oneMoreByte)
+	if readErr != nil && readErr != io.EOF {
+		return "", fmt.Errorf("GCSファイルのサイズ確認中にエラーが発生しました: %w", readErr)
+	}
+
+	if n > 0 {
 		slog.WarnContext(ctx, "GCS入力が制限サイズに達したため切り捨てられました",
 			"url", url,
 			"limit_bytes", maxInputSize)
 	}
+
 	return string(content), nil
 }
 
@@ -137,7 +146,8 @@ func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (strin
 func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, error) {
 	jsonStr := extractJSONString(raw)
 	if jsonStr == "" {
-		slog.Warn("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
+		// [Minor] 正常系フローの一部であるため Warn から Info に変更
+		slog.Info("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
 			"response_snippet", truncateString(raw, 100))
 		jsonStr = raw
 	}
@@ -158,22 +168,21 @@ func limitStringSize(s string, limit int64) (string, bool) {
 	}
 
 	end := limit
+	// [Minor] マルチバイト文字の途中で切り捨てないよう、UTF-8の文字の開始バイトまで遡る
 	for end > 0 && !utf8.RuneStart(s[end]) {
 		end--
 	}
 	return s[:end], true
 }
 
-// extractJSONString は文字列から JSON 部分（Markdownブロックまたは波括弧範囲）を抽出します。
+// extractJSONString は文字列から JSON 部分を抽出します。
 func extractJSONString(raw string) string {
 	cleanRaw := strings.TrimSpace(raw)
 
-	// Markdownブロック優先
 	if matches := jsonBlockRegex.FindStringSubmatch(cleanRaw); len(matches) > 1 {
 		return matches[1]
 	}
 
-	// フォールバック: 最初と最後の波括弧を探す (ベストエフォート)
 	first := strings.Index(cleanRaw, "{")
 	last := strings.LastIndex(cleanRaw, "}")
 	if first != -1 && last != -1 && last > first {
