@@ -36,8 +36,14 @@ func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterf
 		return nil, fmt.Errorf("IOFactory は必須です")
 	}
 
-	reader, _ := ioFactory.InputReader()
-	writer, _ := ioFactory.OutputWriter()
+	reader, err := ioFactory.InputReader()
+	if err != nil {
+		return nil, fmt.Errorf("InputReader の取得に失敗しました: %w", err)
+	}
+	writer, err := ioFactory.OutputWriter()
+	if err != nil {
+		return nil, fmt.Errorf("OutputWriter の取得に失敗しました: %w", err)
+	}
 
 	aiClient, err := initializeAIClient(ctx, cfg.GeminiAPIKey)
 	if err != nil {
