@@ -109,7 +109,6 @@ func (sr *MangaScriptRunner) readFromGCS(ctx context.Context, url string) (strin
 		return "", fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
 	}
 
-	// LimitReader を使用しているため、サイズが上限と一致すれば切り捨てが発生したと判断
 	if int64(len(content)) == maxInputSize {
 		slog.WarnContext(ctx, "GCS入力が制限サイズに達したため切り捨てられました",
 			"url", url,
@@ -125,46 +124,63 @@ func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (strin
 		return "", fmt.Errorf("URLからのテキスト抽出に失敗しました: %w", err)
 	}
 
-	if int64(len(text)) > maxInputSize {
+	truncatedText, wasTruncated := limitStringSize(text, maxInputSize)
+	if wasTruncated {
 		slog.WarnContext(ctx, "Web入力が制限サイズを超えたため切り捨てます",
 			"url", url,
 			"limit_bytes", maxInputSize)
-
-		end := maxInputSize
-		for end > 0 && !utf8.RuneStart(text[end]) {
-			end--
-		}
-		text = text[:end]
 	}
-	return text, nil
+	return truncatedText, nil
 }
 
 // parseResponse は AI の応答から JSON を抽出し、構造体に変換します。
 func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, error) {
-	raw = strings.TrimSpace(raw)
-	var rawJSON string
-
-	if matches := jsonBlockRegex.FindStringSubmatch(raw); len(matches) > 1 {
-		rawJSON = matches[1]
-	} else {
-		// フォールバック: Markdownブロックが見つからない場合、最初と最後の波括弧で囲まれた部分をJSONとして抽出する。
-		// 注意: 本文中に波括弧が含まれると、不正なJSONを切り出す可能性があるベストエフォートな処理。
-		first := strings.Index(raw, "{")
-		last := strings.LastIndex(raw, "}")
-		if first != -1 && last != -1 && last > first {
-			rawJSON = raw[first : last+1]
-		} else {
-			rawJSON = raw
-		}
+	jsonStr := extractJSONString(raw)
+	if jsonStr == "" {
+		slog.Warn("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
+			"response_snippet", truncateString(raw, 100))
+		jsonStr = raw
 	}
 
 	var manga domain.MangaResponse
-	if err := json.Unmarshal([]byte(rawJSON), &manga); err != nil {
+	if err := json.Unmarshal([]byte(jsonStr), &manga); err != nil {
 		return nil, fmt.Errorf("AI応答JSONの解析に失敗しました (抜粋: %q): %w",
 			truncateString(raw, maxErrorResponseLength), err)
 	}
 
 	return &manga, nil
+}
+
+// limitStringSize は文字列を最大バイトサイズに切り捨て、UTF-8文字境界を維持します。
+func limitStringSize(s string, limit int64) (string, bool) {
+	if int64(len(s)) <= limit {
+		return s, false
+	}
+
+	end := limit
+	for end > 0 && !utf8.RuneStart(s[end]) {
+		end--
+	}
+	return s[:end], true
+}
+
+// extractJSONString は文字列から JSON 部分（Markdownブロックまたは波括弧範囲）を抽出します。
+func extractJSONString(raw string) string {
+	cleanRaw := strings.TrimSpace(raw)
+
+	// Markdownブロック優先
+	if matches := jsonBlockRegex.FindStringSubmatch(cleanRaw); len(matches) > 1 {
+		return matches[1]
+	}
+
+	// フォールバック: 最初と最後の波括弧を探す (ベストエフォート)
+	first := strings.Index(cleanRaw, "{")
+	last := strings.LastIndex(cleanRaw, "}")
+	if first != -1 && last != -1 && last > first {
+		return cleanRaw[first : last+1]
+	}
+
+	return ""
 }
 
 // truncateString は指定された長さで文字列を安全に切り捨てます。
@@ -173,6 +189,5 @@ func truncateString(s string, maxLen int) string {
 	if len(runes) <= maxLen {
 		return s
 	}
-	// slice 済み runes を用いることで二重スキャンを回避
 	return string(runes[:maxLen]) + "..."
 }
