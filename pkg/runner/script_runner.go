@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -48,10 +49,27 @@ func NewMangaScriptRunner(
 func (sr *MangaScriptRunner) Run(ctx context.Context, scriptURL string, mode string) (*domain.MangaResponse, error) {
 	slog.Info("ScriptRunner: Extracting text", "url", scriptURL)
 
-	// 1. Web サイトからテキストを抽出
-	inputText, err := sr.extractContent(ctx, scriptURL)
-	if err != nil {
-		return nil, err
+	var inputText string
+	var err error
+
+	// ソースの種類に応じてテキストを取得
+	if remoteio.IsGCSURI(scriptURL) {
+		rc, err := sr.reader.Open(ctx, scriptURL)
+		if err != nil {
+			return nil, fmt.Errorf("GCSファイルのオープンに失敗しました: %w", err)
+		}
+		defer rc.Close()
+
+		content, err := io.ReadAll(rc)
+		if err != nil {
+			return nil, fmt.Errorf("GCSファイルの読み込みに失敗しました: %w", err)
+		}
+		inputText = string(content)
+	} else {
+		inputText, err = sr.extractContent(ctx, scriptURL)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// TemplateData 構造体を使用して InputText を流し込みます
