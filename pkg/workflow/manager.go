@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/shouni/go-manga-kit/pkg/config"
+	"github.com/shouni/go-manga-kit/pkg/generator"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -12,9 +13,15 @@ import (
 	"google.golang.org/genai"
 )
 
-const (
-	defaultGeminiTemperature = float32(0.1)
-)
+// Manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
+type Manager struct {
+	cfg           config.Config
+	httpClient    httpkit.ClientInterface
+	aiClient      gemini.GenerativeModel
+	reader        remoteio.InputReader
+	writer        remoteio.OutputWriter
+	mangaComposer *generator.MangaComposer
+}
 
 // New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, cfg config.Config, httpClient httpkit.ClientInterface, reader remoteio.InputReader, writer remoteio.OutputWriter, charData []byte) (*Manager, error) {
