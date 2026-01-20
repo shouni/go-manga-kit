@@ -32,20 +32,14 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	if args.HTTPClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
 	}
-	if args.IOFactory == nil {
-		return nil, fmt.Errorf("IOFactory は必須です")
+	if args.Reader == nil {
+		return nil, fmt.Errorf("InputReader は必須です")
+	}
+	if args.Writer == nil {
+		return nil, fmt.Errorf("OutputWriter は必須です")
 	}
 	if args.CharactersMap == nil {
 		return nil, fmt.Errorf("CharactersMap は必須です")
-	}
-
-	reader, err := args.IOFactory.InputReader()
-	if err != nil {
-		return nil, fmt.Errorf("InputReader の取得に失敗しました: %w", err)
-	}
-	writer, err := args.IOFactory.OutputWriter()
-	if err != nil {
-		return nil, fmt.Errorf("OutputWriter の取得に失敗しました: %w", err)
 	}
 
 	aiClient, err := initializeAIClient(ctx, args.Config.GeminiAPIKey)
@@ -63,7 +57,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, reader, args.CharactersMap)
+	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, args.Reader, args.CharactersMap)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
@@ -71,8 +65,8 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	return &Manager{
 		cfg:           args.Config,
 		httpClient:    args.HTTPClient,
-		reader:        reader,
-		writer:        writer,
+		reader:        args.Reader,
+		writer:        args.Writer,
 		aiClient:      aiClient,
 		scriptPrompt:  sPrompt,
 		imagePrompt:   iPrompt,
