@@ -15,15 +15,3 @@ type ImagePrompt interface {
 	// BuildPage は、統合された漫画ページ画像用のユーザープロンプトと システムプロンプトを生成します。
 	BuildPage(panels []domain.Panel, rm *ResourceMap) (userPrompt string, systemPrompt string)
 }
-
-// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
-type TemplateData struct {
-	InputText string
-}
-
-type ResourceMap struct {
-	CharacterFiles map[string]int
-	PanelFiles     map[string]int
-	OrderedURIs    []string
-	OrderedURLs    []string
-}
