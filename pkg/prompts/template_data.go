@@ -9,11 +9,6 @@ const (
 	ModeDialogue = "dialogue"
 )
 
-// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
-type TemplateData struct {
-	InputText string
-}
-
 var (
 	//go:embed duet.md
 	DuetPrompt string

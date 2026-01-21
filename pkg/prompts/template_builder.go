@@ -6,11 +6,6 @@ import (
 	"text/template"
 )
 
-// PromptBuilder は、AIプロンプトを構築する契約です。
-type PromptBuilder interface {
-	Build(mode string, data TemplateData) (string, error)
-}
-
 // TextPromptBuilder はレビュープロンプトの構成を管理し、モード選択のロジックを内包します。
 type TextPromptBuilder struct {
 	templates map[string]*template.Template

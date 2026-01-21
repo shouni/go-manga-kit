@@ -24,13 +24,6 @@ const (
 - READING FLOW: Right-to-Left, Top-to-Bottom.`
 )
 
-type ResourceMap struct {
-	CharacterFiles map[string]int
-	PanelFiles     map[string]int
-	OrderedURIs    []string
-	OrderedURLs    []string
-}
-
 // BuildPage はメインのプロンプト構築フローを管理します。
 func (pb *ImagePromptBuilder) BuildPage(panels []domain.Panel, rm *ResourceMap) (string, string) {
 	numPanels := len(panels)
