@@ -41,13 +41,13 @@ func DefaultPageImagePath() string {
 // ResolveOutputPath は、ベースとなるディレクトリパスとファイル名から、
 // GCS/ローカルを考慮した最終的な出力パスを生成します。
 func ResolveOutputPath(baseDir, fileName string) (string, error) {
-	return urlpath.ResolveOutputPath(baseDir, fileName)
+	return urlpath.ResolvePath(baseDir, fileName)
 }
 
 // ResolveBaseURL は、入力パス（URLまたはローカルパス）から
 // 親ディレクトリのパスを解決し、末尾がセパレータで終わるように正規化します。
 func ResolveBaseURL(rawPath string) string {
-	return urlpath.ResolveBaseURL(rawPath)
+	return urlpath.ResolveBaseDir(rawPath)
 }
 
 // GenerateIndexedPath は、指定されたベースパスの拡張子の前に連番を挿入し、
