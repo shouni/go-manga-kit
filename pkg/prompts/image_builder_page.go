@@ -42,8 +42,7 @@ func (pb *ImagePromptBuilder) BuildPage(panels []domain.Panel, rm *ResourceMap) 
 	return us.String(), systemPrompt
 }
 
-// --- Internal Helper Methods ---
-
+// buildSystemPrompt 一貫性を保つために、定義済みの指示、スタイル、タグを組み込んだシステム プロンプト文字列を構築します。
 func (pb *ImagePromptBuilder) buildSystemPrompt() string {
 	const instr = "You are a master digital artist. You MUST follow the exact panel count and layout rules. Character identity MUST match the character master reference files."
 	parts := []string{instr, MangaStructureHeader, RenderingStyle, CinematicTags}
@@ -53,6 +52,7 @@ func (pb *ImagePromptBuilder) buildSystemPrompt() string {
 	return strings.Join(parts, "\n\n")
 }
 
+// writeBasicRequirements フォーマットされた基本要件セクションを生成し、提供された文字列ビルダーに追加します。
 func (pb *ImagePromptBuilder) writeBasicRequirements(w *strings.Builder, num int) {
 	w.WriteString("# FULL COLOR PAGE PRODUCTION REQUEST\n")
 	w.WriteString("- OUTPUT: ONE single portrait manga page image.\n")
@@ -60,6 +60,7 @@ func (pb *ImagePromptBuilder) writeBasicRequirements(w *strings.Builder, num int
 	fmt.Fprintf(w, "- PANEL COUNT: [ %d ] (STRICTLY ONLY %d PANELS. DO NOT ADD ANY MORE).\n\n", num, num)
 }
 
+// writeLayoutStructure フォーマットされたレイアウト構造を生成し、提供された文字列ビルダーに追加します。
 func (pb *ImagePromptBuilder) writeLayoutStructure(w *strings.Builder, num int) {
 	w.WriteString("## MANDATORY PAGE STRUCTURE\n")
 	w.WriteString("- READING ORDER: Japanese Style (Right-to-Left, then Top-to-Bottom).\n")
@@ -83,6 +84,7 @@ func (pb *ImagePromptBuilder) writeLayoutStructure(w *strings.Builder, num int) 
 	w.WriteString("- FRAME STYLE: Deep black borders. GUTTERS: Pure white.\n\n")
 }
 
+// writeCharacterReferences フォーマットされた文字参照のリストを生成し、提供された文字列ビルダーに追加します。
 func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *ResourceMap) {
 	w.WriteString("## CHARACTER MASTER REFERENCES\n")
 
@@ -110,6 +112,7 @@ func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *R
 	w.WriteString("\n")
 }
 
+// writePanelBreakdown g個々のパネルのフォーマットされた内訳を生成し、提供された文字列ビルダーに追加します。
 func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []domain.Panel, rm *ResourceMap, bigIdx int) {
 	num := len(panels)
 	w.WriteString("## PANEL BREAKDOWN\n")
