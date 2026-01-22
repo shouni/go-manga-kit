@@ -18,6 +18,7 @@ type PageGenerator struct {
 	pb       prompts.ImagePrompt
 }
 
+// NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
 func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PageGenerator {
 	return &PageGenerator{
 		composer: composer,
@@ -25,6 +26,7 @@ func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PageGene
 	}
 }
 
+// Execute は、そのページの画像レスポンスを並行して生成します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	if len(manga.Panels) == 0 {
 		return nil, nil
@@ -39,6 +41,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	}
 
 	// 2. ページ分割と並列実行の準備
+	seed := pg.determineDefaultSeed(manga.Panels)
 	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
 	totalPages := len(panelGroups)
 
@@ -47,7 +50,6 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 
 	for i, group := range panelGroups {
 		currentPageNum := i + 1
-		seed := pg.determineDefaultSeed(group)
 
 		eg.Go(func() error {
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
@@ -86,6 +88,8 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	return allResponses, nil
 }
 
+// generateMangaPage は、提供されたマンガレスポンスとAIベースの画像生成用のシードを使用して、マンガページの画像を生成します。
+// 必要なリソースを収集し、プロンプトを作成し、ImageGeneratorコンポーネントを介して画像生成を要求します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	// 1. リソース収集とインデックスマッピングの作成
 	resMap, err := pg.collectResources(manga.Panels)
@@ -188,6 +192,7 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*prompts.Resou
 	return res, nil
 }
 
+// chunkPanels パネルのスライスを指定されたサイズのチャンクに分割し、チャンクの 2D スライスを返します。
 func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain.Panel {
 	var chunks [][]domain.Panel
 	for i := 0; i < len(panels); i += size {
