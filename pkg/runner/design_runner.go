@@ -87,16 +87,18 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 // saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	extension := getPreferredExtension(resp.MimeType)
-	charTags := strings.Join(charIDs, "_")
+	sanitizedCharTags := strings.ReplaceAll(strings.Join(charIDs, "_"), "/", "_")
+	sanitizedCharTags = strings.ReplaceAll(sanitizedCharTags, `\`, "_")
+
 	designDir := path.Join(outputDir, asset.CharacterDesignDir)
-	filename := fmt.Sprintf("design_%s%s", charTags, extension)
+	filename := fmt.Sprintf("design_%s%s", sanitizedCharTags, extension)
 	finalPath, err := asset.ResolveOutputPath(designDir, filename)
 	if err != nil {
 		return "", fmt.Errorf("画像の保存パス生成に失敗しました: %w", err)
 	}
 
 	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
-		return "", fmt.Errorf("画像の書き込みに失敗しました: %w", err)
+		return "", fmt.Errorf("画像保存パスの生成に失敗しました (dir: %s, file: %s): %w", designDir, filename, err)
 	}
 
 	return finalPath, nil
