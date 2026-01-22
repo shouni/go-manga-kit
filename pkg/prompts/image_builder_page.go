@@ -112,7 +112,7 @@ func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *R
 	w.WriteString("\n")
 }
 
-// writePanelBreakdown g個々のパネルのフォーマットされた内訳を生成し、提供された文字列ビルダーに追加します。
+// writePanelBreakdown 個々のパネルのフォーマットされた内訳を生成し、提供された文字列ビルダーに追加します。
 func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []domain.Panel, rm *ResourceMap, bigIdx int) {
 	num := len(panels)
 	w.WriteString("## PANEL BREAKDOWN\n")
