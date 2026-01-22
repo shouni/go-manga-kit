@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	characterDesignDir = "character"
 	// プロンプト構成用の定数
 	designPromptBaseTemplate = "Masterpiece character design sheet of %s"
 	designLayoutDefault      = "multiple views (front, side, back), standing full body"
@@ -85,11 +84,11 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	return outputPath, resp.UsedSeed, nil
 }
 
-// saveResponseImage は、イメージ応答をリモートまたはローカル ストレージに保存する
+// saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	extension := getPreferredExtension(resp.MimeType)
 	charTags := strings.Join(charIDs, "_")
-	designDir := path.Join(outputDir, characterDesignDir)
+	designDir := path.Join(outputDir, asset.CharacterDesignDir)
 	filename := fmt.Sprintf("design_%s%s", charTags, extension)
 	finalPath, err := asset.ResolveOutputPath(designDir, filename)
 	if err != nil {
