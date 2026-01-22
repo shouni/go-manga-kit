@@ -86,19 +86,32 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 
 // saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
-	extension := getPreferredExtension(resp.MimeType)
-	sanitizedCharTags := strings.ReplaceAll(strings.Join(charIDs, "_"), "/", "_")
-	sanitizedCharTags = strings.ReplaceAll(sanitizedCharTags, `\`, "_")
+	// ファイル名として使えない文字を置換するためのReplacerを定義
+	var fileNameSanitizer = strings.NewReplacer(
+		"/", "_",
+		`\`, "_",
+		":", "_",
+		"*", "_",
+		"?", "_",
+		`"`, "_",
+		"<", "_",
+		">", "_",
+		"|", "_",
+	)
 
+	charTags := strings.Join(charIDs, "_")
+	sanitizedCharTags := fileNameSanitizer.Replace(charTags)
+
+	extension := getPreferredExtension(resp.MimeType)
 	designDir := path.Join(outputDir, asset.CharacterDesignDir)
 	filename := fmt.Sprintf("design_%s%s", sanitizedCharTags, extension)
 	finalPath, err := asset.ResolveOutputPath(designDir, filename)
 	if err != nil {
-		return "", fmt.Errorf("画像の保存パス生成に失敗しました: %w", err)
+		return "", fmt.Errorf("画像保存パスの生成に失敗しました (dir: %s, file: %s): %w", designDir, filename, err)
 	}
 
 	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
-		return "", fmt.Errorf("画像保存パスの生成に失敗しました (dir: %s, file: %s): %w", designDir, filename, err)
+		return "", fmt.Errorf("画像の保存に失敗しました (path: %s): %w", finalPath, err)
 	}
 
 	return finalPath, nil
