@@ -103,11 +103,10 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 	sanitizedCharTags := fileNameSanitizer.Replace(charTags)
 
 	extension := getPreferredExtension(resp.MimeType)
-	designDir := path.Join(outputDir, asset.CharacterDesignDir)
-	filename := fmt.Sprintf("design_%s%s", sanitizedCharTags, extension)
-	finalPath, err := asset.ResolveOutputPath(designDir, filename)
+	relativePath := path.Join(asset.CharacterDesignDir, fmt.Sprintf("design_%s%s", sanitizedCharTags, extension))
+	finalPath, err := asset.ResolveOutputPath(outputDir, relativePath)
 	if err != nil {
-		return "", fmt.Errorf("画像保存パスの生成に失敗しました (dir: %s, file: %s): %w", designDir, filename, err)
+		return "", fmt.Errorf("画像保存パスの生成に失敗しました (baseDir: %s, relativePath: %s): %w", outputDir, relativePath, err)
 	}
 
 	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
