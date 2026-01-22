@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/url"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
+	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
@@ -25,6 +24,19 @@ const (
 	designLayoutPromptFormat = "Layout: %s, side-by-side, separate character charts"
 )
 
+// fileNameSanitizer はファイル名として使用できない文字を置換します。
+var fileNameSanitizer = strings.NewReplacer(
+	"/", "_",
+	`\`, "_",
+	":", "_",
+	"*", "_",
+	"?", "_",
+	`"`, "_",
+	"<", "_",
+	">", "_",
+	"|", "_",
+)
+
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
@@ -32,7 +44,7 @@ type MangaDesignRunner struct {
 	writer   remoteio.OutputWriter
 }
 
-// NewMangaDesignRunner は依存関係を注入して初期化するのだ。
+// NewMangaDesignRunner は依存関係を注入して初期化します。
 func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, writer remoteio.OutputWriter) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		cfg:      cfg,
@@ -41,8 +53,8 @@ func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, 
 	}
 }
 
-// Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
-func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
+// Run は、指定されたキャラクターIDのデザインシートを生成し、指定されたディレクトリに保存します。
+func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
 	refs, descriptions, err := collectCharacterAssets(dr.composer.CharactersMap, charIDs)
 	if err != nil {
@@ -76,7 +88,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 5. 画像の保存
-	outputPath, err := dr.saveResponseImage(ctx, *resp, charIDs, outputGCS)
+	outputPath, err := dr.saveResponseImage(ctx, *resp, charIDs, outputDir)
 	if err != nil {
 		slog.Error("Failed to save image", "error", err)
 		return "", 0, fmt.Errorf("画像の保存に失敗しました: %w", err)
@@ -85,28 +97,21 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	return outputPath, resp.UsedSeed, nil
 }
 
-func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, imageDir string) (string, error) {
-	extension := getPreferredExtension(resp.MimeType)
+// saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
+func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	charTags := strings.Join(charIDs, "_")
-	filename := fmt.Sprintf("design_%s%s", charTags, extension)
-	var finalPath string
-	var err error
+	sanitizedCharTags := fileNameSanitizer.Replace(charTags)
 
-	if remoteio.IsRemoteURI(imageDir) {
-		finalPath, err = url.JoinPath(imageDir, filename)
-	} else {
-		finalPath = filepath.Join(imageDir, filename)
-		if err := os.MkdirAll(filepath.Dir(finalPath), 0755); err != nil {
-			return "", err
-		}
-	}
-
+	extension := getPreferredExtension(resp.MimeType)
+	designDir := path.Join(outputDir, asset.CharacterDesignDir)
+	filename := fmt.Sprintf("design_%s%s", sanitizedCharTags, extension)
+	finalPath, err := asset.ResolveOutputPath(designDir, filename)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("画像保存パスの生成に失敗しました (dir: %s, file: %s): %w", designDir, filename, err)
 	}
 
-	if err := dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
-		return "", err
+	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+		return "", fmt.Errorf("画像の保存に失敗しました (path: %s): %w", finalPath, err)
 	}
 
 	return finalPath, nil

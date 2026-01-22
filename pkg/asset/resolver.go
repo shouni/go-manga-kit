@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	// CharacterDesignDir は生成されたキャラクター画像を格納するディレクトリ名です。
+	CharacterDesignDir = "character"
 	// DefaultImageDir は生成された画像を格納するデフォルトのディレクトリ名です。
 	DefaultImageDir = "images"
 	// DefaultMangaPlotJson は生成された漫画プロットのデフォルト JSON ファイル名です。
