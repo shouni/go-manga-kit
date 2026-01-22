@@ -32,7 +32,7 @@ type MangaDesignRunner struct {
 	writer   remoteio.OutputWriter
 }
 
-// NewMangaDesignRunner は依存関係を注入して初期化するのだ。
+// NewMangaDesignRunner は依存関係を注入して初期化します。
 func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, writer remoteio.OutputWriter) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		cfg:      cfg,
@@ -41,7 +41,7 @@ func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, 
 	}
 }
 
-// Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
+// Run は、指定されたキャラクターIDのデザインシートを生成し、指定されたディレクトリに保存します。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
 	refs, descriptions, err := collectCharacterAssets(dr.composer.CharactersMap, charIDs)
