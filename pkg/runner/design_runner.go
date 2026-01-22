@@ -18,6 +18,7 @@ import (
 )
 
 const (
+	characterDesignDir = "character"
 	// プロンプト構成用の定数
 	designPromptBaseTemplate = "Masterpiece character design sheet of %s"
 	designLayoutDefault      = "multiple views (front, side, back), standing full body"
@@ -88,7 +89,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	extension := getPreferredExtension(resp.MimeType)
 	charTags := strings.Join(charIDs, "_")
-	designDir := path.Join(outputDir, "character")
+	designDir := path.Join(outputDir, characterDesignDir)
 	filename := fmt.Sprintf("design_%s%s", charTags, extension)
 	finalPath, err := asset.ResolveOutputPath(designDir, filename)
 	if err != nil {
@@ -96,7 +97,7 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 	}
 
 	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
-		return "", err
+		return "", fmt.Errorf("画像の書き込みに失敗しました: %w", err)
 	}
 
 	return finalPath, nil
