@@ -5,11 +5,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/url"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
+	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
@@ -42,7 +41,7 @@ func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, 
 }
 
 // Run は、キャラクターIDを指定してデザインシートを生成し、GCSやローカルに保存するのだ。
-func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputGCS string) (string, int64, error) {
+func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
 	refs, descriptions, err := collectCharacterAssets(dr.composer.CharactersMap, charIDs)
 	if err != nil {
@@ -76,7 +75,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 5. 画像の保存
-	outputPath, err := dr.saveResponseImage(ctx, *resp, charIDs, outputGCS)
+	outputPath, err := dr.saveResponseImage(ctx, *resp, charIDs, outputDir)
 	if err != nil {
 		slog.Error("Failed to save image", "error", err)
 		return "", 0, fmt.Errorf("画像の保存に失敗しました: %w", err)
@@ -85,27 +84,18 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	return outputPath, resp.UsedSeed, nil
 }
 
-func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, imageDir string) (string, error) {
+// saveResponseImage は、イメージ応答をリモートまたはローカル ストレージに保存する
+func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	extension := getPreferredExtension(resp.MimeType)
 	charTags := strings.Join(charIDs, "_")
+	designDir := path.Join(outputDir, "character")
 	filename := fmt.Sprintf("design_%s%s", charTags, extension)
-	var finalPath string
-	var err error
-
-	if remoteio.IsRemoteURI(imageDir) {
-		finalPath, err = url.JoinPath(imageDir, filename)
-	} else {
-		finalPath = filepath.Join(imageDir, filename)
-		if err := os.MkdirAll(filepath.Dir(finalPath), 0755); err != nil {
-			return "", err
-		}
-	}
-
+	finalPath, err := asset.ResolveOutputPath(designDir, filename)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("画像の保存パス生成に失敗しました: %w", err)
 	}
 
-	if err := dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
 		return "", err
 	}
 
