@@ -24,6 +24,19 @@ const (
 	designLayoutPromptFormat = "Layout: %s, side-by-side, separate character charts"
 )
 
+// fileNameSanitizer はファイル名として使用できない文字を置換します。
+var fileNameSanitizer = strings.NewReplacer(
+	"/", "_",
+	`\`, "_",
+	":", "_",
+	"*", "_",
+	"?", "_",
+	`"`, "_",
+	"<", "_",
+	">", "_",
+	"|", "_",
+)
+
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
 	cfg      config.Config
@@ -86,19 +99,6 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 
 // saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
 func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.ImageResponse, charIDs []string, outputDir string) (string, error) {
-	// ファイル名として使えない文字を置換するためのReplacerを定義
-	var fileNameSanitizer = strings.NewReplacer(
-		"/", "_",
-		`\`, "_",
-		":", "_",
-		"*", "_",
-		"?", "_",
-		`"`, "_",
-		"<", "_",
-		">", "_",
-		"|", "_",
-	)
-
 	charTags := strings.Join(charIDs, "_")
 	sanitizedCharTags := fileNameSanitizer.Replace(charTags)
 
