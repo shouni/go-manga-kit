@@ -106,12 +106,12 @@ github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRI
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/uniseg v0.4.7 h1:WUdvkW8uEhrYfLC4ZzdpI2ztxP1I582+49Oc5Mq64VQ=
 github.com/rivo/uniseg v0.4.7/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
-github.com/shouni/gemini-image-kit v1.2.4 h1:LpIUtTHBUti0164R+OHXV9tLPOG7JoO09+lUZzOk6YY=
-github.com/shouni/gemini-image-kit v1.2.4/go.mod h1:ClAbkjE4h6mFaR/V8X8odU6Eh2mJhqESznZSxmZ1OoE=
+github.com/shouni/gemini-image-kit v1.2.5 h1:DZ26UqiIFnDuhzHQq72czKdPxK9F1dAaApksoCkwC0Q=
+github.com/shouni/gemini-image-kit v1.2.5/go.mod h1:bkJmNM9mixZwaOGedlfR7BNz4c49d3jG8D4sV25UnhI=
 github.com/shouni/go-gemini-client v1.0.5 h1:SmjvNmpRqayKju5PHUlCb5HhjMxaArN0NzbL5ioFL/4=
 github.com/shouni/go-gemini-client v1.0.5/go.mod h1:q7+qEX6hHP1o0KdRZkWkbti30jIC0oLslN638zrsccE=
-github.com/shouni/go-http-kit v1.1.3 h1:G7IPUzJHRoTSoj4CNnzrln6w6lOPiZKsJ+T4AW9aIvA=
-github.com/shouni/go-http-kit v1.1.3/go.mod h1:3hR1zjeVzTJmq+MNB1U4LQ0wTVadS3x4dO4wHL/aspM=
+github.com/shouni/go-http-kit v1.2.1 h1:oBPuqeifYcVFT2FSra/f4xmJSdYDo45flB4EC8D7w8Y=
+github.com/shouni/go-http-kit v1.2.1/go.mod h1:3hR1zjeVzTJmq+MNB1U4LQ0wTVadS3x4dO4wHL/aspM=
 github.com/shouni/go-remote-io v1.2.0 h1:2B4QpjuUwC95I3dG2gyr2vwwyXRBB/ZNP9Dhuj05URM=
 github.com/shouni/go-remote-io v1.2.0/go.mod h1:0zVVFnT4jSw42lf/zFZD1TghwX9aTNgAs9+wIXandis=
 github.com/shouni/go-text-format v1.1.3 h1:OW53o+jPycCo7TjjPTCqa7uiBxmrFZR/C7IeRG0/RBI=
