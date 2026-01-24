@@ -142,7 +142,7 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	if dr.cfg.StyleSuffix != "" {
 		promptParts = append(promptParts, dr.cfg.StyleSuffix)
 	}
-	promptParts = append(promptParts, "white background", "sharp focus", "4k resolution")
+	promptParts = append(promptParts, "white background", "sharp focus", "2k resolution")
 
 	return strings.Join(promptParts, ", ")
 }
