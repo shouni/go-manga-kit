@@ -124,7 +124,8 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			if num == 1 {
 				label, pos = "FULL-PAGE", "Entire page area"
 			} else {
-				label, pos = "FULL-WIDTH IMPACT", "Bottom row, full width"
+				label, pos = "FULL-WIDTH IMPACT", "Bottom row, covering the entire width of the page"
+				fmt.Fprintf(w, "- COMPOSITION: Cinematic wide shot, high impact focus.\n")
 			}
 		} else {
 			side := "RIGHT"
