@@ -70,13 +70,13 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	result.ImagePaths = imagePaths
 	content := p.buildMarkdown(manga, imagePaths)
 
-	// 4. Markdown ファイルの書き出し
+	// 3. Markdown ファイルの書き出し
 	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdown)
 	if err := p.writer.Write(ctx, markdown, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
 		return result, fmt.Errorf("Markdown ファイルの書き込みに失敗: %w", err)
 	}
 
-	// 5. HTML 変換と保存
+	// 4. HTML 変換と保存
 	if p.htmlRunner != nil {
 		slog.InfoContext(ctx, "HTML への変換を開始します", "title", manga.Title)
 		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
