@@ -38,7 +38,6 @@ func NewMangaPageRunner(
 	}
 }
 
-// Run は、指定されたパスの Markdown コンテンツを解析し、漫画ページ画像（バイナリデータ）のリストを生成します。
 // Run は、構造化された台本データを基に、最終的な漫画ページ画像を生成します。
 func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	// 1. バリデーション
