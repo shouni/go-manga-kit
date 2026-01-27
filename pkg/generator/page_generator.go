@@ -41,7 +41,6 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	}
 
 	// 2. ページ分割と並列実行の準備
-	seed := pg.determineDefaultSeed(manga.Panels)
 	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
 	totalPages := len(panelGroups)
 
@@ -49,6 +48,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for i, group := range panelGroups {
+		seed := pg.determineDefaultSeed(group)
 		currentPageNum := i + 1
 
 		eg.Go(func() error {

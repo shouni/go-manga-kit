@@ -10,6 +10,13 @@ import (
 
 // --- Constants & Types ---
 const (
+	LabelStandard     = "Standard"
+	LabelFullPage     = "FULL-PAGE"
+	LabelImpact       = "FULL-WIDTH IMPACT"
+	PosFullPage       = "Entire page area"
+	PosFullWidth      = "Bottom row, covering the entire width of the page"
+	CompositionImpact = "- COMPOSITION: Cinematic wide shot, high impact focus.\n"
+
 	// NegativePagePrompt は生成から除外したい要素を定義します。
 	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
 
@@ -119,14 +126,18 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 	for i, panel := range panels {
 		panelNum := i + 1
 
-		label, pos := "Standard", ""
+		// 1. パネルのメタデータ（ラベル、位置、追加指示）の決定
+		var label, pos, extraInstruction string
+
 		if i == bigIdx {
 			if num == 1 {
-				label, pos = "FULL-PAGE", "Entire page area"
+				label, pos = LabelFullPage, PosFullPage
 			} else {
-				label, pos = "FULL-WIDTH IMPACT", "Bottom row, full width"
+				label, pos = LabelImpact, PosFullWidth
+				extraInstruction = CompositionImpact
 			}
 		} else {
+			label = LabelStandard
 			side := "RIGHT"
 			if i%2 == 1 {
 				side = "LEFT"
@@ -134,9 +145,14 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			pos = fmt.Sprintf("Row %d, %s column", (i/2)+1, side)
 		}
 
-		fmt.Fprintf(w, "### PANEL %d [%s]\n- POSITION: %s\n", panelNum, label, pos)
+		// 2. 出力処理 (構造を維持するために順序を制御)
+		fmt.Fprintf(w, "### PANEL %d [%s]\n", panelNum, label)
+		fmt.Fprintf(w, "- POSITION: %s\n", pos)
+		if extraInstruction != "" {
+			w.WriteString(extraInstruction)
+		}
 
-		// キャラクターIDと表示名
+		// キャラクターIDと表示名の取得
 		displayName := panel.SpeakerID
 		charFileIdx := -1
 		if char := pb.characterMap.GetCharacter(panel.SpeakerID); char != nil {
@@ -146,7 +162,7 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			}
 		}
 
-		// セリフ詳細指示の復元
+		// セリフ指示
 		if panel.Dialogue != "" {
 			fmt.Fprintf(w, "- SPEECH: Speech bubble for [%s].\n", displayName)
 			fmt.Fprintf(w, "  - TEXT_TO_RENDER: \"%s\"\n", formatDialogue(panel.Dialogue))
@@ -155,7 +171,7 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 		}
 		w.WriteString("\n")
 
-		// アクション指示
+		// アクション・ポーズ指示
 		sceneDescription := sanitizeInline(panel.VisualAnchor)
 		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
 		charRefStr := ""
@@ -165,7 +181,7 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 
 		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", displayName, sceneDescription, charRefStr)
 
-		// ポーズ参照ロジックの復元
+		// ポーズ参照ロジック
 		if panel.ReferenceURL != "" {
 			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
 				fmt.Fprintf(w, "- POSE_REF: Use input_file_%d for BODY/POSE/ANATOMY only. IGNORE face/hair/colors from this file.\n", fileIdx)
@@ -174,6 +190,7 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 				}
 			}
 		}
+		w.WriteString("\n")
 	}
 }
 
