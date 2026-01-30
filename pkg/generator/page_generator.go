@@ -41,7 +41,12 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	}
 
 	// 2. ページ分割と並列実行の準備
-	panelGroups := pg.chunkPanels(manga.Panels, MaxPanelsPerPage)
+	maxPanels := pg.composer.Config.MaxPanelsPerPage
+	if maxPanels <= 0 {
+		maxPanels = MaxPanelsPerPage
+	}
+
+	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
 
 	allResponses := make([]*imagedom.ImageResponse, totalPages)

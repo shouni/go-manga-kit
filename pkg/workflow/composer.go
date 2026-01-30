@@ -36,6 +36,7 @@ func buildMangaComposer(
 	}
 
 	return generator.NewMangaComposer(
+		cfg,
 		assetManager,
 		imageGenerator,
 		chars,
