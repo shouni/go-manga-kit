@@ -10,7 +10,6 @@ import (
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/config"
-	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -56,14 +55,14 @@ func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, 
 // Run は、指定されたキャラクターIDのデザインシートを生成し、指定されたディレクトリに保存します。
 func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
-	refs, descriptions, err := collectCharacterAssets(dr.composer.CharactersMap, charIDs)
+	imageURIs, descriptions, err := dr.collectCharacterURIs(charIDs)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
 	}
 
 	slog.Info("Executing design work generation",
 		slog.Any("chars", charIDs),
-		slog.Int("ref_count", len(refs)),
+		slog.Int("ref_count", len(imageURIs)),
 	)
 
 	// 2. プロンプト構築
@@ -74,10 +73,11 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 
 	// 3. 生成リクエスト
 	pageReq := imgdom.ImagePageRequest{
-		Prompt:        designPrompt,
-		ReferenceURLs: refs,
-		AspectRatio:   "16:9",
-		Seed:          ptrInt64(seed),
+		Prompt:      designPrompt,
+		AspectRatio: "16:9",
+		ImageSize:   generator.ImageSize2K,
+		Images:      imageURIs,
+		Seed:        ptrInt64(seed),
 	}
 
 	// 4. 生成実行
@@ -147,9 +147,9 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	return strings.Join(promptParts, ", ")
 }
 
-// collectCharacterAssets キャラクター情報を収集し、参照URLと説明文を返します。
-func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string, []string, error) {
-	var referenceURLs []string
+// collectCharacterURIs はキャラクター情報を収集し、ImageURIスライスと説明文を返します。
+func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imgdom.ImageURI, []string, error) {
+	var uris []imgdom.ImageURI
 	var descriptions []string
 	var missingIDs []string
 	processedIDs := make(map[string]struct{})
@@ -160,18 +160,24 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 		}
 		processedIDs[id] = struct{}{}
 
-		char := chars.GetCharacter(id)
+		char := dr.composer.CharactersMap.GetCharacter(id)
 		if char == nil {
 			missingIDs = append(missingIDs, id)
 			continue
 		}
 
-		if char.ReferenceURL == "" {
-			slog.Warn("キャラクターに参照URLがないためスキップします", "id", id)
+		// File API URI があれば取得
+		fileURI := dr.composer.CharacterResourceMap[char.ID]
+
+		if char.ReferenceURL == "" && fileURI == "" {
+			slog.Warn("キャラクターに有効な参照画像がないためスキップします", "id", id)
 			continue
 		}
 
-		referenceURLs = append(referenceURLs, char.ReferenceURL)
+		uris = append(uris, imgdom.ImageURI{
+			ReferenceURL: char.ReferenceURL,
+			FileAPIURI:   fileURI,
+		})
 
 		desc := char.Name
 		if len(char.VisualCues) > 0 {
@@ -184,11 +190,11 @@ func collectCharacterAssets(chars domain.CharactersMap, ids []string) ([]string,
 		return nil, nil, fmt.Errorf("一部のキャラクターIDが見つかりませんでした: %s", strings.Join(missingIDs, ", "))
 	}
 
-	if len(referenceURLs) == 0 {
-		return nil, nil, fmt.Errorf("有効な参照URLを持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
+	if len(uris) == 0 {
+		return nil, nil, fmt.Errorf("有効な参照画像を持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
 	}
 
-	return referenceURLs, descriptions, nil
+	return uris, descriptions, nil
 }
 
 func ptrInt64(v int64) *int64 {
