@@ -43,7 +43,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	// 2. ページ分割と並列実行の準備
 	maxPanels := pg.composer.Config.MaxPanelsPerPage
 	if maxPanels <= 0 {
-		maxPanels = MaxPanelsPerPage
+		maxPanels = DefaultMaxPanelsPerPage
 	}
 
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
