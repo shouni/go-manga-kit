@@ -100,28 +100,20 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
 
 	// 3. ImageURI 構造体のスライスを作成
-	imageURIs := make([]imagedom.ImageURI, len(resMap.OrderedURIs))
-	for i := range resMap.OrderedURIs {
-		imageURIs[i] = imagedom.ImageURI{
-			ReferenceURL: resMap.OrderedURLs[i],
-			FileAPIURI:   resMap.OrderedURIs[i],
-		}
-	}
-
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
 		NegativePrompt: prompts.NegativePagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		ImageSize:      ImageSize2K,
-		Images:         imageURIs,
+		Images:         resMap.OrderedAssets,
 		Seed:           &seed,
 	}
 
 	slog.Info("Requesting AI image generation (4K mode)",
 		"title", manga.Title,
 		"seed", seed,
-		"total_assets", len(imageURIs),
+		"total_assets", len(resMap.OrderedAssets),
 	)
 
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
@@ -132,25 +124,27 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*prompts.Resou
 	res := &prompts.ResourceMap{
 		CharacterFiles: make(map[string]int),
 		PanelFiles:     make(map[string]int),
+		OrderedAssets:  []imagedom.ImageURI{},
 	}
 	addedMap := make(map[string]int) // URL -> index (重複排除用)
 
 	pg.composer.mu.RLock()
 	defer pg.composer.mu.RUnlock()
 
-	// 1. ページ内に登場する全キャラクターの立ち絵を優先的に登録 (input_file_0, 1...)
+	// 1. ページ内に登場する全キャラクターの立ち絵を優先的に登録
 	speakerIDs := domain.Panels(panels).UniqueSpeakerIDs()
 	for _, sID := range speakerIDs {
 		char := pg.composer.CharactersMap.GetCharacter(sID)
 		if char != nil && char.ReferenceURL != "" {
 			if uri, ok := pg.composer.CharacterResourceMap[char.ID]; ok {
-				// 同じURLが既に登録されていれば、そのインデックスを再利用
 				if idx, exists := addedMap[char.ReferenceURL]; exists {
 					res.CharacterFiles[sID] = idx
 				} else {
-					newIdx := len(res.OrderedURIs)
-					res.OrderedURLs = append(res.OrderedURLs, char.ReferenceURL)
-					res.OrderedURIs = append(res.OrderedURIs, uri)
+					newIdx := len(res.OrderedAssets)
+					res.OrderedAssets = append(res.OrderedAssets, imagedom.ImageURI{
+						ReferenceURL: char.ReferenceURL,
+						FileAPIURI:   uri,
+					})
 					res.CharacterFiles[sID] = newIdx
 					addedMap[char.ReferenceURL] = newIdx
 				}
@@ -158,35 +152,37 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*prompts.Resou
 		}
 	}
 
-	// 2. パネル固有のポーズ参照（重複排除しつつソートして順序を安定させる）
-	type panelRef struct{ url, uri string }
-	var refs []panelRef
+	// 2. パネル固有のポーズ参照
+	var panelRefs []imagedom.ImageURI
 	for _, p := range panels {
 		if p.ReferenceURL == "" {
 			continue
 		}
-		// 既にキャラ立ち絵として登録済みの画像でなければ、候補に追加
 		if _, exists := addedMap[p.ReferenceURL]; !exists {
 			if uri, ok := pg.composer.PanelResourceMap[p.ReferenceURL]; ok {
-				refs = append(refs, panelRef{url: p.ReferenceURL, uri: uri})
+				panelRefs = append(panelRefs, imagedom.ImageURI{
+					ReferenceURL: p.ReferenceURL,
+					FileAPIURI:   uri,
+				})
 				addedMap[p.ReferenceURL] = -1 // 仮登録
 			}
 		}
 	}
-	// 決定論的な順序のためにURLでソート
-	sort.Slice(refs, func(i, j int) bool { return refs[i].url < refs[j].url })
 
-	// 3. ソート済みパネル参照を OrderedURIs に追加し、インデックスを確定
-	for _, r := range refs {
-		newIdx := len(res.OrderedURIs)
-		res.OrderedURLs = append(res.OrderedURLs, r.url)
-		res.OrderedURIs = append(res.OrderedURIs, r.uri)
-		res.PanelFiles[r.url] = newIdx
-		// addedMap を更新（同じURLが複数パネルで使われている場合のため）
-		addedMap[r.url] = newIdx
+	// 決定論的な順序のためにURLでソート
+	sort.Slice(panelRefs, func(i, j int) bool {
+		return panelRefs[i].ReferenceURL < panelRefs[j].ReferenceURL
+	})
+
+	// 3. ソート済みパネル参照を OrderedAssets に追加し、インデックスを確定
+	for _, r := range panelRefs {
+		newIdx := len(res.OrderedAssets)
+		res.OrderedAssets = append(res.OrderedAssets, r)
+		res.PanelFiles[r.ReferenceURL] = newIdx
+		addedMap[r.ReferenceURL] = newIdx
 	}
 
-	// 最後に、複数のパネルで同じ ReferenceURL が使われていた場合のマッピングを補完
+	// 4. 重複していた ReferenceURL のマッピングを補完
 	for _, p := range panels {
 		if p.ReferenceURL != "" {
 			if idx, ok := addedMap[p.ReferenceURL]; ok && idx != -1 {

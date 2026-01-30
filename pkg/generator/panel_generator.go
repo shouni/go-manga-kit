@@ -65,7 +65,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			logger.Info("Starting panel generation (4K mode)")
 
 			startTime := time.Now()
-			// 修正ポイント: ImageURI 構造体と ImageSize4K の適用
 			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         userPrompt,
 				SystemPrompt:   systemPrompt,
