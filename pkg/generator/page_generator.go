@@ -14,15 +14,17 @@ import (
 )
 
 type PageGenerator struct {
-	composer *MangaComposer
-	pb       prompts.ImagePrompt
+	composer         *MangaComposer
+	pb               prompts.ImagePrompt
+	maxPanelsPerPage int
 }
 
 // NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
-func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PageGenerator {
+func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt, size int) *PageGenerator {
 	return &PageGenerator{
-		composer: composer,
-		pb:       pb,
+		composer:         composer,
+		pb:               pb,
+		maxPanelsPerPage: size,
 	}
 }
 
@@ -41,9 +43,9 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	}
 
 	// 2. ページ分割と並列実行の準備
-	maxPanels := pg.composer.Config.MaxPanelsPerPage
+	maxPanels := pg.maxPanelsPerPage
 	if maxPanels <= 0 {
-		maxPanels = DefaultMaxPanelsPerPage
+		maxPanels = defaultMaxPanelsPerPage
 	}
 
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)

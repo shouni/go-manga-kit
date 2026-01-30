@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
 	"github.com/shouni/gemini-image-kit/pkg/generator"
@@ -15,7 +14,6 @@ import (
 )
 
 type MangaComposer struct {
-	Config               config.Config
 	AssetManager         generator.AssetManager
 	ImageGenerator       generator.ImageGenerator
 	CharactersMap        domain.CharactersMap
@@ -28,14 +26,12 @@ type MangaComposer struct {
 
 // NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
 func NewMangaComposer(
-	config config.Config,
 	assetMgr generator.AssetManager,
 	imgGen generator.ImageGenerator,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
 ) *MangaComposer {
 	return &MangaComposer{
-		Config:               config,
 		AssetManager:         assetMgr,
 		ImageGenerator:       imgGen,
 		CharactersMap:        cm,

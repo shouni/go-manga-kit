@@ -35,7 +35,7 @@ func (m *Manager) BuildPanelImageRunner() (PanelImageRunner, error) {
 
 // BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *Manager) BuildPageImageRunner() (PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt)
+	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt, m.cfg.MaxPanelsPerPage)
 
 	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
 }
