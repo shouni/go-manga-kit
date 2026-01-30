@@ -23,6 +23,9 @@ type Config struct {
 	StyleSuffix  string
 	RateInterval time.Duration
 
+	// --- Layout Settings ---
+	MaxPanelsPerPage int
+
 	// --- Timeout & Retries ---
 	RequestTimeout time.Duration
 }
