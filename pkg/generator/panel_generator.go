@@ -62,7 +62,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				"seed", finalSeed,
 				"use_file_api", fileURI != "",
 			)
-			logger.Info("Starting panel generation (4K mode)")
+			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
 			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
