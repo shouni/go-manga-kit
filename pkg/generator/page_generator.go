@@ -110,7 +110,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		Seed:           &seed,
 	}
 
-	slog.Info("Requesting AI image generation (4K mode)",
+	slog.Info("Requesting AI image generation",
 		"title", manga.Title,
 		"seed", seed,
 		"total_assets", len(resMap.OrderedAssets),
