@@ -147,7 +147,7 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	return strings.Join(promptParts, ", ")
 }
 
-// collectCharacterAssets キャラクター情報を収集し、参照URLと説明文を返します。
+// collectCharacterURIs はキャラクター情報を収集し、ImageURIスライスと説明文を返します。
 func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imgdom.ImageURI, []string, error) {
 	var uris []imgdom.ImageURI
 	var descriptions []string
@@ -166,8 +166,13 @@ func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imgdom.ImageU
 			continue
 		}
 
-		// File API URI があれば取得、なければ空文字のまま ImageURI を作成
+		// File API URI があれば取得
 		fileURI := dr.composer.CharacterResourceMap[char.ID]
+
+		if char.ReferenceURL == "" && fileURI == "" {
+			slog.Warn("キャラクターに有効な参照画像がないためスキップします", "id", id)
+			continue
+		}
 
 		uris = append(uris, imgdom.ImageURI{
 			ReferenceURL: char.ReferenceURL,
@@ -183,6 +188,10 @@ func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imgdom.ImageU
 
 	if len(missingIDs) > 0 {
 		return nil, nil, fmt.Errorf("一部のキャラクターIDが見つかりませんでした: %s", strings.Join(missingIDs, ", "))
+	}
+
+	if len(uris) == 0 {
+		return nil, nil, fmt.Errorf("有効な参照画像を持つキャラクターが1つも見つかりませんでした (対象ID: %s)", strings.Join(ids, ", "))
 	}
 
 	return uris, descriptions, nil
