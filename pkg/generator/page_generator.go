@@ -20,11 +20,11 @@ type PageGenerator struct {
 }
 
 // NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
-func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt, size int) *PageGenerator {
+func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt, maxPanelsPerPage int) *PageGenerator {
 	return &PageGenerator{
 		composer:         composer,
 		pb:               pb,
-		maxPanelsPerPage: size,
+		maxPanelsPerPage: maxPanelsPerPage,
 	}
 }
 
