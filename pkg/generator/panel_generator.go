@@ -27,7 +27,6 @@ func NewPanelGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PanelGe
 }
 
 // Execute は、並列処理を用いてパネル群を生成します。
-// 事前にキャラクターリソースを準備し、各パネルの画像生成を並行して実行します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
 	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
@@ -56,7 +55,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			fileURI := pg.composer.CharacterResourceMap[char.ID]
 			pg.composer.mu.RUnlock()
 
-			// character_name を追加し、デバッグ性を向上
 			logger := slog.With(
 				"panel_index", i+1,
 				"character_id", char.ID,
@@ -64,17 +62,21 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				"seed", finalSeed,
 				"use_file_api", fileURI != "",
 			)
-			logger.Info("Starting panel generation")
+			logger.Info("Starting panel generation (4K mode)")
 
 			startTime := time.Now()
+			// 修正ポイント: ImageURI 構造体と ImageSize4K の適用
 			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         userPrompt,
-				NegativePrompt: prompts.NegativePanelPrompt,
 				SystemPrompt:   systemPrompt,
-				Seed:           &finalSeed,
-				FileAPIURI:     fileURI,
-				ReferenceURL:   char.ReferenceURL,
+				NegativePrompt: prompts.NegativePanelPrompt,
 				AspectRatio:    PanelAspectRatio,
+				ImageSize:      ImageSize1K,
+				Image: imagedom.ImageURI{
+					FileAPIURI:   fileURI,
+					ReferenceURL: char.ReferenceURL,
+				},
+				Seed: &finalSeed,
 			})
 			if err != nil {
 				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", i+1, char.ID, err)

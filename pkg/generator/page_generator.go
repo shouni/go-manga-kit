@@ -89,7 +89,6 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 }
 
 // generateMangaPage は、提供されたマンガレスポンスとAIベースの画像生成用のシードを使用して、マンガページの画像を生成します。
-// 必要なリソースを収集し、プロンプトを作成し、ImageGeneratorコンポーネントを介して画像生成を要求します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
 	// 1. リソース収集とインデックスマッピングの作成
 	resMap, err := pg.collectResources(manga.Panels)
@@ -97,25 +96,32 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		return nil, fmt.Errorf("failed to collect resources: %w", err)
 	}
 
-	// 2. プロンプト構築 (ResourceMap を渡すように pb 側を調整済みと想定)
+	// 2. プロンプト構築
 	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
+
+	// 3. ImageURI 構造体のスライスを作成
+	imageURIs := make([]imagedom.ImageURI, len(resMap.OrderedURIs))
+	for i := range resMap.OrderedURIs {
+		imageURIs[i] = imagedom.ImageURI{
+			ReferenceURL: resMap.OrderedURLs[i],
+			FileAPIURI:   resMap.OrderedURIs[i],
+		}
+	}
 
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
 		NegativePrompt: prompts.NegativePagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
+		ImageSize:      ImageSize2K,
+		Images:         imageURIs,
 		Seed:           &seed,
-		ReferenceURLs:  resMap.OrderedURLs,
-		FileAPIURIs:    resMap.OrderedURIs,
 	}
 
-	slog.Info("Requesting AI image generation",
+	slog.Info("Requesting AI image generation (4K mode)",
 		"title", manga.Title,
 		"seed", seed,
-		"character_resources", len(resMap.CharacterFiles),
-		"panel_resources", len(resMap.PanelFiles),
-		"total_files", len(resMap.OrderedURIs),
+		"total_assets", len(imageURIs),
 	)
 
 	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
