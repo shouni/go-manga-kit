@@ -15,6 +15,16 @@ import (
 	"google.golang.org/genai"
 )
 
+type ManagerArgs struct {
+	Config        config.Config
+	HTTPClient    httpkit.ClientInterface
+	Reader        remoteio.InputReader
+	Writer        remoteio.OutputWriter
+	CharactersMap domain.CharactersMap
+	ScriptPrompt  prompts.ScriptPrompt
+	ImagePrompt   prompts.ImagePrompt
+}
+
 // Manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type Manager struct {
 	cfg           config.Config
@@ -27,7 +37,16 @@ type Manager struct {
 	mangaComposer *generator.MangaComposer
 }
 
-// New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
+// Runners は、構築済みの各 Runner を保持します。
+type Runners struct {
+	Design     DesignRunner
+	Script     ScriptRunner
+	PanelImage PanelImageRunner
+	PageImage  PageImageRunner
+	Publish    PublishRunner
+}
+
+// New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	if args.HTTPClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
@@ -71,6 +90,38 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		scriptPrompt:  scriptPrompt,
 		imagePrompt:   imagePrompt,
 		mangaComposer: mangaComposer,
+	}, nil
+}
+
+// BuildRunners は、ワークフロー プロセスを管理するために必要なすべてのランナーを含むワークフローを初期化して返します。
+func (m *Manager) BuildRunners() (*Runners, error) {
+	dr, err := m.buildDesignRunner()
+	if err != nil {
+		return nil, fmt.Errorf("DesignRunner のビルドに失敗しました: %w", err)
+	}
+	sr, err := m.buildScriptRunner()
+	if err != nil {
+		return nil, fmt.Errorf("ScriptRunner のビルドに失敗しました: %w", err)
+	}
+	panR, err := m.buildPanelImageRunner()
+	if err != nil {
+		return nil, fmt.Errorf("PanelImageRunner のビルドに失敗しました: %w", err)
+	}
+	pagR, err := m.buildPageImageRunner()
+	if err != nil {
+		return nil, fmt.Errorf("PageImageRunner のビルドに失敗しました: %w", err)
+	}
+	pubR, err := m.buildPublishRunner()
+	if err != nil {
+		return nil, fmt.Errorf("PublishRunner のビルドに失敗しました: %w", err)
+	}
+
+	return &Runners{
+		Design:     dr,
+		Script:     sr,
+		PanelImage: panR,
+		PageImage:  pagR,
+		Publish:    pubR,
 	}, nil
 }
 

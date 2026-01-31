@@ -9,15 +9,6 @@ import (
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
-// Workflow は、漫画生成ワークフローの各工程を担当するRunnerを構築するためのインターフェースを定義します。
-type Workflow interface {
-	BuildDesignRunner() (DesignRunner, error)
-	BuildScriptRunner() (ScriptRunner, error)
-	BuildPanelImageRunner() (PanelImageRunner, error)
-	BuildPageImageRunner() (PageImageRunner, error)
-	BuildPublishRunner() (PublishRunner, error)
-}
-
 // DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。
 type DesignRunner interface {
 	Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error)
