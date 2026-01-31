@@ -30,24 +30,27 @@ func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, char *domain.Charac
 
 	// --- 2. User Prompt の構築 ---
 	var visualParts []string
-
-	// キャラクター情報を取得
 	speakerID := panel.SpeakerID
 	displayName := char.Name
 
-	// 編集者AIが生成した VisualAnchorをベースにする
+	// アイデンティティの固定を最優先
+	// プロンプトの先頭に「名前 + 外見的特徴」を置くことで、キャラクターの再現度を最大化します。
+	identityBase := fmt.Sprintf("%s character", displayName)
+	if len(char.VisualCues) > 0 {
+		identityBase = fmt.Sprintf("%s, %s", identityBase, strings.Join(char.VisualCues, ", "))
+	}
+	visualParts = append(visualParts, identityBase)
+
+	// 編集者AIが生成した VisualAnchor (アクション・構図・背景)
+	// IDを表示名に置換して結合します。
 	if panel.VisualAnchor != "" {
 		anchor := strings.ReplaceAll(panel.VisualAnchor, speakerID, displayName)
 		visualParts = append(visualParts, anchor)
 	} else {
-		// 万が一 Anchor が空の場合のフォールバック
-		visualParts = append(visualParts, fmt.Sprintf("%s character, character focus", displayName))
+		// フォールバック
+		visualParts = append(visualParts, "character focus, cinematic scene")
 	}
 
-	// キャラクター固有のビジュアル特徴 (VisualCues) を追加
-	if len(char.VisualCues) > 0 {
-		visualParts = append(visualParts, char.VisualCues...)
-	}
 	visualParts = append(visualParts, "vibrant full color", "cinematic lighting", "high quality")
 
 	// --- 3. プロンプトのクリーンな結合 ---
