@@ -166,8 +166,20 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 		if panel.Dialogue != "" {
 			fmt.Fprintf(w, "- SPEECH: Speech bubble for [%s].\n", displayName)
 			fmt.Fprintf(w, "  - TEXT_TO_RENDER: \"%s\"\n", formatDialogue(panel.Dialogue))
-			w.WriteString("  - TYPOGRAPHY: Use professional Japanese manga font (Gothic or Mincho style).\n")
-			w.WriteString("  - LANGUAGE: Japanese characters. Ensure each Kanji/Kana is rendered accurately and legibly.\n")
+
+			direction := "Vertical (Tategaki)"
+			layoutDesc := "traditional Japanese manga style layout"
+
+			// 10文字以下の短いセリフや、感嘆符(!?)が多い場合は横書きも検討する指示
+			if len([]rune(panel.Dialogue)) <= 10 && (strings.Contains(panel.Dialogue, "!") || strings.Contains(panel.Dialogue, "?")) {
+				// 短い叫びなどはインパクト重視で「横書き」を許可する指示を混ぜる
+				direction = "Horizontal (Yokogaki) or Vertical"
+				layoutDesc = "bold and high impact placement"
+			}
+
+			fmt.Fprintf(w, "  - TEXT_DIRECTION: %s\n", direction)
+			fmt.Fprintf(w, "  - TYPOGRAPHY: Use professional Japanese manga font (Gothic/Mincho). %s.\n", layoutDesc)
+			w.WriteString("  - LANGUAGE: Japanese characters. Ensure accurate rendering of Kanji/Kana.\n")
 		}
 		w.WriteString("\n")
 
