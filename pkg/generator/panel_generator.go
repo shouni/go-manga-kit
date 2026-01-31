@@ -44,12 +44,13 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				return err
 			}
 
+			// キャラクター情報を取得
 			char := cm.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
 				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
 			}
-
-			userPrompt, systemPrompt, finalSeed := pg.pb.BuildPanel(panel, char.ID)
+			finalSeed := char.Seed
+			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
 
 			pg.composer.mu.RLock()
 			fileURI := pg.composer.CharacterResourceMap[char.ID]
