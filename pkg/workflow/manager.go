@@ -39,11 +39,11 @@ type Manager struct {
 
 // Runners は、構築済みの各 Runner を保持します。
 type Runners struct {
-	DesignRunner     DesignRunner
-	ScriptRunner     ScriptRunner
-	PanelImageRunner PanelImageRunner
-	PageImageRunner  PageImageRunner
-	PublishRunner    PublishRunner
+	Design     DesignRunner
+	Script     ScriptRunner
+	PanelImage PanelImageRunner
+	PageImage  PageImageRunner
+	Publish    PublishRunner
 }
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
