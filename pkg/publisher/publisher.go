@@ -63,7 +63,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	for _, panel := range manga.Panels {
 		var relPath string
 		if panel.ReferenceURL != "" {
-			relPath = path.Join(asset.DefaultImageDir, filepath.Base(panel.ReferenceURL))
+			relPath = path.Join(asset.DefaultImageDir, path.Base(panel.ReferenceURL))
 		}
 		imagePaths = append(imagePaths, relPath)
 	}
@@ -107,10 +107,9 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 
 	// パネルごとの出力
 	for i, panel := range manga.Panels {
-		hasImage := i < len(imagePaths) && imagePaths[i] != ""
+		hasImage := imagePaths[i] != ""
 		hasDialogue := panel.Dialogue != ""
 
-		// 画像もセリフもないパネル（ト書きのみ等）は、表示上のノイズになるためスキップ
 		if !hasImage && !hasDialogue {
 			continue
 		}
@@ -127,15 +126,15 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 		// 2. セリフを出力
 		if hasDialogue {
 			if panel.SpeakerID != "" {
-				// 話者名を強調
 				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", panel.SpeakerID, panel.Dialogue))
 			} else {
 				sb.WriteString(fmt.Sprintf("%s\n\n", panel.Dialogue))
 			}
 		}
 
-		// パネル間のセパレーター
-		sb.WriteString("---\n\n")
+		if i < len(manga.Panels)-1 {
+			sb.WriteString("---\n\n")
+		}
 	}
 
 	return sb.String()
