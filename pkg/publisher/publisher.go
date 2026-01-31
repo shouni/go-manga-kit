@@ -84,7 +84,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 			return result, fmt.Errorf("HTML 変換に失敗: %w", err)
 		}
 
-		// Markdown のパスをベースに .html 拡張子へ置換
+		// HTMLファイル拡張子の置換には filepath.Ext を継続利用 (ローカルパス操作のため)
 		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
 			return result, fmt.Errorf("HTML ファイルの書き込みに失敗: %w", err)
@@ -100,42 +100,66 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 	var sb strings.Builder
 
 	// タイトルと説明文
-	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
+	sb.WriteString(fmt.Sprintf("# %s\n\n", escapeMarkdown(manga.Title)))
 	if manga.Description != "" {
-		sb.WriteString(manga.Description + "\n\n")
+		sb.WriteString(escapeMarkdown(manga.Description) + "\n\n")
 	}
 
-	// パネルごとの出力
+	firstPanel := true
 	for i, panel := range manga.Panels {
-		hasImage := imagePaths[i] != ""
+		// 防御的実装: 並行配列の境界チェック
+		var currentImagePath string
+		if i < len(imagePaths) {
+			currentImagePath = imagePaths[i]
+		}
+
+		hasImage := currentImagePath != ""
 		hasDialogue := panel.Dialogue != ""
 
 		if !hasImage && !hasDialogue {
 			continue
 		}
 
-		// 1. 画像が存在する場合のみ Markdown 記法を出力
+		// パネル間のセパレーター (2枚目以降の有効なパネルの前に挿入)
+		if !firstPanel {
+			sb.WriteString("---\n\n")
+		}
+		firstPanel = false
+
+		// 1. 画像の出力
 		if hasImage {
 			altText := panel.VisualAnchor
 			if altText == "" {
 				altText = fmt.Sprintf("Panel %d", i+1)
 			}
-			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", altText, imagePaths[i]))
+			// altText もエスケープして属性値の崩れを防止
+			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", escapeMarkdown(altText), currentImagePath))
 		}
 
-		// 2. セリフを出力
+		// 2. セリフの出力 (話者と内容をエスケープ)
 		if hasDialogue {
+			dialogue := escapeMarkdown(panel.Dialogue)
 			if panel.SpeakerID != "" {
-				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", panel.SpeakerID, panel.Dialogue))
+				speaker := escapeMarkdown(panel.SpeakerID)
+				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", speaker, dialogue))
 			} else {
-				sb.WriteString(fmt.Sprintf("%s\n\n", panel.Dialogue))
+				sb.WriteString(fmt.Sprintf("%s\n\n", dialogue))
 			}
-		}
-
-		if i < len(manga.Panels)-1 {
-			sb.WriteString("---\n\n")
 		}
 	}
 
 	return sb.String()
+}
+
+// escapeMarkdown は Markdown の制御文字をエスケープして表示の整合性を保ちます。
+func escapeMarkdown(text string) string {
+	replacer := strings.NewReplacer(
+		"*", "\\*",
+		"_", "\\_",
+		"[", "\\[",
+		"]", "\\]",
+		"#", "\\#",
+		"`", "\\`",
+	)
+	return replacer.Replace(text)
 }
