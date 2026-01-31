@@ -76,7 +76,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	result.ImagePaths = imagePaths
 
 	// Markdown 文字列の構築
-	content := p.BuildMarkdownOnly(manga, imagePaths)
+	content := p.BuildMarkdown(manga, imagePaths)
 
 	// Markdown の保存
 	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdownPath)
@@ -100,8 +100,9 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	return result, nil
 }
 
-// BuildMarkdownOnly は画像、話者、セリフ、確認用アンカーを含むMarkdownを構築します。
-func (p *MangaPublisher) BuildMarkdownOnly(manga *domain.MangaResponse, imagePaths []string) string {
+// BuildMarkdown は画像、話者、セリフ、確認用アンカーを含むMarkdownを構築します。
+// imagePaths が nil またはインデックスに対応する要素がない場合、manga.Panels 内の ReferenceURL が画像のパスとして使用されます
+func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 
 	// タイトルと説明文

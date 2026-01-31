@@ -34,7 +34,7 @@ type PanelImageRunner interface {
 	RunAndSave(ctx context.Context, manga *domain.MangaResponse, scriptPath string) (*domain.MangaResponse, error)
 }
 
-// PageImageRunner は、指定されたパスのMarkdownコンテンツから漫画のページ画像を生成する責務を持ちます。
+// PageImageRunner は、解析済みの漫画データから漫画のページ画像を生成する責務を持ちます。
 type PageImageRunner interface {
 	Run(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error)
 	RunAndSave(ctx context.Context, manga *domain.MangaResponse, plotPath string) ([]string, error)

@@ -34,5 +34,5 @@ func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga *domain.MangaRe
 func (pr *DefaultPublisherRunner) BuildMarkdown(manga *domain.MangaResponse) string {
 	// 内部の publisher.BuildMarkdownOnly を呼び出す
 	// 第2引数の imagePaths を nil にすることで、構造体内のパス（署名付きURLなど）をそのまま使用します
-	return pr.publisher.BuildMarkdownOnly(manga, nil)
+	return pr.publisher.BuildMarkdown(manga, nil)
 }
