@@ -117,11 +117,11 @@ func (m *Manager) BuildRunners() (*Runners, error) {
 	}
 
 	return &Runners{
-		DesignRunner:     dr,
-		ScriptRunner:     sr,
-		PanelImageRunner: panR,
-		PageImageRunner:  pagR,
-		PublishRunner:    pubR,
+		Design:     dr,
+		Script:     sr,
+		PanelImage: panR,
+		PageImage:  pagR,
+		Publish:    pubR,
 	}, nil
 }
 
