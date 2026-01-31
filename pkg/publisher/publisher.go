@@ -100,8 +100,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	return result, nil
 }
 
-// BuildMarkdownOnly は画像、話者、セリフを含む Markdown 文字列のみを生成して返却します。
-// imagePaths が指定されている場合はそちらを優先し、nil の場合は構造体内の ReferenceURL を使用します。
+// BuildMarkdownOnly は画像、話者、セリフ、確認用アンカーを含むMarkdownを構築します。
 func (p *MangaPublisher) BuildMarkdownOnly(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 
@@ -114,7 +113,6 @@ func (p *MangaPublisher) BuildMarkdownOnly(manga *domain.MangaResponse, imagePat
 	firstPanel := true
 	for i, panel := range manga.Panels {
 		var currentImagePath string
-		// 引数 imagePaths があれば優先、なければ構造体内の URL を使う
 		if i < len(imagePaths) {
 			currentImagePath = imagePaths[i]
 		} else {
@@ -132,14 +130,12 @@ func (p *MangaPublisher) BuildMarkdownOnly(manga *domain.MangaResponse, imagePat
 		}
 		firstPanel = false
 
+		// 1. 画像の出力
 		if hasImage {
-			altText := panel.VisualAnchor
-			if altText == "" {
-				altText = fmt.Sprintf("Panel %d", i+1)
-			}
-			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", escapeMarkdown(altText), currentImagePath))
+			sb.WriteString(fmt.Sprintf("![Panel %d](%s)\n\n", i+1, currentImagePath))
 		}
 
+		// 2. セリフの出力
 		if hasDialogue {
 			dialogue := escapeMarkdown(panel.Dialogue)
 			if panel.SpeakerID != "" {
@@ -147,6 +143,11 @@ func (p *MangaPublisher) BuildMarkdownOnly(manga *domain.MangaResponse, imagePat
 			} else {
 				sb.WriteString(fmt.Sprintf("%s\n\n", dialogue))
 			}
+		}
+
+		// 3. VisualAnchor の出力
+		if panel.VisualAnchor != "" {
+			sb.WriteString(fmt.Sprintf("> **Visual Anchor:** %s\n\n", escapeMarkdown(panel.VisualAnchor)))
 		}
 	}
 
