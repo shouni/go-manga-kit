@@ -32,9 +32,8 @@ func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResp
 }
 
 // BuildMarkdown は保存処理を行わず、構造体から Markdown 文字列のみを生成して返却します。
-// Webハンドラーでの表示用などで、署名付きURLに置換済みのデータを扱う際に便利です。
 func (pr *MangaPublisherRunner) BuildMarkdown(manga *domain.MangaResponse) string {
-	// 内部の publisher.BuildMarkdown を呼び出します。
-	// 第2引数の imagePaths を nil にすることで、構造体内の ReferenceURL（署名付きURLなど）を優先して使用します。
-	return pr.publisher.BuildMarkdown(manga, nil)
+	// publisher.Options を空で渡すことで、外部パス指定を行わず、
+	// domain.MangaResponse 内の ReferenceURL をそのまま使用するデフォルト挙動を選択します。
+	return pr.publisher.BuildMarkdown(manga, publisher.Options{})
 }

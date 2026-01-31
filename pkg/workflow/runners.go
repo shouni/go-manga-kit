@@ -57,5 +57,5 @@ func (m *Manager) BuildPublishRunner() (PublishRunner, error) {
 
 	pub := publisher.NewMangaPublisher(m.writer, md2htmlRunner)
 
-	return runner.NewDefaultPublisherRunner(m.cfg, pub), nil
+	return runner.NewMangaPublisherRunner(m.cfg, pub), nil
 }

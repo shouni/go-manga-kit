@@ -25,9 +25,10 @@ var markdownEscaper = strings.NewReplacer(
 	">", "&gt;",
 )
 
-// Options はパブリッシュ動作を制御する設定項目です。
+// Options はパブリッシュ動作および Markdown 構築を制御する設定項目です。
 type Options struct {
-	OutputDir string
+	OutputDir  string
+	ImagePaths []string // 明示的に画像パスを指定する場合に使用。空なら ReferenceURL を使用します。
 }
 
 // PublishResult はパブリッシュ処理の結果として生成されたファイルの情報を保持します。
@@ -64,7 +65,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	}
 	result.MarkdownPath = markdownPath
 
-	// 保存用に相対パスリストを作成
+	// 保存用に相対パスリストを作成し、opts にセットする
 	imagePaths := make([]string, 0, len(manga.Panels))
 	for _, panel := range manga.Panels {
 		var relPath string
@@ -74,9 +75,10 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 		imagePaths = append(imagePaths, relPath)
 	}
 	result.ImagePaths = imagePaths
+	opts.ImagePaths = imagePaths // 構築用にセット
 
-	// Markdown 文字列の構築
-	content := p.BuildMarkdown(manga, imagePaths)
+	// 共通の BuildMarkdown を使用
+	content := p.BuildMarkdown(manga, opts)
 
 	// Markdown の保存
 	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdownPath)
@@ -100,9 +102,8 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	return result, nil
 }
 
-// BuildMarkdown は画像、話者、セリフ、確認用アンカーを含むMarkdownを構築します。
-// imagePaths が nil またはインデックスに対応する要素がない場合、manga.Panels 内の ReferenceURL が画像のパスとして使用されます
-func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
+// BuildMarkdown は画像、話者、セリフ、確認用アンカーを含む Markdown を構築します。
+func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, opts Options) string {
 	var sb strings.Builder
 
 	// タイトルと説明文
@@ -114,30 +115,28 @@ func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, imagePaths [
 	firstPanel := true
 	for i, panel := range manga.Panels {
 		var currentImagePath string
-		if i < len(imagePaths) {
-			currentImagePath = imagePaths[i]
+		// opts.ImagePaths が指定されていればそれを使用し、なければ構造体の ReferenceURL を使用
+		if i < len(opts.ImagePaths) && opts.ImagePaths[i] != "" {
+			currentImagePath = opts.ImagePaths[i]
 		} else {
 			currentImagePath = panel.ReferenceURL
 		}
 
-		hasImage := currentImagePath != ""
-		hasDialogue := panel.Dialogue != ""
-		if !hasImage && !hasDialogue {
+		if currentImagePath == "" && panel.Dialogue == "" {
 			continue
 		}
-
 		if !firstPanel {
 			sb.WriteString("---\n\n")
 		}
 		firstPanel = false
 
-		// 1. 画像の出力
-		if hasImage {
+		// 1. 画像
+		if currentImagePath != "" {
 			sb.WriteString(fmt.Sprintf("![Panel %d](%s)\n\n", i+1, currentImagePath))
 		}
 
-		// 2. セリフの出力
-		if hasDialogue {
+		// 2. セリフ
+		if panel.Dialogue != "" {
 			dialogue := escapeMarkdown(panel.Dialogue)
 			if panel.SpeakerID != "" {
 				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", escapeMarkdown(panel.SpeakerID), dialogue))
@@ -146,7 +145,7 @@ func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, imagePaths [
 			}
 		}
 
-		// 3. VisualAnchor の出力
+		// 3. VisualAnchor
 		if panel.VisualAnchor != "" {
 			sb.WriteString(fmt.Sprintf("> **Visual Anchor:** %s\n\n", escapeMarkdown(panel.VisualAnchor)))
 		}
