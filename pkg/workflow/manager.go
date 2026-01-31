@@ -37,8 +37,8 @@ type Manager struct {
 	mangaComposer *generator.MangaComposer
 }
 
-// Workflow は、構築済みの各 Runner を保持します。
-type Workflow struct {
+// Runners は、構築済みの各 Runner を保持します。
+type Runners struct {
 	DesignRunner     DesignRunner
 	ScriptRunner     ScriptRunner
 	PanelImageRunner PanelImageRunner
@@ -46,7 +46,7 @@ type Workflow struct {
 	PublishRunner    PublishRunner
 }
 
-// New は、New は、設定とキャラクター定義を基に新しい Manager を初期化します。
+// New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	if args.HTTPClient == nil {
 		return nil, fmt.Errorf("httpClient は必須です")
@@ -94,7 +94,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 }
 
 // BuildRunners は、ワークフロー プロセスを管理するために必要なすべてのランナーを含むワークフローを初期化して返します。
-func (m *Manager) BuildRunners() (*Workflow, error) {
+func (m *Manager) BuildRunners() (*Runners, error) {
 	dr, err := m.buildDesignRunner()
 	if err != nil {
 		return nil, fmt.Errorf("DesignRunner のビルドに失敗しました: %w", err)
@@ -116,7 +116,7 @@ func (m *Manager) BuildRunners() (*Workflow, error) {
 		return nil, fmt.Errorf("PublishRunner のビルドに失敗しました: %w", err)
 	}
 
-	return &Workflow{
+	return &Runners{
 		DesignRunner:     dr,
 		ScriptRunner:     sr,
 		PanelImageRunner: panR,
