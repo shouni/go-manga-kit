@@ -11,8 +11,8 @@ import (
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
-// BuildScriptRunner は、台本生成を担当する Runner を作成します。
-func (m *Manager) BuildScriptRunner() (ScriptRunner, error) {
+// buildScriptRunner は、台本生成を担当する Runner を作成します。
+func (m *Manager) buildScriptRunner() (ScriptRunner, error) {
 	extractor, err := extract.NewExtractor(m.httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
@@ -21,27 +21,27 @@ func (m *Manager) BuildScriptRunner() (ScriptRunner, error) {
 	return runner.NewMangaScriptRunner(m.cfg, extractor, m.scriptPrompt, m.aiClient, m.reader), nil
 }
 
-// BuildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
-func (m *Manager) BuildDesignRunner() (DesignRunner, error) {
+// buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
+func (m *Manager) buildDesignRunner() (DesignRunner, error) {
 	return runner.NewMangaDesignRunner(m.cfg, m.mangaComposer, m.writer), nil
 }
 
-// BuildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
-func (m *Manager) BuildPanelImageRunner() (PanelImageRunner, error) {
+// buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
+func (m *Manager) buildPanelImageRunner() (PanelImageRunner, error) {
 	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.imagePrompt)
 
 	return runner.NewMangaPanelRunner(m.cfg, panelsGen, m.writer), nil
 }
 
-// BuildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
-func (m *Manager) BuildPageImageRunner() (PageImageRunner, error) {
+// buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
+func (m *Manager) buildPageImageRunner() (PageImageRunner, error) {
 	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt, m.cfg.MaxPanelsPerPage)
 
 	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
 }
 
-// BuildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
-func (m *Manager) BuildPublishRunner() (PublishRunner, error) {
+// buildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
+func (m *Manager) buildPublishRunner() (PublishRunner, error) {
 	htmlCfg := builder.BuilderConfig{
 		EnableHardWraps: true,
 		Mode:            "webtoon",
