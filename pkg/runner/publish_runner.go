@@ -8,20 +8,22 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
-// DefaultPublisherRunner は pkg/publisher を利用した標準実装なのだ。
-type DefaultPublisherRunner struct {
+// MangaPublisherRunner は pkg/publisher を利用して漫画成果物の公開と構築を担います。
+type MangaPublisherRunner struct {
 	cfg       config.Config
 	publisher *publisher.MangaPublisher
 }
 
-func NewDefaultPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher) *DefaultPublisherRunner {
-	return &DefaultPublisherRunner{
+// NewMangaPublisherRunner は、指定された構成と MangaPublisher を持つ新しい MangaPublisherRunner インスタンスを作成します。
+func NewMangaPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher) *MangaPublisherRunner {
+	return &MangaPublisherRunner{
 		cfg:       cfg,
 		publisher: pub,
 	}
 }
 
-func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (publisher.PublishResult, error) {
+// Run は漫画データの公開処理を実行し、Markdown や HTML などの成果物を指定された出力ディレクトリに保存します。
+func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (publisher.PublishResult, error) {
 	opts := publisher.Options{
 		OutputDir: outputDir,
 	}
@@ -31,8 +33,8 @@ func (pr *DefaultPublisherRunner) Run(ctx context.Context, manga *domain.MangaRe
 
 // BuildMarkdown は保存処理を行わず、構造体から Markdown 文字列のみを生成して返却します。
 // Webハンドラーでの表示用などで、署名付きURLに置換済みのデータを扱う際に便利です。
-func (pr *DefaultPublisherRunner) BuildMarkdown(manga *domain.MangaResponse) string {
-	// 内部の publisher.BuildMarkdownOnly を呼び出す
-	// 第2引数の imagePaths を nil にすることで、構造体内のパス（署名付きURLなど）をそのまま使用します
+func (pr *MangaPublisherRunner) BuildMarkdown(manga *domain.MangaResponse) string {
+	// 内部の publisher.BuildMarkdown を呼び出します。
+	// 第2引数の imagePaths を nil にすることで、構造体内の ReferenceURL（署名付きURLなど）を優先して使用します。
 	return pr.publisher.BuildMarkdown(manga, nil)
 }
