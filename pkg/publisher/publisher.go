@@ -5,13 +5,24 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-text-format/pkg/md2htmlrunner"
+)
+
+// markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
+var markdownEscaper = strings.NewReplacer(
+	"*", "\\*",
+	"_", "\\_",
+	"[", "\\[",
+	"]", "\\]",
+	"#", "\\#",
+	"`", "\\`",
+	"<", "&lt;",
+	">", "&gt;",
 )
 
 // Options はパブリッシュ動作を制御する設定項目です。
@@ -84,8 +95,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 			return result, fmt.Errorf("HTML 変換に失敗: %w", err)
 		}
 
-		// HTMLファイル拡張子の置換には filepath.Ext を継続利用 (ローカルパス操作のため)
-		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
+		htmlPath := strings.TrimSuffix(markdown, path.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
 			return result, fmt.Errorf("HTML ファイルの書き込みに失敗: %w", err)
 		}
@@ -120,7 +130,7 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 			continue
 		}
 
-		// パネル間のセパレーター (2枚目以降の有効なパネルの前に挿入)
+		// パネル間のセパレーター (有効なパネルの間のみ挿入)
 		if !firstPanel {
 			sb.WriteString("---\n\n")
 		}
@@ -132,11 +142,10 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 			if altText == "" {
 				altText = fmt.Sprintf("Panel %d", i+1)
 			}
-			// altText もエスケープして属性値の崩れを防止
 			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", escapeMarkdown(altText), currentImagePath))
 		}
 
-		// 2. セリフの出力 (話者と内容をエスケープ)
+		// 2. セリフの出力
 		if hasDialogue {
 			dialogue := escapeMarkdown(panel.Dialogue)
 			if panel.SpeakerID != "" {
@@ -151,15 +160,7 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 	return sb.String()
 }
 
-// escapeMarkdown は Markdown の制御文字をエスケープして表示の整合性を保ちます。
+// escapeMarkdown は Markdown の制御文字と HTML 特殊文字を安全に置換します。
 func escapeMarkdown(text string) string {
-	replacer := strings.NewReplacer(
-		"*", "\\*",
-		"_", "\\_",
-		"[", "\\[",
-		"]", "\\]",
-		"#", "\\#",
-		"`", "\\`",
-	)
-	return replacer.Replace(text)
+	return markdownEscaper.Replace(text)
 }
