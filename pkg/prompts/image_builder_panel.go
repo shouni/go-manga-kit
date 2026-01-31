@@ -13,7 +13,7 @@ const (
 )
 
 // BuildPanel は、単体パネル用の UserPrompt, SystemPrompt, およびシード値を生成します。
-func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, speakerID string) (userPrompt string, systemPrompt string, targetSeed int64) {
+func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, char *domain.Character) (userPrompt string, systemPrompt string) {
 	// --- 1. System Prompt の構築 ---
 	const mangaSystemInstruction = "You are a professional anime illustrator. Create a single high-quality cinematic scene with vibrant digital coloring."
 
@@ -28,38 +28,38 @@ func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, speakerID string) (
 	}
 	systemPrompt = strings.Join(systemParts, "\n\n")
 
-	// --- 2. キャラクター設定とアクションの構築 (User Prompt) ---
+	// --- 2. User Prompt の構築 ---
 	var visualParts []string
-	displayName := speakerID
+	speakerID := panel.SpeakerID
+	displayName := speakerID // デフォルトはIDを使用
+	var visualCues []string
 
-	// キャラクターの特定
-	char := pb.characterMap.GetCharacterWithDefault(speakerID)
 	if char != nil {
 		displayName = char.Name
-		targetSeed = char.Seed
-
-		// 1. まずキャラクターの固有名詞を主語として入れる
-		visualParts = append(visualParts, fmt.Sprintf("Subject: %s", displayName))
-
-		// 2. キャラクター固有のビジュアル特徴(VisualCues)を追加
-		if len(char.VisualCues) > 0 {
-			visualParts = append(visualParts, char.VisualCues...)
-		}
-	} else {
-		// キャラクターが見つからない場合のフォールバック
-		targetSeed = domain.GetSeedFromString(speakerID)
-		visualParts = append(visualParts, displayName)
+		visualCues = char.VisualCues
 	}
 
-	// 3. アクション/シーン描写(VisualAnchor)を追加
-	// IDを名前に置換して、文脈を明確にする
+	// アイデンティティの固定を最優先
+	identityBase := fmt.Sprintf("%s character", displayName)
+	if len(visualCues) > 0 {
+		identityBase = fmt.Sprintf("%s, %s", identityBase, strings.Join(visualCues, ", "))
+	}
+	visualParts = append(visualParts, identityBase)
+
+	// 編集者AIが生成した VisualAnchor (アクション・構図・背景)
+	// IDを表示名に置換して結合します。
 	if panel.VisualAnchor != "" {
-		actionDesc := strings.ReplaceAll(panel.VisualAnchor, speakerID, displayName)
-		visualParts = append(visualParts, fmt.Sprintf("Action: %s", actionDesc))
+		anchor := panel.VisualAnchor
+		if speakerID != "" {
+			anchor = strings.ReplaceAll(panel.VisualAnchor, speakerID, displayName)
+		}
+		visualParts = append(visualParts, anchor)
+	} else {
+		// フォールバック
+		visualParts = append(visualParts, "character focus, cinematic scene")
 	}
 
-	// 4. カラーと品質の最終念押し
-	visualParts = append(visualParts, "vibrant full color", "cinematic lighting")
+	visualParts = append(visualParts, "vibrant full color", "cinematic lighting", "high quality")
 
 	// --- 3. プロンプトのクリーンな結合 ---
 	var cleanParts []string
@@ -70,5 +70,5 @@ func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, speakerID string) (
 	}
 	userPrompt = strings.Join(cleanParts, ", ")
 
-	return userPrompt, systemPrompt, targetSeed
+	return userPrompt, systemPrompt
 }
