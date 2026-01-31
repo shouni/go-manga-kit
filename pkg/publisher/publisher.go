@@ -43,33 +43,28 @@ type MangaPublisher struct {
 	htmlRunner md2htmlrunner.Runner
 }
 
-// NewMangaPublisher は、指定された依存関係を持つMangaPublisherの新しいインスタンスを作成して返却します。
-func NewMangaPublisher(
-	writer remoteio.OutputWriter,
-	htmlRunner md2htmlrunner.Runner,
-) *MangaPublisher {
+// NewMangaPublisher は新しいインスタンスを作成します。
+func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer:     writer,
 		htmlRunner: htmlRunner,
 	}
 }
 
-// Publish はドメインモデルを基に Webtoon 形式の Markdown を構築し、HTML への変換・保存を実行します。
+// Publish はドメインモデルを基に Markdown を構築し、HTML への変換・保存を実行します。
 func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts Options) (PublishResult, error) {
 	result := PublishResult{}
-
 	if manga == nil {
 		return result, fmt.Errorf("manga データが nil です")
 	}
 
-	// 1. 出力パス（Markdown）の解決
-	markdown, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultMangaPlotName)
+	markdownPath, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultMangaPlotName)
 	if err != nil {
 		return result, fmt.Errorf("Markdown 出力パスの解決に失敗: %w", err)
 	}
-	result.MarkdownPath = markdown
+	result.MarkdownPath = markdownPath
 
-	// 2. 構造体内の ReferenceURL から画像パスリストを作成
+	// 保存用に相対パスリストを作成
 	imagePaths := make([]string, 0, len(manga.Panels))
 	for _, panel := range manga.Panels {
 		var relPath string
@@ -79,25 +74,25 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 		imagePaths = append(imagePaths, relPath)
 	}
 	result.ImagePaths = imagePaths
-	content := p.buildMarkdown(manga, imagePaths)
 
-	// 3. Markdown ファイルの書き出し
-	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdown)
-	if err := p.writer.Write(ctx, markdown, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
-		return result, fmt.Errorf("Markdown ファイルの書き込みに失敗: %w", err)
+	// Markdown 文字列の構築
+	content := p.BuildMarkdownOnly(manga, imagePaths)
+
+	// Markdown の保存
+	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdownPath)
+	if err := p.writer.Write(ctx, markdownPath, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
+		return result, fmt.Errorf("Markdown 書き込み失敗: %w", err)
 	}
 
-	// 4. HTML 変換と保存
+	// HTML の生成
 	if p.htmlRunner != nil {
-		slog.InfoContext(ctx, "HTML への変換を開始します", "title", manga.Title)
 		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
 		if err != nil {
-			return result, fmt.Errorf("HTML 変換に失敗: %w", err)
+			return result, fmt.Errorf("HTML 変換失敗: %w", err)
 		}
-
-		htmlPath := strings.TrimSuffix(markdown, path.Ext(markdown)) + ".html"
+		htmlPath := strings.TrimSuffix(markdownPath, path.Ext(markdownPath)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
-			return result, fmt.Errorf("HTML ファイルの書き込みに失敗: %w", err)
+			return result, fmt.Errorf("HTML 書き込み失敗: %w", err)
 		}
 		result.HTMLPath = htmlPath
 	}
@@ -105,8 +100,9 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	return result, nil
 }
 
-// buildMarkdown は画像、話者、セリフを含む Markdown を構築します。
-func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
+// BuildMarkdownOnly は画像、話者、セリフを含む Markdown 文字列のみを生成して返却します。
+// imagePaths が指定されている場合はそちらを優先し、nil の場合は構造体内の ReferenceURL を使用します。
+func (p *MangaPublisher) BuildMarkdownOnly(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 
 	// タイトルと説明文
@@ -117,26 +113,25 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 
 	firstPanel := true
 	for i, panel := range manga.Panels {
-		// 防御的実装: 並行配列の境界チェック
 		var currentImagePath string
+		// 引数 imagePaths があれば優先、なければ構造体内の URL を使う
 		if i < len(imagePaths) {
 			currentImagePath = imagePaths[i]
+		} else {
+			currentImagePath = panel.ReferenceURL
 		}
 
 		hasImage := currentImagePath != ""
 		hasDialogue := panel.Dialogue != ""
-
 		if !hasImage && !hasDialogue {
 			continue
 		}
 
-		// パネル間のセパレーター (有効なパネルの間のみ挿入)
 		if !firstPanel {
 			sb.WriteString("---\n\n")
 		}
 		firstPanel = false
 
-		// 1. 画像の出力
 		if hasImage {
 			altText := panel.VisualAnchor
 			if altText == "" {
@@ -145,12 +140,10 @@ func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths [
 			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", escapeMarkdown(altText), currentImagePath))
 		}
 
-		// 2. セリフの出力
 		if hasDialogue {
 			dialogue := escapeMarkdown(panel.Dialogue)
 			if panel.SpeakerID != "" {
-				speaker := escapeMarkdown(panel.SpeakerID)
-				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", speaker, dialogue))
+				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", escapeMarkdown(panel.SpeakerID), dialogue))
 			} else {
 				sb.WriteString(fmt.Sprintf("%s\n\n", dialogue))
 			}
