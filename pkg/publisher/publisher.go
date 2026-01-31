@@ -5,13 +5,24 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-text-format/pkg/md2htmlrunner"
+)
+
+// markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
+var markdownEscaper = strings.NewReplacer(
+	"*", "\\*",
+	"_", "\\_",
+	"[", "\\[",
+	"]", "\\]",
+	"#", "\\#",
+	"`", "\\`",
+	"<", "&lt;",
+	">", "&gt;",
 )
 
 // Options はパブリッシュ動作を制御する設定項目です。
@@ -25,8 +36,6 @@ type PublishResult struct {
 	HTMLPath     string   // 生成された HTML のパス
 	ImagePaths   []string // 保存された全画像のパスリスト
 }
-
-const placeholder = "placeholder.png"
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
@@ -60,11 +69,13 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	}
 	result.MarkdownPath = markdown
 
-	// 2. 構造体内の ReferenceURL から Markdown 用の相対パスリストを作成
+	// 2. 構造体内の ReferenceURL から画像パスリストを作成
 	imagePaths := make([]string, 0, len(manga.Panels))
 	for _, panel := range manga.Panels {
-		// ReferenceURL からファイル名を取得し、相対パスを構築
-		relPath := path.Join(asset.DefaultImageDir, filepath.Base(panel.ReferenceURL))
+		var relPath string
+		if panel.ReferenceURL != "" {
+			relPath = path.Join(asset.DefaultImageDir, path.Base(panel.ReferenceURL))
+		}
 		imagePaths = append(imagePaths, relPath)
 	}
 	result.ImagePaths = imagePaths
@@ -84,8 +95,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 			return result, fmt.Errorf("HTML 変換に失敗: %w", err)
 		}
 
-		// Markdown のパスをベースに .html 拡張子へ置換
-		htmlPath := strings.TrimSuffix(markdown, filepath.Ext(markdown)) + ".html"
+		htmlPath := strings.TrimSuffix(markdown, path.Ext(markdown)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
 			return result, fmt.Errorf("HTML ファイルの書き込みに失敗: %w", err)
 		}
@@ -95,35 +105,62 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	return result, nil
 }
 
-// buildMarkdown は WebtoonParser が解析可能な「純粋な画像リスト」形式の Markdown を生成します。
+// buildMarkdown は画像、話者、セリフを含む Markdown を構築します。
 func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 
-	// タイトルを出力
-	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-
-	// 説明文を引用符なしのプレーンテキストで出力（WebtoonParser が Description として抽出）
+	// タイトルと説明文
+	sb.WriteString(fmt.Sprintf("# %s\n\n", escapeMarkdown(manga.Title)))
 	if manga.Description != "" {
-		sb.WriteString(manga.Description + "\n\n")
+		sb.WriteString(escapeMarkdown(manga.Description) + "\n\n")
 	}
 
-	// パネルを画像記法として出力
+	firstPanel := true
 	for i, panel := range manga.Panels {
-		img := placeholder
-		if i < len(imagePaths) && imagePaths[i] != "" {
-			img = imagePaths[i]
+		// 防御的実装: 並行配列の境界チェック
+		var currentImagePath string
+		if i < len(imagePaths) {
+			currentImagePath = imagePaths[i]
 		}
 
-		// Altテキストには VisualAnchor (描画指示) を活用し、アクセシビリティを高める
-		altText := panel.VisualAnchor
-		if altText == "" {
-			altText = fmt.Sprintf("Panel %d", i+1)
+		hasImage := currentImagePath != ""
+		hasDialogue := panel.Dialogue != ""
+
+		if !hasImage && !hasDialogue {
+			continue
 		}
 
-		// セリフや話者情報のテキスト出力は、Webtoonの没入感を損なうためここでは意図的に除外。
-		// 画像（文字入り画像である前提）のみを美しく並べる形式にします。
-		sb.WriteString(fmt.Sprintf("![%s](%s)\n", altText, img))
+		// パネル間のセパレーター (有効なパネルの間のみ挿入)
+		if !firstPanel {
+			sb.WriteString("---\n\n")
+		}
+		firstPanel = false
+
+		// 1. 画像の出力
+		if hasImage {
+			altText := panel.VisualAnchor
+			if altText == "" {
+				altText = fmt.Sprintf("Panel %d", i+1)
+			}
+			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", escapeMarkdown(altText), currentImagePath))
+		}
+
+		// 2. セリフの出力
+		if hasDialogue {
+			dialogue := escapeMarkdown(panel.Dialogue)
+			if panel.SpeakerID != "" {
+				speaker := escapeMarkdown(panel.SpeakerID)
+				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", speaker, dialogue))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s\n\n", dialogue))
+			}
+		}
 	}
 
 	return sb.String()
+}
+
+// escapeMarkdown は Markdown の制御文字と HTML 特殊文字を安全に置換します。
+func escapeMarkdown(text string) string {
+	return markdownEscaper.Replace(text)
 }
