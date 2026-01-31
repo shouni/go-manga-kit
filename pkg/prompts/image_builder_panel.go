@@ -54,9 +54,6 @@ func (pb *ImagePromptBuilder) BuildPanel(panel domain.Panel, char *domain.Charac
 			anchor = strings.ReplaceAll(panel.VisualAnchor, speakerID, displayName)
 		}
 		visualParts = append(visualParts, anchor)
-		if !strings.Contains(anchor, displayName) {
-			visualParts = append(visualParts, fmt.Sprintf("character %s", displayName))
-		}
 	} else {
 		// フォールバック
 		visualParts = append(visualParts, "character focus, cinematic scene")
