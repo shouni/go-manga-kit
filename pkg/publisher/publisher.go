@@ -26,8 +26,6 @@ type PublishResult struct {
 	ImagePaths   []string // 保存された全画像のパスリスト
 }
 
-const placeholder = "placeholder.png"
-
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
 	writer     remoteio.OutputWriter
@@ -60,11 +58,13 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	}
 	result.MarkdownPath = markdown
 
-	// 2. 構造体内の ReferenceURL から Markdown 用の相対パスリストを作成
+	// 2. 構造体内の ReferenceURL から画像パスリストを作成
 	imagePaths := make([]string, 0, len(manga.Panels))
 	for _, panel := range manga.Panels {
-		// ReferenceURL からファイル名を取得し、相対パスを構築
-		relPath := path.Join(asset.DefaultImageDir, filepath.Base(panel.ReferenceURL))
+		var relPath string
+		if panel.ReferenceURL != "" {
+			relPath = path.Join(asset.DefaultImageDir, filepath.Base(panel.ReferenceURL))
+		}
 		imagePaths = append(imagePaths, relPath)
 	}
 	result.ImagePaths = imagePaths
@@ -95,34 +95,47 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	return result, nil
 }
 
-// buildMarkdown は WebtoonParser が解析可能な「純粋な画像リスト」形式の Markdown を生成します。
+// buildMarkdown は画像、話者、セリフを含む Markdown を構築します。
 func (p *MangaPublisher) buildMarkdown(manga *domain.MangaResponse, imagePaths []string) string {
 	var sb strings.Builder
 
-	// タイトルを出力
+	// タイトルと説明文
 	sb.WriteString(fmt.Sprintf("# %s\n\n", manga.Title))
-
-	// 説明文を引用符なしのプレーンテキストで出力（WebtoonParser が Description として抽出）
 	if manga.Description != "" {
 		sb.WriteString(manga.Description + "\n\n")
 	}
 
-	// パネルを画像記法として出力
+	// パネルごとの出力
 	for i, panel := range manga.Panels {
-		img := placeholder
-		if i < len(imagePaths) && imagePaths[i] != "" {
-			img = imagePaths[i]
+		hasImage := i < len(imagePaths) && imagePaths[i] != ""
+		hasDialogue := panel.Dialogue != ""
+
+		// 画像もセリフもないパネル（ト書きのみ等）は、表示上のノイズになるためスキップ
+		if !hasImage && !hasDialogue {
+			continue
 		}
 
-		// Altテキストには VisualAnchor (描画指示) を活用し、アクセシビリティを高める
-		altText := panel.VisualAnchor
-		if altText == "" {
-			altText = fmt.Sprintf("Panel %d", i+1)
+		// 1. 画像が存在する場合のみ Markdown 記法を出力
+		if hasImage {
+			altText := panel.VisualAnchor
+			if altText == "" {
+				altText = fmt.Sprintf("Panel %d", i+1)
+			}
+			sb.WriteString(fmt.Sprintf("![%s](%s)\n\n", altText, imagePaths[i]))
 		}
 
-		// セリフや話者情報のテキスト出力は、Webtoonの没入感を損なうためここでは意図的に除外。
-		// 画像（文字入り画像である前提）のみを美しく並べる形式にします。
-		sb.WriteString(fmt.Sprintf("![%s](%s)\n", altText, img))
+		// 2. セリフを出力
+		if hasDialogue {
+			if panel.SpeakerID != "" {
+				// 話者名を強調
+				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", panel.SpeakerID, panel.Dialogue))
+			} else {
+				sb.WriteString(fmt.Sprintf("%s\n\n", panel.Dialogue))
+			}
+		}
+
+		// パネル間のセパレーター
+		sb.WriteString("---\n\n")
 	}
 
 	return sb.String()
