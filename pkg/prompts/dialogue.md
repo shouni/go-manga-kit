@@ -24,21 +24,13 @@
 * **衣装の独自指定禁止**: `visual_anchor` 内で、キャラクターに新しい服（軍服、スーツ等）を記述することは**厳禁**です。
 * **参照フレーズ**: 必ず **`"strictly matching the original outfit and character design from the reference image"`** を含めてください。
 * **識別**: 冒頭は必ず `"{speaker_id} character, character focus,"` で始めてください。
-
-
-* **ライティングと質感（2K最適化）**:
-* `"dramatic rim lighting"`, `"ambient glow from monitors"`, `"reflective surfaces"`, `"high contrast"`.
-
-
+* **ライティングと質感**:
+    * `"dramatic rim lighting"`, `"ambient glow from monitors"`, `"reflective surfaces"`, `"high contrast"`.
 * **スタイルと構図**:
-* `"90s retro mecha anime style"`, `"cel-shaded"`, `"cinematic dutch angle"`, `"dynamic camera angles"`.
-
-
+    * `"90s retro mecha anime style"`, `"cel-shaded"`, `"cinematic dutch angle"`, `"dynamic camera angles"`.
 * **【重要】テキスト排除**: `"no speech bubbles", "no word balloons", "no text", "clear illustration"`.
 * **背景（高密度描写）**:
-* `"cockpit interior with complex functional tech details"`, `"sci-fi server room with glowing mechanical parts"`.
-
-
+    * `"cockpit interior with complex functional tech details"`, `"sci-fi server room with glowing mechanical parts"`.
 
 ### 4. 出力形式（JSON構造）
 
