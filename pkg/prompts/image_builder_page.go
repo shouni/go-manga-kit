@@ -126,14 +126,11 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 	for i, panel := range panels {
 		panelNum := i + 1
 
-		// 1. パネルのメタデータ（ラベル、位置、追加指示）の決定
+		// メタデータ準備
 		var label, pos, extraInstruction string
-
 		if i == bigIdx {
-			if num == 1 {
-				label, pos = LabelFullPage, PosFullPage
-			} else {
-				label, pos = LabelImpact, PosFullWidth
+			label, pos = (map[bool]string{true: LabelFullPage, false: LabelImpact})[num == 1], (map[bool]string{true: PosFullPage, false: PosFullWidth})[num == 1]
+			if num > 1 {
 				extraInstruction = CompositionImpact
 			}
 		} else {
@@ -145,7 +142,7 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			pos = fmt.Sprintf("Row %d, %s column", (i/2)+1, side)
 		}
 
-		// 2. 出力処理 (構造を維持するために順序を制御)
+		// 出力処理 (構造を維持するために順序を制御)
 		fmt.Fprintf(w, "### PANEL %d [%s]\n", panelNum, label)
 		fmt.Fprintf(w, "- POSITION: %s\n", pos)
 		if extraInstruction != "" {
@@ -159,6 +156,26 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			displayName = char.Name
 			if idx, ok := rm.CharacterFiles[char.ID]; ok {
 				charFileIdx = idx
+			}
+		}
+
+		if charFileIdx != -1 {
+			fmt.Fprintf(w, "- CHARACTER_IDENTITY: [ %s ] from input_file_%d. (Face, hair, and outfit MUST match input_file_%d exactly).\n", displayName, charFileIdx, charFileIdx)
+		} else {
+			fmt.Fprintf(w, "- SUBJECT: %s\n", displayName)
+		}
+
+		// アクションとポーズ参照
+		sceneDescription := sanitizeInline(panel.VisualAnchor)
+		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
+		fmt.Fprintf(w, "- ACTION: %s\n", sceneDescription)
+
+		if panel.ReferenceURL != "" {
+			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
+				fmt.Fprintf(w, "- POSE_GUIDE: Use body posture from input_file_%d. IGNORE the character in it.\n", fileIdx)
+				if charFileIdx != -1 {
+					fmt.Fprintf(w, "- MANDATORY: Face and hair MUST be %s from input_file_%d.\n", displayName, charFileIdx)
+				}
 			}
 		}
 
@@ -180,27 +197,6 @@ func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []d
 			fmt.Fprintf(w, "  - TEXT_DIRECTION: %s\n", direction)
 			fmt.Fprintf(w, "  - TYPOGRAPHY: Use professional Japanese manga font (Gothic/Mincho). %s.\n", layoutDesc)
 			w.WriteString("  - LANGUAGE: Japanese characters. Ensure accurate rendering of Kanji/Kana.\n")
-		}
-		w.WriteString("\n")
-
-		// アクション・ポーズ指示
-		sceneDescription := sanitizeInline(panel.VisualAnchor)
-		sceneDescription = strings.ReplaceAll(sceneDescription, panel.SpeakerID, displayName)
-		charRefStr := ""
-		if charFileIdx != -1 {
-			charRefStr = fmt.Sprintf(" (Match input_file_%d)", charFileIdx)
-		}
-
-		fmt.Fprintf(w, "- SUBJECT: %s\n- ACTION: %s%s\n", displayName, sceneDescription, charRefStr)
-
-		// ポーズ参照ロジック
-		if panel.ReferenceURL != "" {
-			if fileIdx, ok := rm.PanelFiles[panel.ReferenceURL]; ok {
-				fmt.Fprintf(w, "- POSE_REF: Use input_file_%d for BODY/POSE/ANATOMY only. IGNORE face/hair/colors from this file.\n", fileIdx)
-				if charFileIdx != -1 {
-					fmt.Fprintf(w, "- IDENTITY_FIX: Face/hair/eyes MUST match input_file_%d exactly.\n", charFileIdx)
-				}
-			}
 		}
 		w.WriteString("\n")
 	}
