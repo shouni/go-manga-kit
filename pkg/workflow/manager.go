@@ -35,11 +35,11 @@ type Manager struct {
 	scriptPrompt  prompts.ScriptPrompt
 	imagePrompt   prompts.ImagePrompt
 	mangaComposer *generator.MangaComposer
-	Runners       *Runners
+	Runners       *runners
 }
 
-// Runners は、構築済みの各 Runner を保持します。
-type Runners struct {
+// runners は、構築済みの各 Runner を保持します。
+type runners struct {
 	Design     DesignRunner
 	Script     ScriptRunner
 	PanelImage PanelImageRunner
@@ -93,11 +93,10 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		mangaComposer: mangaComposer,
 	}
 
-	runners, err := m.buildAllRunners()
+	m.Runners, err = m.buildAllRunners()
 	if err != nil {
 		return nil, err
 	}
-	m.Runners = runners
 
 	return m, nil
 }
