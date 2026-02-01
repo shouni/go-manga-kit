@@ -11,7 +11,7 @@ import (
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
-// buildAllRunners は、ワークフロー プロセスを管理するために必要なすべてのランナーを含むワークフローを初期化して返します。
+// buildAllRunners は、ワークフローの実行に必要なすべてのランナーを構築して返します。
 func (m *Manager) buildAllRunners() (*Runners, error) {
 	dr, err := m.buildDesignRunner()
 	if err != nil {
