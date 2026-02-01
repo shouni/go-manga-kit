@@ -40,15 +40,20 @@
 
 ## 📂 プロジェクト構造 (Project Structure)
 
+本ライブラリは、不変のデータモデルを中心に、生成戦略を柔軟に入れ替え可能な**ストラテジー・パターン**に基づいて構成されています。
+
 ```text
 go-manga-kit/
 └── pkg/
-    ├── asset/       # アセット管理 (パス解決、URI管理)
-    ├── domain/      # 基底モデル (Character DNA, Panel定義)
-    ├── generator/   # 生成戦略 (PageGenerator: コマ数・Seed制御の中核)
-    ├── prompts/     # 司令塔 (BuildMangaPagePrompt: 厳格なレイアウト指示)
-    ├── runner/      # ワークフロー実体 (Design/Script/Panel/Page)
-    └── workflow/    # インターフェース定義
+    ├── domain/      # 【不変の核】キャラクターDNA(Seed/VisualCues)やManga/Panelの基底定義。
+    ├── workflow/    # 【契約・統合】各工程のインターフェース定義と、一連の工程を管理するManager。
+    ├── runner/      # 【実行実体】Design/Script/Panel/Page/Publish の具体的な実行プロセス。
+    ├── generator/   # 【生成戦略】Page/Panel構成、Composerによるレイアウト計算アルゴリズム。
+    ├── prompts/     # 【言語戦略】テンプレート（.md）とデータを用いたAI指示文の動的構築。
+    ├── parser/      # 【解析】入力テキストやAIレスポンスを構造化データへ変換。
+    ├── publisher/   # 【出力】生成された画像とテキストを最終成果物として統合。
+    ├── asset/       # 【アセット管理】アセットのパス解決およびURIマッピング。
+    └── config/      # 【設定】ライブラリ全体の動作パラメータ管理。
 
 ```
 
@@ -81,7 +86,7 @@ sequenceDiagram
 
 ---
 
-## 🤝 依存関係 (Dependencies)
+### 🤝 依存関係 (Dependencies)
 
 * [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - Gemini 画像作成コア
 * [shouni/go-remote-io](https://github.com/shouni/go-remote-io) - マルチストレージ I/O
