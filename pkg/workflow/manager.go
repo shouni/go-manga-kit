@@ -89,7 +89,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 
 	m.mangaComposer, err = m.buildMangaComposer(args.CharactersMap)
 	if err != nil {
-		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
+		return nil, err
 	}
 
 	m.Runners, err = m.buildAllRunners()

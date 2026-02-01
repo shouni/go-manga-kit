@@ -27,7 +27,7 @@ func (m *Manager) buildMangaComposer(
 	assetManager := initializeAssetManager(core)
 	imageGenerator, err := initializeImageGenerator(m.cfg.ImageModel, core)
 	if err != nil {
-		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("ImageGeneratorの初期化に失敗しました: %w", err)
 	}
 
 	return generator.NewMangaComposer(
