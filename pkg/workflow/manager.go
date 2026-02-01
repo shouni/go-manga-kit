@@ -77,27 +77,25 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, err
 	}
 
-	mangaComposer, err := buildMangaComposer(args.Config, args.HTTPClient, aiClient, args.Reader, args.CharactersMap)
-	if err != nil {
-		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
-	}
-
 	m := &Manager{
-		cfg:           args.Config,
-		httpClient:    args.HTTPClient,
-		reader:        args.Reader,
-		writer:        args.Writer,
-		aiClient:      aiClient,
-		scriptPrompt:  scriptPrompt,
-		imagePrompt:   imagePrompt,
-		mangaComposer: mangaComposer,
+		cfg:          args.Config,
+		httpClient:   args.HTTPClient,
+		reader:       args.Reader,
+		writer:       args.Writer,
+		aiClient:     aiClient,
+		scriptPrompt: scriptPrompt,
+		imagePrompt:  imagePrompt,
 	}
 
-	runners, err := m.buildAllRunners()
+	m.mangaComposer, err = m.buildMangaComposer(args.CharactersMap)
 	if err != nil {
 		return nil, err
 	}
-	m.Runners = runners
+
+	m.Runners, err = m.buildAllRunners()
+	if err != nil {
+		return nil, err
+	}
 
 	return m, nil
 }

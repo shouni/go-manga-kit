@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/patrickmn/go-cache"
-	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"golang.org/x/time/rate"
@@ -16,30 +15,28 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
+const defaultRateBurst = 2
+
 // buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
-func buildMangaComposer(
-	cfg config.Config,
-	httpClient httpkit.ClientInterface,
-	aiClient gemini.GenerativeModel,
-	reader remoteio.InputReader,
+func (m *Manager) buildMangaComposer(
 	chars domain.CharactersMap,
 ) (*generator.MangaComposer, error) {
 	// 画像生成エンジンの初期化
-	core, err := initializeCore(reader, httpClient, aiClient)
+	core, err := initializeCore(m.reader, m.httpClient, m.aiClient)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 	assetManager := initializeAssetManager(core)
-	imageGenerator, err := initializeImageGenerator(cfg.ImageModel, core)
+	imageGenerator, err := initializeImageGenerator(m.cfg.ImageModel, core)
 	if err != nil {
-		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("ImageGeneratorの初期化に失敗しました: %w", err)
 	}
 
 	return generator.NewMangaComposer(
 		assetManager,
 		imageGenerator,
 		chars,
-		rate.NewLimiter(rate.Every(cfg.RateInterval), 2),
+		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
 	), nil
 }
 
