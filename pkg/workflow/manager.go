@@ -35,11 +35,11 @@ type Manager struct {
 	scriptPrompt  prompts.ScriptPrompt
 	imagePrompt   prompts.ImagePrompt
 	mangaComposer *generator.MangaComposer
-	Runners       *runners
+	Runners       *Runners
 }
 
-// runners は、構築済みの各 Runner を保持します。
-type runners struct {
+// Runners は、構築済みの各 Runner を保持します。
+type Runners struct {
 	Design     DesignRunner
 	Script     ScriptRunner
 	PanelImage PanelImageRunner

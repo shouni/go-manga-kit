@@ -12,7 +12,7 @@ import (
 )
 
 // buildAllRunners は、ワークフローの実行に必要なすべてのランナーを構築して返します。
-func (m *Manager) buildAllRunners() (*runners, error) {
+func (m *Manager) buildAllRunners() (*Runners, error) {
 	dr, err := m.buildDesignRunner()
 	if err != nil {
 		return nil, fmt.Errorf("DesignRunner のビルドに失敗しました: %w", err)
@@ -34,7 +34,7 @@ func (m *Manager) buildAllRunners() (*runners, error) {
 		return nil, fmt.Errorf("PublishRunner のビルドに失敗しました: %w", err)
 	}
 
-	return &runners{
+	return &Runners{
 		Design:     dr,
 		Script:     sr,
 		PanelImage: panR,
