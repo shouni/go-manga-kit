@@ -15,6 +15,8 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
+const defaultRateBurst = 2
+
 // buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
 func (m *Manager) buildMangaComposer(
 	chars domain.CharactersMap,
@@ -34,7 +36,7 @@ func (m *Manager) buildMangaComposer(
 		assetManager,
 		imageGenerator,
 		chars,
-		rate.NewLimiter(rate.Every(m.cfg.RateInterval), 2),
+		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
 	), nil
 }
 
