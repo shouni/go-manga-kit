@@ -35,6 +35,7 @@ type Manager struct {
 	scriptPrompt  prompts.ScriptPrompt
 	imagePrompt   prompts.ImagePrompt
 	mangaComposer *generator.MangaComposer
+	Runners       *Runners
 }
 
 // Runners は、構築済みの各 Runner を保持します。
@@ -81,7 +82,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
-	return &Manager{
+	m := &Manager{
 		cfg:           args.Config,
 		httpClient:    args.HTTPClient,
 		reader:        args.Reader,
@@ -90,39 +91,15 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		scriptPrompt:  scriptPrompt,
 		imagePrompt:   imagePrompt,
 		mangaComposer: mangaComposer,
-	}, nil
-}
-
-// BuildRunners は、ワークフロー プロセスを管理するために必要なすべてのランナーを含むワークフローを初期化して返します。
-func (m *Manager) BuildRunners() (*Runners, error) {
-	dr, err := m.buildDesignRunner()
-	if err != nil {
-		return nil, fmt.Errorf("DesignRunner のビルドに失敗しました: %w", err)
-	}
-	sr, err := m.buildScriptRunner()
-	if err != nil {
-		return nil, fmt.Errorf("ScriptRunner のビルドに失敗しました: %w", err)
-	}
-	panR, err := m.buildPanelImageRunner()
-	if err != nil {
-		return nil, fmt.Errorf("PanelImageRunner のビルドに失敗しました: %w", err)
-	}
-	pagR, err := m.buildPageImageRunner()
-	if err != nil {
-		return nil, fmt.Errorf("PageImageRunner のビルドに失敗しました: %w", err)
-	}
-	pubR, err := m.buildPublishRunner()
-	if err != nil {
-		return nil, fmt.Errorf("PublishRunner のビルドに失敗しました: %w", err)
 	}
 
-	return &Runners{
-		Design:     dr,
-		Script:     sr,
-		PanelImage: panR,
-		PageImage:  pagR,
-		Publish:    pubR,
-	}, nil
+	runners, err := m.buildAllRunners()
+	if err != nil {
+		return nil, err
+	}
+	m.Runners = runners
+
+	return m, nil
 }
 
 // initializeAIClient は gemini クライアントを初期化します。
