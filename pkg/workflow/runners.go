@@ -11,6 +11,38 @@ import (
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
+// buildAllRunners は、ワークフロー プロセスを管理するために必要なすべてのランナーを含むワークフローを初期化して返します。
+func (m *Manager) buildAllRunners() (*Runners, error) {
+	dr, err := m.buildDesignRunner()
+	if err != nil {
+		return nil, fmt.Errorf("DesignRunner のビルドに失敗しました: %w", err)
+	}
+	sr, err := m.buildScriptRunner()
+	if err != nil {
+		return nil, fmt.Errorf("ScriptRunner のビルドに失敗しました: %w", err)
+	}
+	panR, err := m.buildPanelImageRunner()
+	if err != nil {
+		return nil, fmt.Errorf("PanelImageRunner のビルドに失敗しました: %w", err)
+	}
+	pagR, err := m.buildPageImageRunner()
+	if err != nil {
+		return nil, fmt.Errorf("PageImageRunner のビルドに失敗しました: %w", err)
+	}
+	pubR, err := m.buildPublishRunner()
+	if err != nil {
+		return nil, fmt.Errorf("PublishRunner のビルドに失敗しました: %w", err)
+	}
+
+	return &Runners{
+		Design:     dr,
+		Script:     sr,
+		PanelImage: panR,
+		PageImage:  pagR,
+		Publish:    pubR,
+	}, nil
+}
+
 // buildScriptRunner は、台本生成を担当する Runner を作成します。
 func (m *Manager) buildScriptRunner() (ScriptRunner, error) {
 	extractor, err := extract.NewExtractor(m.httpClient)
