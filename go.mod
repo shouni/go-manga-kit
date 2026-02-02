@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.2.7
+	github.com/shouni/gemini-image-kit v1.2.8
 	github.com/shouni/go-gemini-client v1.0.6
 	github.com/shouni/go-http-kit v1.2.1
 	github.com/shouni/go-remote-io v1.2.0
