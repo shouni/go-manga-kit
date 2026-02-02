@@ -18,7 +18,7 @@ type Config struct {
 	// --- AI Model Settings ---
 	GeminiAPIKey      string
 	GeminiModel       string
-	ImageModel        string // 標準・高速（パネル用
+	ImageModel        string // 標準・高速（パネル用）
 	ImageQualityModel string // 高品質・高知能（ページ用）
 
 	// --- Generation Settings ---

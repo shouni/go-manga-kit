@@ -11,8 +11,6 @@ import (
 	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
 )
 
-const defaultRateBurst = 2
-
 // buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
 func (m *Manager) buildMangaComposer(
 	chars domain.CharactersMap,
