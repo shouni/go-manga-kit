@@ -28,7 +28,7 @@ func (m *Manager) buildMangaComposer(
 	}
 
 	imageGenerator, err := imagekit.NewGeminiGenerator(
-		m.cfg.ImageModel,
+		m.cfg.ImageStandardModel,
 		m.cfg.ImageQualityModel,
 		core,
 	)
