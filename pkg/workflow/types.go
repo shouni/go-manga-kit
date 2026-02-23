@@ -7,7 +7,7 @@ import (
 const (
 	// defaultRateBurst は、短時間に許容される最大リクエスト数（バースト）です。
 	// パネルの並列生成時などに、API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
-	defaultRateBurst = 2
+	defaultRateBurst = 1
 
 	// defaultGeminiTemperature はモデル生成時の多様性を制御します。
 	// 0.1 は低い値に設定することで、漫画の構成や指示への忠実度を安定させます。
