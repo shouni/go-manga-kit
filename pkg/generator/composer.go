@@ -111,6 +111,15 @@ func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, reference
 	// gemini-image-kit 側が ReferenceURL (gs://) を直接処理するため、
 	// File API へのアップロードプロセスそのものをスキップします。
 	if remoteio.IsGCSURI(referenceURL) {
+		mc.mu.RLock()
+		_, ok := resourceMap[key]
+		mc.mu.RUnlock()
+
+		if !ok {
+			mc.mu.Lock()
+			resourceMap[key] = ""
+			mc.mu.Unlock()
+		}
 		return "", nil
 	}
 
