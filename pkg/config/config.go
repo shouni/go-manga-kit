@@ -4,8 +4,9 @@ import (
 	"time"
 )
 
-// デフォルト値の定義なのだ
+// デフォルト値の定義
 const (
+	DefaultLocationID         = "asia-northeast1"
 	DefaultGeminiModel        = "gemini-3-flash-preview"
 	DefaultImageStandardModel = "gemini-3-pro-image-preview"
 	DefaultImageQualityModel  = "gemini-3-pro-image-preview"
@@ -41,6 +42,7 @@ type Config struct {
 // DefaultConfig は推奨されるデフォルト設定を返すヘルパー関数なのだ。
 func DefaultConfig() Config {
 	return Config{
+		LocationID:         DefaultLocationID,
 		GeminiModel:        DefaultGeminiModel,
 		ImageStandardModel: DefaultImageStandardModel,
 		ImageQualityModel:  DefaultImageQualityModel,
