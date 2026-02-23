@@ -39,7 +39,7 @@ type Config struct {
 	RequestTimeout time.Duration
 }
 
-// DefaultConfig は推奨されるデフォルト設定を返すヘルパー関数なのだ。
+// DefaultConfig は推奨されるデフォルト設定を返すヘルパー関数です。
 func DefaultConfig() Config {
 	return Config{
 		LocationID:         DefaultLocationID,
