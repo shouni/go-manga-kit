@@ -62,7 +62,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, fmt.Errorf("CharactersMap は必須です")
 	}
 
-	aiClient, err := initializeAIClient(ctx, args.Config.GeminiAPIKey)
+	aiClient, err := initializeAIClient(ctx, args.Config.ProjectID, args.Config.LocationID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,9 +101,10 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 }
 
 // initializeAIClient は gemini クライアントを初期化します。
-func initializeAIClient(ctx context.Context, projectID string) (gemini.GenerativeModel, error) {
+func initializeAIClient(ctx context.Context, projectID, locationID string) (gemini.GenerativeModel, error) {
 	clientConfig := gemini.Config{
 		ProjectID:   projectID,
+		LocationID:  locationID,
 		Temperature: genai.Ptr(defaultGeminiTemperature),
 	}
 	aiClient, err := gemini.NewClient(ctx, clientConfig)

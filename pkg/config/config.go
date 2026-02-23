@@ -21,12 +21,9 @@ type Config struct {
 	ImageStandardModel string // 標準・高速（パネル用）
 	ImageQualityModel  string // 高品質・高知能（ページ用）
 
-	// --- Google AI (Gemini API) Settings ---
-	GeminiAPIKey string
-
 	// --- Vertex AI Settings ---
 	ProjectID  string // Google Cloud Project ID
-	LocationID string // 例: "us-central1"
+	LocationID string // 例: "asia-northeast1"
 
 	// --- Generation Settings ---
 	StyleSuffix  string
