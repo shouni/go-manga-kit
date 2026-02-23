@@ -101,9 +101,9 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 }
 
 // initializeAIClient は gemini クライアントを初期化します。
-func initializeAIClient(ctx context.Context, apiKey string) (gemini.GenerativeModel, error) {
+func initializeAIClient(ctx context.Context, projectID string) (gemini.GenerativeModel, error) {
 	clientConfig := gemini.Config{
-		APIKey:      apiKey,
+		ProjectID:   projectID,
 		Temperature: genai.Ptr(defaultGeminiTemperature),
 	}
 	aiClient, err := gemini.NewClient(ctx, clientConfig)

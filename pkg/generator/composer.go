@@ -8,6 +8,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
 	"github.com/shouni/gemini-image-kit/pkg/generator"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
@@ -107,6 +108,12 @@ func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL
 
 // getOrUploadResource は二重チェックロッキングと singleflight を用いてアセットアップロードの共通ロジックを提供します。
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
+	// gemini-image-kit 側が ReferenceURL (gs://) を直接処理するため、
+	// File API へのアップロードプロセスそのものをスキップします。
+	if remoteio.IsGCSURI(referenceURL) {
+		return "", nil
+	}
+
 	// 最初のチェック: ロックを最小限にするための RLock
 	mc.mu.RLock()
 	uri, ok := resourceMap[key]
@@ -115,9 +122,8 @@ func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, reference
 		return uri, nil
 	}
 
-	// 同一キーに対する同時リクエストを1つに集約
+	// 同一キーに対する同時リクエストを1つに集約（HTTP URL等の場合のみ）
 	val, err, _ := mc.uploadGroup.Do(key, func() (interface{}, error) {
-		// ダブルチェック: singleflight 待機中に他で完了している可能性があるため
 		mc.mu.RLock()
 		existingURI, ok := resourceMap[key]
 		mc.mu.RUnlock()
@@ -125,6 +131,7 @@ func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, reference
 			return existingURI, nil
 		}
 
+		// ここで実際に File API (Google AI Studio) へアップロードされる
 		uploadedURI, uploadErr := mc.AssetManager.UploadFile(ctx, referenceURL)
 		if uploadErr != nil {
 			return nil, uploadErr
@@ -140,9 +147,5 @@ func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, reference
 		return "", err
 	}
 
-	res, ok := val.(string)
-	if !ok {
-		return "", fmt.Errorf("unexpected type from upload group for key %q: expected string, got %T", key, val)
-	}
-	return res, nil
+	return val.(string), nil
 }
