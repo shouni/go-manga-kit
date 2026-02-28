@@ -26,7 +26,7 @@
 * **⚡ Smart Asset Management**: 
     * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドをゼロにします。
     * Gemini API 利用時は、同一URLの二重アップロードを防止するキャッシュ機構が自動で作動します。
-      * `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
+    * `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
 
 ---
 
