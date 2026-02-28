@@ -23,7 +23,6 @@ type MangaComposer struct {
 	PanelResourceMap     map[string]string // ReferenceURL -> FileAPIURI
 	mu                   sync.RWMutex
 	uploadGroup          singleflight.Group
-	isVertexAI           bool
 }
 
 // NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
@@ -32,7 +31,6 @@ func NewMangaComposer(
 	imgGen generator.ImageGenerator,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
-	isVertexAI bool,
 ) *MangaComposer {
 	return &MangaComposer{
 		AssetManager:         assetMgr,
@@ -41,7 +39,6 @@ func NewMangaComposer(
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),
 		PanelResourceMap:     make(map[string]string),
-		isVertexAI:           isVertexAI,
 	}
 }
 
@@ -112,7 +109,7 @@ func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
 	// gemini-image-kit 側が ReferenceURL (gs://) を直接処理するため、
 	// File API へのアップロードプロセスそのものをスキップします。
-	if mc.isVertexAI && remoteio.IsGCSURI(referenceURL) {
+	if mc.AssetManager.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
 		mc.mu.RLock()
 		_, ok := resourceMap[key]
 		mc.mu.RUnlock()

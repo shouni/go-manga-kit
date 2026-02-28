@@ -16,13 +16,17 @@
 ## ✨ コア・コンセプト (Core Concepts)
 
 * **🧬 3-Factor Consistency Control**:
-    * キャラクターの一貫性を担保するため、**Seed値**（基盤）、**File API参照画像**（外見）、**VisualCues/言語指示**（詳細）の3要素を組み合わせて制御します。
+    * キャラクターの一貫性を担保するため、**Seed値**（基盤）、**参照アセット**（外見）、**VisualCues/言語指示**（詳細）の3要素を組み合わせて制御します。
+* **Multi-Backend Asset Support**: 
+    * Gemini API モードでは **File API**、Vertex AI モードでは **Cloud Storage (GCS)** 上の画像を直接参照可能です。
 * **📐 Strict Layout & Count Control**: 
     * 「指定されたコマ数を厳密に守る」ためのプロンプト・ガードレールを搭載。`FINAL PANEL` 指示等により、AIによる勝手なコマ追加を抑制します。
 * **🎨 Vibrant Color Guidance**:
     * モノクロ化を抑制。参照画像が白黒やラフスケッチであっても、プロンプト技術により鮮やかなデジタルアニメ調の彩色を強く誘導します。
 * **⚡ Smart Asset Management**: 
-    * `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
+    * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドをゼロにします。
+    * Gemini API 利用時は、同一URLの二重アップロードを防止するキャッシュ機構が自動で作動します。
+      * `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
 
 ---
 
@@ -65,20 +69,20 @@ go-manga-kit/
 sequenceDiagram
     participant APP as Application
     participant Runner as runner.PageImageRunner
-    participant Builder as Prompt Builder
-    participant API as Gemini API (Nano Banana)
+    participant API as Gemini API / Vertex AI
 
     Note over APP, Runner: 1. アセット準備 & Seed特定
-    Runner->>Runner: 最初のパネルからキャラSeed(10001等)を特定
-    Runner->>Runner: 登場キャラの立ち絵を File API へ準備
+    Runner->>Runner: キャラSeed(10001等)を特定
 
-    Note over Runner, Builder: 2. プロンプト構築
-    Builder->>Builder: キャラ毎に input_file_N を紐付け
-    Builder->>Builder: STRICT PANEL COUNT 指示を注入
+    alt Vertex AI Mode
+        Runner->>Runner: GCS (gs://) パスを直接解決
+    else Gemini API Mode
+        Runner->>Runner: Gemini File API へ準備 (Upload/Cache)
+    end
 
-    Note over Runner, API: 3. ページ一括生成
-    Runner->>API: GenerateContent(Prompt + Seed + FileURIs)
-    Note over Runner, API: APIは立ち絵を参照し、指定されたコマ数でページを描画
+    Note over Runner, API: 2. ページ一括生成
+    Runner->>API: GenerateContent(Prompt + Seed + AssetURIs)
+    Note over Runner, API: バックエンドに応じたURI形式でリクエスト
     API-->>Runner: 生成画像データ (Full Color)
     Runner-->>APP: []ImageResponse
 

@@ -41,6 +41,5 @@ func (m *Manager) buildMangaComposer(
 		imageGenerator,
 		chars,
 		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
-		m.aiClient.IsVertexAI(),
 	), nil
 }
