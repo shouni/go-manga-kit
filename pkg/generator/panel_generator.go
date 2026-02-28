@@ -38,7 +38,6 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
-		i, panel := i, panel
 		eg.Go(func() error {
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
