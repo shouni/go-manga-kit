@@ -31,7 +31,17 @@ func NewMangaComposer(
 	imgGen generator.ImageGenerator,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
-) *MangaComposer {
+) (*MangaComposer, error) {
+	if assetMgr == nil {
+		return nil, fmt.Errorf("assetMgr is required")
+	}
+	if imgGen == nil {
+		return nil, fmt.Errorf("imgGen is required")
+	}
+	if limiter == nil {
+		return nil, fmt.Errorf("limiter is required")
+	}
+
 	return &MangaComposer{
 		AssetManager:         assetMgr,
 		ImageGenerator:       imgGen,
@@ -39,7 +49,7 @@ func NewMangaComposer(
 		RateLimiter:          limiter,
 		CharacterResourceMap: make(map[string]string),
 		PanelResourceMap:     make(map[string]string),
-	}
+	}, nil
 }
 
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
@@ -82,7 +92,6 @@ func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []dom
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for _, panel := range panels {
-		panel := panel
 		if panel.ReferenceURL == "" {
 			continue
 		}
@@ -108,9 +117,9 @@ func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL
 
 // getOrUploadResource は二重チェックロッキングと singleflight を用いてアセットアップロードの共通ロジックを提供します。
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
-	// gemini-image-kit 側が ReferenceURL (gs://) を直接処理するため、
-	// File API へのアップロードプロセスそのものをスキップします。
-	if remoteio.IsGCSURI(referenceURL) {
+	// Vertex AI モード時は Cloud Storage (gs://) を直接参照可能なため、
+	// File API へのアップロード処理をバイパスし、転送コストを削減します。
+	if mc.AssetManager.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
 		mc.mu.RLock()
 		_, ok := resourceMap[key]
 		mc.mu.RUnlock()

@@ -36,10 +36,15 @@ func (m *Manager) buildMangaComposer(
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
 	}
 
-	return generator.NewMangaComposer(
+	composer, err := generator.NewMangaComposer(
 		core,
 		imageGenerator,
 		chars,
 		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
-	), nil
+	)
+	if err != nil {
+		return nil, fmt.Errorf("MangaComposerの初期化に失敗しました: %w", err)
+	}
+
+	return composer, nil
 }
