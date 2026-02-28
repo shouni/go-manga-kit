@@ -107,8 +107,8 @@ func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL
 
 // getOrUploadResource は二重チェックロッキングと singleflight を用いてアセットアップロードの共通ロジックを提供します。
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
-	// gemini-image-kit 側が ReferenceURL (gs://) を直接処理するため、
-	// File API へのアップロードプロセスそのものをスキップします。 {
+	// Vertex AI モード時は Cloud Storage (gs://) を直接参照可能なため、
+	// File API へのアップロード処理をバイパスし、転送コストを削減します。
 	if mc.AssetManager != nil && mc.AssetManager.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
 		mc.mu.RLock()
 		_, ok := resourceMap[key]
