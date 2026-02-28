@@ -38,6 +38,9 @@ func NewMangaComposer(
 	if imgGen == nil {
 		return nil, fmt.Errorf("imgGen is required")
 	}
+	if limiter == nil {
+		return nil, fmt.Errorf("limiter is required")
+	}
 
 	return &MangaComposer{
 		AssetManager:         assetMgr,
