@@ -103,9 +103,10 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 // initializeAIClient は gemini クライアントを初期化します。
 func initializeAIClient(ctx context.Context, projectID, locationID string) (gemini.GenerativeModel, error) {
 	clientConfig := gemini.Config{
-		ProjectID:   projectID,
-		LocationID:  locationID,
-		Temperature: genai.Ptr(defaultGeminiTemperature),
+		ProjectID:    projectID,
+		LocationID:   locationID,
+		Temperature:  genai.Ptr(defaultGeminiTemperature),
+		InitialDelay: defaultInitialDelay,
 	}
 	aiClient, err := gemini.NewClient(ctx, clientConfig)
 	if err != nil {
