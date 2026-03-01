@@ -3,7 +3,6 @@ package workflow
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
@@ -107,7 +106,7 @@ func initializeAIClient(ctx context.Context, projectID, locationID string) (gemi
 		ProjectID:    projectID,
 		LocationID:   locationID,
 		Temperature:  genai.Ptr(defaultGeminiTemperature),
-		InitialDelay: 60 * time.Second,
+		InitialDelay: defaultInitialDelay,
 	}
 	aiClient, err := gemini.NewClient(ctx, clientConfig)
 	if err != nil {
