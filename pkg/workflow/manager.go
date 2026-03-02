@@ -65,11 +65,11 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 
 	aiClient := args.AIClient
 	if aiClient == nil {
-		var err error
-		aiClient, err = initializeAIClient(ctx, args.Config.ProjectID, args.Config.LocationID)
+		client, err := initializeAIClient(ctx, args.Config.ProjectID, args.Config.LocationID)
 		if err != nil {
 			return nil, err
 		}
+		aiClient = client
 	}
 
 	scriptPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
