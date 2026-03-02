@@ -13,7 +13,6 @@ import (
 	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
-	"google.golang.org/genai"
 )
 
 type ManagerArgs struct {
@@ -60,17 +59,11 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	if args.Writer == nil {
 		return nil, fmt.Errorf("OutputWriter は必須です")
 	}
+	if args.AIClient == nil {
+		return nil, fmt.Errorf("AIClient は必須です")
+	}
 	if args.CharactersMap == nil {
 		return nil, fmt.Errorf("CharactersMap は必須です")
-	}
-
-	aiClient := args.AIClient
-	if aiClient == nil {
-		client, err := initializeAIClient(ctx, args.Config.ProjectID, args.Config.LocationID)
-		if err != nil {
-			return nil, err
-		}
-		aiClient = client
 	}
 
 	scriptPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
@@ -88,7 +81,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		httpClient:   args.HTTPClient,
 		reader:       args.Reader,
 		writer:       args.Writer,
-		aiClient:     aiClient,
+		aiClient:     args.AIClient,
 		scriptPrompt: scriptPrompt,
 		imagePrompt:  imagePrompt,
 	}
@@ -104,21 +97,6 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	}
 
 	return m, nil
-}
-
-// initializeAIClient は gemini クライアントを初期化します。
-func initializeAIClient(ctx context.Context, projectID, locationID string) (gemini.GenerativeModel, error) {
-	clientConfig := gemini.Config{
-		ProjectID:    projectID,
-		LocationID:   locationID,
-		Temperature:  genai.Ptr(defaultGeminiTemperature),
-		InitialDelay: defaultInitialDelay,
-	}
-	aiClient, err := gemini.NewClient(ctx, clientConfig)
-	if err != nil {
-		return nil, fmt.Errorf("AIクライアントの初期化に失敗しました: %w", err)
-	}
-	return aiClient, nil
 }
 
 // initializeScriptPrompt は ScriptPrompt ビルダーを初期化します。

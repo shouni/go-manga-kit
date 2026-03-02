@@ -9,13 +9,6 @@ const (
 	// パネルの並列生成時などに、API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
 	defaultRateBurst = 1
 
-	// defaultGeminiTemperature はモデル生成時の多様性を制御します。
-	// 0.1 は低い値に設定することで、漫画の構成や指示への忠実度を安定させます。
-	defaultGeminiTemperature = float32(0.1)
-
-	// defaultInitialDelay リトライのデフォルトの遅延期間を指定します。
-	defaultInitialDelay = 60 * time.Second
-
 	// defaultCacheExpiration は、インメモリに保持されたアセット情報の有効期限です。
 	// フェッチ済みの画像バイナリや、既に Gemini File API にアップロード済みの
 	// URI 情報を再利用し、重複した I/O やアップロード処理を抑制します。
