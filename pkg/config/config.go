@@ -6,7 +6,6 @@ import (
 
 // デフォルト値の定義
 const (
-	DefaultLocationID         = "asia-northeast1"
 	DefaultGeminiModel        = "gemini-3-flash-preview"
 	DefaultImageStandardModel = "gemini-3-pro-image-preview"
 	DefaultImageQualityModel  = "gemini-3-pro-image-preview"
@@ -20,10 +19,6 @@ type Config struct {
 	GeminiModel        string
 	ImageStandardModel string // 標準・高速（パネル用）
 	ImageQualityModel  string // 高品質・高知能（ページ用）
-
-	// --- Vertex AI Settings ---
-	ProjectID  string // Google Cloud Project ID
-	LocationID string // 例: "asia-northeast1"
 
 	// --- Generation Settings ---
 	StyleSuffix  string
@@ -39,7 +34,6 @@ type Config struct {
 // DefaultConfig は推奨されるデフォルト設定を返すヘルパー関数です。
 func DefaultConfig() Config {
 	return Config{
-		LocationID:         DefaultLocationID,
 		GeminiModel:        DefaultGeminiModel,
 		ImageStandardModel: DefaultImageStandardModel,
 		ImageQualityModel:  DefaultImageQualityModel,
