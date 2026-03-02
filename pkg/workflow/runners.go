@@ -44,7 +44,7 @@ func (m *Manager) buildAllRunners() (*Runners, error) {
 }
 
 // buildScriptRunner は、台本生成を担当する Runner を作成します。
-func (m *Manager) buildScriptRunner() (ScriptRunner, error) {
+func (m *Manager) buildScriptRunner() (runner.ScriptRunner, error) {
 	extractor, err := extract.NewExtractor(m.httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
@@ -54,26 +54,26 @@ func (m *Manager) buildScriptRunner() (ScriptRunner, error) {
 }
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
-func (m *Manager) buildDesignRunner() (DesignRunner, error) {
+func (m *Manager) buildDesignRunner() (runner.DesignRunner, error) {
 	return runner.NewMangaDesignRunner(m.cfg, m.mangaComposer, m.writer), nil
 }
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
-func (m *Manager) buildPanelImageRunner() (PanelImageRunner, error) {
+func (m *Manager) buildPanelImageRunner() (runner.PanelImageRunner, error) {
 	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.imagePrompt)
 
 	return runner.NewMangaPanelRunner(m.cfg, panelsGen, m.writer), nil
 }
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
-func (m *Manager) buildPageImageRunner() (PageImageRunner, error) {
+func (m *Manager) buildPageImageRunner() (runner.PageImageRunner, error) {
 	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt, m.cfg.MaxPanelsPerPage)
 
 	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
 }
 
 // buildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
-func (m *Manager) buildPublishRunner() (PublishRunner, error) {
+func (m *Manager) buildPublishRunner() (runner.PublishRunner, error) {
 	htmlCfg := builder.BuilderConfig{
 		EnableHardWraps: true,
 		Mode:            "webtoon",
