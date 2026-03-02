@@ -1,4 +1,4 @@
-package workflow
+package runner
 
 import (
 	"context"

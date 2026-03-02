@@ -8,6 +8,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
+	"github.com/shouni/go-manga-kit/pkg/runner"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-http-kit/pkg/httpkit"
@@ -41,11 +42,11 @@ type Manager struct {
 
 // Runners は、構築済みの各 Runner を保持します。
 type Runners struct {
-	Design     DesignRunner
-	Script     ScriptRunner
-	PanelImage PanelImageRunner
-	PageImage  PageImageRunner
-	Publish    PublishRunner
+	Design     runner.DesignRunner
+	Script     runner.ScriptRunner
+	PanelImage runner.PanelImageRunner
+	PageImage  runner.PageImageRunner
+	Publish    runner.PublishRunner
 }
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
