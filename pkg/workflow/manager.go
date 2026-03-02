@@ -23,6 +23,7 @@ type ManagerArgs struct {
 	CharactersMap domain.CharactersMap
 	ScriptPrompt  prompts.ScriptPrompt
 	ImagePrompt   prompts.ImagePrompt
+	AIClient      gemini.GenerativeModel
 }
 
 // Manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
@@ -62,9 +63,13 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 		return nil, fmt.Errorf("CharactersMap は必須です")
 	}
 
-	aiClient, err := initializeAIClient(ctx, args.Config.ProjectID, args.Config.LocationID)
-	if err != nil {
-		return nil, err
+	aiClient := args.AIClient
+	if aiClient == nil {
+		var err error
+		aiClient, err = initializeAIClient(ctx, args.Config.ProjectID, args.Config.LocationID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	scriptPrompt, err := initializeScriptPrompt(args.ScriptPrompt)
