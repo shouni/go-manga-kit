@@ -40,13 +40,10 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 	cm := pg.composer.CharactersMap
 
-	for i := range panels {
-		idx := i
-		p := panels[idx]
-
+	for i, panel := range panels {
 		// ゴルーチン起動前にセマフォを取得
 		if err := sem.Acquire(egCtx, 1); err != nil {
-			return nil, err
+			break
 		}
 
 		eg.Go(func() error {
@@ -57,19 +54,19 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				return err
 			}
 
-			char := cm.GetCharacterWithDefault(p.SpeakerID)
+			char := cm.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
-				return fmt.Errorf("character not found for speaker ID '%s'", p.SpeakerID)
+				return fmt.Errorf("character not found for speaker ID '%s'", panel.SpeakerID)
 			}
 			finalSeed := char.Seed
-			userPrompt, systemPrompt := pg.pb.BuildPanel(p, char)
+			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
 
 			pg.composer.mu.RLock()
 			fileURI := pg.composer.CharacterResourceMap[char.ID]
 			pg.composer.mu.RUnlock()
 
 			logger := slog.With(
-				"panel_index", idx+1,
+				"panel_index", i+1,
 				"character_id", char.ID,
 				"character_name", char.Name,
 				"seed", finalSeed,
@@ -91,13 +88,13 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				Seed: &finalSeed,
 			})
 			if err != nil {
-				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", idx+1, char.ID, err)
+				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", i+1, char.ID, err)
 			}
 
 			logger.Info("Panel generation completed",
 				"duration", time.Since(startTime).Round(time.Second),
 			)
-			images[idx] = resp
+			images[i] = resp
 			return nil
 		})
 	}

@@ -56,14 +56,12 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for i, group := range panelGroups {
-		idx := i
-		grp := group
-		seed := pg.determineDefaultSeed(grp)
+		seed := pg.determineDefaultSeed(group)
 		currentPageNum := i + 1
 
 		// ゴルーチン起動前にセマフォを取得
 		if err := sem.Acquire(egCtx, 1); err != nil {
-			return nil, err
+			break
 		}
 
 		eg.Go(func() error {
@@ -77,13 +75,13 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 			subManga := domain.MangaResponse{
 				Title:       fmt.Sprintf("%s (Page %d/%d)", manga.Title, currentPageNum, totalPages),
 				Description: manga.Description,
-				Panels:      grp,
+				Panels:      group,
 			}
 
 			logger := slog.With(
 				"page", currentPageNum,
 				"total", totalPages,
-				"panels", len(grp),
+				"panels", len(group),
 				"seed", seed,
 			)
 			logger.Info("Starting manga page generation")
@@ -95,7 +93,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 			}
 
 			logger.Info("Manga page generation completed", "duration", time.Since(startTime).Round(time.Second))
-			allResponses[idx] = res
+			allResponses[i] = res
 			return nil
 		})
 	}
