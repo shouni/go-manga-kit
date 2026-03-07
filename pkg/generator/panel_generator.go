@@ -42,7 +42,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	for i, panel := range panels {
 		// ゴルーチン起動前にセマフォを取得
 		if err := sem.Acquire(egCtx, 1); err != nil {
-			break
+			return nil, fmt.Errorf("failed to acquire semaphore: %w", err)
 		}
 
 		eg.Go(func() error {

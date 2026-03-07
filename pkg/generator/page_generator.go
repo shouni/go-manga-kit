@@ -60,7 +60,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 
 		// ゴルーチン起動前にセマフォを取得
 		if err := sem.Acquire(egCtx, 1); err != nil {
-			break
+			return nil, fmt.Errorf("failed to acquire semaphore: %w", err)
 		}
 
 		eg.Go(func() error {
