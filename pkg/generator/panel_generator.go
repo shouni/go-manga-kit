@@ -40,14 +40,12 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
-		// ゴルーチン起動前にセマフォを取得
-		if err := sem.Acquire(egCtx, 1); err != nil {
-			return nil, fmt.Errorf("failed to acquire semaphore: %w", err)
-		}
-
 		eg.Go(func() error {
-			// 処理終了後に必ず解放
+			if err := sem.Acquire(egCtx, 1); err != nil {
+				return err
+			}
 			defer sem.Release(1)
+
 			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
