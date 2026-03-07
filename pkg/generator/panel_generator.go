@@ -10,6 +10,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
@@ -26,7 +27,7 @@ func NewPanelGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PanelGe
 	}
 }
 
-// Execute は、並列処理を用いてパネル群を生成します。
+// Execute は、セマフォを使用して同時実行数を制限しながらパネルを並列生成します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
 	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
@@ -34,19 +35,25 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
+	sem := semaphore.NewWeighted(pg.composer.MaxConcurrency)
 
 	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
 		eg.Go(func() error {
+			if err := sem.Acquire(egCtx, 1); err != nil {
+				return err
+			}
+			defer sem.Release(1)
+
+			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
-			// キャラクター情報を取得
 			char := cm.GetCharacterWithDefault(panel.SpeakerID)
 			if char == nil {
-				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
+				return fmt.Errorf("character not found for speaker ID '%s'", panel.SpeakerID)
 			}
 			finalSeed := char.Seed
 			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
@@ -81,7 +88,9 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", i+1, char.ID, err)
 			}
 
-			logger.Info("Panel generation completed", "duration", time.Since(startTime).Round(time.Millisecond))
+			logger.Info("Panel generation completed",
+				"duration", time.Since(startTime).Round(time.Second),
+			)
 			images[i] = resp
 			return nil
 		})

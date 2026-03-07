@@ -11,6 +11,8 @@
 
 [Gemini Image Kit](https://github.com/shouni/gemini-image-kit) を描画コアに採用。独自の**Seedシンクロナイズ機能**と**Dynamic Asset Mapping**により、複数ページにわたる作品でもキャラクターの造形と色彩を高い精度で固定することが可能です。
 
+また、**並列実行制御（Semaphore）** と **APIレート制限** により、Vertex AI などのクォータ制限下でも、安定した大規模生成パイプラインの構築を実現します。
+
 ---
 
 ## ✨ コア・コンセプト (Core Concepts)
@@ -23,10 +25,11 @@
     * 「指定されたコマ数を厳密に守る」ためのプロンプト・ガードレールを搭載。`FINAL PANEL` 指示等により、AIによる勝手なコマ追加を抑制します。
 * **🎨 Vibrant Color Guidance**:
     * モノクロ化を抑制。参照画像が白黒やラフスケッチであっても、プロンプト技術により鮮やかなデジタルアニメ調の彩色を強く誘導します。
+* **🛡 Production-Ready Concurrency Control**:
+    * セマフォ（Semaphore）を用いた細やかな並列実行制御を内包。API の `RESOURCE_EXHAUSTED` (429) エラーを未然に防ぎ、スロットルを効かせた堅牢なバッチ処理を可能にします。
 * **⚡ Smart Asset Management**: 
-    * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドをゼロにします。
-    * Gemini API 利用時は、同一URLの二重アップロードを防止するキャッシュ機構が自動で作動します。
-    * `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
+    * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドを軽減します。
+    * Gemini API 利用時は `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
 
 ---
 

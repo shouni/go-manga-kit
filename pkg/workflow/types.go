@@ -5,9 +5,11 @@ import (
 )
 
 const (
+	// defaultMaxConcurrency は、並行実行数です。
+	defaultMaxConcurrency = 2
 	// defaultRateBurst は、短時間に許容される最大リクエスト数（バースト）です。
 	// パネルの並列生成時などに、API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
-	defaultRateBurst = 1
+	defaultRateBurst = 2
 
 	// defaultCacheExpiration は、インメモリに保持されたアセット情報の有効期限です。
 	// フェッチ済みの画像バイナリや、既に Gemini File API にアップロード済みの

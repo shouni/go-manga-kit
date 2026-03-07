@@ -11,6 +11,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 type PageGenerator struct {
@@ -28,13 +29,12 @@ func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt, maxPanels
 	}
 }
 
-// Execute は、そのページの画像レスポンスを並行して生成します。
+// Execute は、セマフォを使用して並列数を制限しながらページ画像を生成します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	if len(manga.Panels) == 0 {
 		return nil, nil
 	}
 
-	// 1. アセットの事前並列アップロード（Character と Panel のリソースを準備）
 	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
 		return nil, fmt.Errorf("failed to prepare character resources: %w", err)
 	}
@@ -42,12 +42,12 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		return nil, fmt.Errorf("failed to prepare panel resources: %w", err)
 	}
 
-	// 2. ページ分割と並列実行の準備
 	maxPanels := pg.maxPanelsPerPage
 	if maxPanels <= 0 {
 		maxPanels = defaultMaxPanelsPerPage
 	}
 
+	sem := semaphore.NewWeighted(pg.composer.MaxConcurrency)
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
 
@@ -59,8 +59,14 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		currentPageNum := i + 1
 
 		eg.Go(func() error {
+			if err := sem.Acquire(egCtx, 1); err != nil {
+				return err
+			}
+			defer sem.Release(1)
+
+			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
-				return fmt.Errorf("rate limiter wait error: %w", err)
+				return err
 			}
 
 			subManga := domain.MangaResponse{
@@ -83,7 +89,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 				return fmt.Errorf("failed to generate page %d: %w", currentPageNum, err)
 			}
 
-			logger.Info("Manga page generation completed", "duration", time.Since(startTime).Round(time.Millisecond))
+			logger.Info("Manga page generation completed", "duration", time.Since(startTime).Round(time.Second))
 			allResponses[i] = res
 			return nil
 		})
@@ -112,7 +118,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		NegativePrompt: prompts.NegativePagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
-		ImageSize:      ImageSize2K,
+		ImageSize:      ImageSize1K,
 		Images:         resMap.OrderedAssets,
 		Seed:           &seed,
 	}
