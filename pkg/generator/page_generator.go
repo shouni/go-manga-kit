@@ -47,8 +47,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		maxPanels = defaultMaxPanelsPerPage
 	}
 
-	const maxConcurrency = 2
-	sem := semaphore.NewWeighted(maxConcurrency)
+	sem := semaphore.NewWeighted(pg.composer.MaxConcurrency)
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
 

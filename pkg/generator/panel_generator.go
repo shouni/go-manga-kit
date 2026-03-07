@@ -35,8 +35,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	const maxConcurrency = 2
-	sem := semaphore.NewWeighted(maxConcurrency)
+	sem := semaphore.NewWeighted(pg.composer.MaxConcurrency)
 
 	cm := pg.composer.CharactersMap
 

@@ -19,6 +19,7 @@ type MangaComposer struct {
 	ImageGenerator       generator.ImageGenerator
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
+	MaxConcurrency       int64
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
 	PanelResourceMap     map[string]string // ReferenceURL -> FileAPIURI
 	mu                   sync.RWMutex
@@ -31,6 +32,7 @@ func NewMangaComposer(
 	imgGen generator.ImageGenerator,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
+	maxConcurrency int64,
 ) (*MangaComposer, error) {
 	if assetMgr == nil {
 		return nil, fmt.Errorf("assetMgr is required")
@@ -47,6 +49,7 @@ func NewMangaComposer(
 		ImageGenerator:       imgGen,
 		CharactersMap:        cm,
 		RateLimiter:          limiter,
+		MaxConcurrency:       maxConcurrency,
 		CharacterResourceMap: make(map[string]string),
 		PanelResourceMap:     make(map[string]string),
 	}, nil
