@@ -22,6 +22,7 @@ func (m *Manager) buildMangaComposer(
 		m.httpClient,
 		cache.New(defaultCacheExpiration, cacheCleanupInterval),
 		defaultTTL,
+		false,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)

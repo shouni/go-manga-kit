@@ -4,16 +4,15 @@ go 1.25
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.2.13
-	github.com/shouni/go-gemini-client v1.0.13
-	github.com/shouni/go-http-kit v1.2.1
+	github.com/shouni/gemini-image-kit v1.3.1
+	github.com/shouni/go-gemini-client v1.1.0
+	github.com/shouni/go-http-kit v1.3.2
 	github.com/shouni/go-remote-io v1.2.1
 	github.com/shouni/go-text-format v1.2.0
 	github.com/shouni/go-utils v1.0.18
 	github.com/shouni/go-web-exact/v2 v2.0.13
 	golang.org/x/sync v0.19.0
 	golang.org/x/time v0.14.0
-	google.golang.org/genai v1.48.0
 )
 
 require (
@@ -77,6 +76,7 @@ require (
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/api v0.267.0 // indirect
+	google.golang.org/genai v1.49.0 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260203192932-546029d2fa20 // indirect
