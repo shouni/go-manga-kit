@@ -118,7 +118,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 		NegativePrompt: prompts.NegativePagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
-		ImageSize:      ImageSize1K,
+		ImageSize:      ImageSize2K,
 		Images:         resMap.OrderedAssets,
 		Seed:           &seed,
 	}
