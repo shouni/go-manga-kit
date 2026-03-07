@@ -34,31 +34,45 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
+	maxConcurrency := 2
+	sem := make(chan struct{}, maxConcurrency)
 
 	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
+		// セマフォからトークンを取得（枠が空くまで待機）
+		select {
+		case sem <- struct{}{}:
+		case <-egCtx.Done():
+			return nil, egCtx.Err()
+		}
+
+		// ループ変数のキャプチャ
+		idx := i
+		p := panel
+
 		eg.Go(func() error {
+			// 終了時にトークンを解放
+			defer func() { <-sem }()
+
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
-			// キャラクター情報を取得
-			char := cm.GetCharacterWithDefault(panel.SpeakerID)
+			char := cm.GetCharacterWithDefault(p.SpeakerID)
 			if char == nil {
-				return fmt.Errorf("character not found for speaker ID '%s' and no default character is available", panel.SpeakerID)
+				return fmt.Errorf("character not found for speaker ID '%s'", p.SpeakerID)
 			}
 			finalSeed := char.Seed
-			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
+			userPrompt, systemPrompt := pg.pb.BuildPanel(p, char)
 
 			pg.composer.mu.RLock()
 			fileURI := pg.composer.CharacterResourceMap[char.ID]
 			pg.composer.mu.RUnlock()
 
 			logger := slog.With(
-				"panel_index", i+1,
+				"panel_index", idx+1,
 				"character_id", char.ID,
-				"character_name", char.Name,
 				"seed", finalSeed,
 				"use_file_api", fileURI != "",
 			)
@@ -78,11 +92,13 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				Seed: &finalSeed,
 			})
 			if err != nil {
-				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", i+1, char.ID, err)
+				return fmt.Errorf("panel %d generation failed: %w", idx+1, err)
 			}
 
-			logger.Info("Panel generation completed", "duration", time.Since(startTime).Round(time.Millisecond))
-			images[i] = resp
+			logger.Info("Panel generation completed",
+				"duration", time.Since(startTime).Round(time.Second),
+			)
+			images[idx] = resp
 			return nil
 		})
 	}
