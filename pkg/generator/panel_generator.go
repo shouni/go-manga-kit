@@ -52,7 +52,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 		eg.Go(func() error {
 			// 処理終了後に必ず解放
 			defer sem.Release(1)
-
+			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
@@ -71,6 +71,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			logger := slog.With(
 				"panel_index", idx+1,
 				"character_id", char.ID,
+				"character_name", char.Name,
 				"seed", finalSeed,
 				"use_file_api", fileURI != "",
 			)

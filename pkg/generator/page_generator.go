@@ -69,10 +69,9 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		eg.Go(func() error {
 			// 処理終了後に必ず解放
 			defer sem.Release(1)
-
 			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
-				return fmt.Errorf("rate limiter wait error: %w", err)
+				return err
 			}
 
 			subManga := domain.MangaResponse{
