@@ -10,6 +10,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 )
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
@@ -26,7 +27,7 @@ func NewPanelGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PanelGe
 	}
 }
 
-// Execute は、並列処理を用いてパネル群を生成します。
+// Execute は、セマフォを使用して同時実行数を制限しながらパネルを並列生成します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
 	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
@@ -34,26 +35,23 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	maxConcurrency := 2
-	sem := make(chan struct{}, maxConcurrency)
+	const maxConcurrency = 2
+	sem := semaphore.NewWeighted(maxConcurrency)
 
 	cm := pg.composer.CharactersMap
 
-	for i, panel := range panels {
-		// セマフォからトークンを取得（枠が空くまで待機）
-		select {
-		case sem <- struct{}{}:
-		case <-egCtx.Done():
-			return nil, egCtx.Err()
+	for i := range panels {
+		idx := i
+		p := panels[idx]
+
+		// ゴルーチン起動前にセマフォを取得
+		if err := sem.Acquire(egCtx, 1); err != nil {
+			return nil, err
 		}
 
-		// ループ変数のキャプチャ
-		idx := i
-		p := panel
-
 		eg.Go(func() error {
-			// 終了時にトークンを解放
-			defer func() { <-sem }()
+			// 処理終了後に必ず解放
+			defer sem.Release(1)
 
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
@@ -92,7 +90,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				Seed: &finalSeed,
 			})
 			if err != nil {
-				return fmt.Errorf("panel %d generation failed: %w", idx+1, err)
+				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", idx+1, char.ID, err)
 			}
 
 			logger.Info("Panel generation completed",

@@ -29,13 +29,12 @@ func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt, maxPanels
 	}
 }
 
-// Execute は、そのページの画像レスポンスをセマフォで制御しながら並行して生成します。
+// Execute は、セマフォを使用して並列数を制限しながらページ画像を生成します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
 	if len(manga.Panels) == 0 {
 		return nil, nil
 	}
 
-	// 1. アセットの事前並列アップロード（Character と Panel のリソースを準備）
 	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
 		return nil, fmt.Errorf("failed to prepare character resources: %w", err)
 	}
@@ -43,13 +42,13 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		return nil, fmt.Errorf("failed to prepare panel resources: %w", err)
 	}
 
-	// 2. ページ分割と並列実行の準備
 	maxPanels := pg.maxPanelsPerPage
 	if maxPanels <= 0 {
 		maxPanels = defaultMaxPanelsPerPage
 	}
 
-	sem := semaphore.NewWeighted(1)
+	const maxConcurrency = 2
+	sem := semaphore.NewWeighted(maxConcurrency)
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
 
@@ -59,14 +58,16 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 	for i, group := range panelGroups {
 		idx := i
 		grp := group
-
 		seed := pg.determineDefaultSeed(grp)
 		currentPageNum := i + 1
 
+		// ゴルーチン起動前にセマフォを取得
+		if err := sem.Acquire(egCtx, 1); err != nil {
+			return nil, err
+		}
+
 		eg.Go(func() error {
-			if err := sem.Acquire(egCtx, 1); err != nil {
-				return err
-			}
+			// 処理終了後に必ず解放
 			defer sem.Release(1)
 
 			// レート制限の待機
