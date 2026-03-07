@@ -4,12 +4,12 @@ go 1.25
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.3.1
-	github.com/shouni/go-gemini-client v1.1.0
+	github.com/shouni/gemini-image-kit v1.3.2
+	github.com/shouni/go-gemini-client v1.1.1
 	github.com/shouni/go-http-kit v1.3.2
 	github.com/shouni/go-remote-io v1.2.1
 	github.com/shouni/go-text-format v1.2.0
-	github.com/shouni/go-utils v1.0.18
+	github.com/shouni/go-utils v1.0.19
 	github.com/shouni/go-web-exact/v2 v2.0.13
 	golang.org/x/sync v0.19.0
 	golang.org/x/time v0.14.0
