@@ -17,7 +17,7 @@ import (
 
 type ManagerArgs struct {
 	Config        config.Config
-	HTTPClient    httpkit.ClientInterface
+	HTTPClient    httpkit.HTTPClient
 	Reader        remoteio.InputReader
 	Writer        remoteio.OutputWriter
 	CharactersMap domain.CharactersMap
@@ -29,7 +29,7 @@ type ManagerArgs struct {
 // Manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type Manager struct {
 	cfg           config.Config
-	httpClient    httpkit.ClientInterface
+	httpClient    httpkit.HTTPClient
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
 	aiClient      gemini.GenerativeModel
