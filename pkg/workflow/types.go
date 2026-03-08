@@ -5,8 +5,6 @@ import (
 )
 
 const (
-	// defaultMaxConcurrency は、並行実行数です。
-	defaultMaxConcurrency = 2
 	// defaultRateBurst は、短時間に許容される最大リクエスト数（バースト）です。
 	// パネルの並列生成時などに、API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
 	defaultRateBurst = 2

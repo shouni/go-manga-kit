@@ -42,7 +42,7 @@ func (m *Manager) buildMangaComposer(
 		imageGenerator,
 		chars,
 		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
-		defaultMaxConcurrency,
+		m.cfg.MaxConcurrency,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("MangaComposerの初期化に失敗しました: %w", err)
