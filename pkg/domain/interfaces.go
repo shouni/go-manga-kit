@@ -17,7 +17,7 @@ type ScriptPrompt interface {
 	Build(mode string, data TemplateData) (string, error)
 }
 
-// ImagePrompt は、AIプロンプトを構築する契約です。
+// ImagePrompt は、画像生成AI向けのプロンプトを構築する契約です。
 type ImagePrompt interface {
 	// BuildPanel は、単一の漫画パネル用のユーザープロンプトとシステムプロンプトを決定します。
 	BuildPanel(panel Panel, char *Character) (userPrompt string, systemPrompt string)
