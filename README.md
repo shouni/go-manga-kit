@@ -56,7 +56,6 @@ go-manga-kit/
     ├── workflow/    # 【契約・統合】各工程のインターフェース定義と、一連の工程を管理するManager。
     ├── runner/      # 【実行実体】Design/Script/Panel/Page/Publish の具体的な実行プロセス。
     ├── generator/   # 【生成戦略】Page/Panel構成、Composerによるレイアウト計算アルゴリズム。
-    ├── prompts/     # 【言語戦略】テンプレート（.md）とデータを用いたAI指示文の動的構築。
     ├── parser/      # 【解析】入力テキストやAIレスポンスを構造化データへ変換。
     ├── publisher/   # 【出力】生成された画像とテキストを最終成果物として統合。
     ├── asset/       # 【アセット管理】アセットのパス解決およびURIマッピング。
