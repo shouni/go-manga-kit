@@ -21,8 +21,8 @@ type ManagerArgs struct {
 	Reader        remoteio.InputReader
 	Writer        remoteio.OutputWriter
 	CharactersMap domain.CharactersMap
-	ScriptPrompt  prompts.ScriptPrompt
-	ImagePrompt   prompts.ImagePrompt
+	ScriptPrompt  domain.ScriptPrompt
+	ImagePrompt   domain.ImagePrompt
 	AIClient      gemini.GenerativeModel
 }
 
@@ -33,8 +33,8 @@ type Manager struct {
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
 	aiClient      gemini.GenerativeModel
-	scriptPrompt  prompts.ScriptPrompt
-	imagePrompt   prompts.ImagePrompt
+	scriptPrompt  domain.ScriptPrompt
+	imagePrompt   domain.ImagePrompt
 	mangaComposer *generator.MangaComposer
 	Runners       *Runners
 }
@@ -101,7 +101,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 
 // initializeScriptPrompt は ScriptPrompt ビルダーを初期化します。
 // 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
-func initializeScriptPrompt(scriptPrompt prompts.ScriptPrompt) (prompts.ScriptPrompt, error) {
+func initializeScriptPrompt(scriptPrompt domain.ScriptPrompt) (domain.ScriptPrompt, error) {
 	if scriptPrompt != nil {
 		return scriptPrompt, nil
 	}
@@ -116,7 +116,7 @@ func initializeScriptPrompt(scriptPrompt prompts.ScriptPrompt) (prompts.ScriptPr
 
 // initializeImagePrompt は ImagePromptBuilderを初期化します。
 // 引数として既存のビルダーが渡された場合はそれを返し、nil の場合は新規作成します。
-func initializeImagePrompt(imagePrompt prompts.ImagePrompt, charMap domain.CharactersMap, styleSuffix string) (prompts.ImagePrompt, error) {
+func initializeImagePrompt(imagePrompt domain.ImagePrompt, charMap domain.CharactersMap, styleSuffix string) (domain.ImagePrompt, error) {
 	if imagePrompt != nil {
 		return imagePrompt, nil
 	}

@@ -10,11 +10,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/prompts"
-
-	"github.com/shouni/go-gemini-client/pkg/gemini"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
@@ -32,7 +30,7 @@ var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 type MangaScriptRunner struct {
 	cfg           config.Config
 	extractor     *extract.Extractor
-	promptBuilder prompts.ScriptPrompt
+	promptBuilder domain.ScriptPrompt
 	aiClient      gemini.GenerativeModel
 	reader        remoteio.InputReader
 }
@@ -41,7 +39,7 @@ type MangaScriptRunner struct {
 func NewMangaScriptRunner(
 	cfg config.Config,
 	ext *extract.Extractor,
-	pb prompts.ScriptPrompt,
+	pb domain.ScriptPrompt,
 	ai gemini.GenerativeModel,
 	r remoteio.InputReader,
 ) *MangaScriptRunner {
@@ -65,7 +63,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 	}
 
 	// 2. プロンプトの構築
-	templateData := prompts.TemplateData{InputText: inputText}
+	templateData := domain.TemplateData{InputText: inputText}
 	finalPrompt, err := sr.promptBuilder.Build(mode, templateData)
 	if err != nil {
 		return nil, fmt.Errorf("プロンプトの構築に失敗しました: %w", err)

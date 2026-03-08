@@ -1,6 +1,9 @@
-package prompts
+package domain
 
-import "github.com/shouni/go-manga-kit/pkg/domain"
+// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
+type TemplateData struct {
+	InputText string
+}
 
 // ScriptPrompt は、AIプロンプトを構築する契約です。
 type ScriptPrompt interface {
@@ -11,7 +14,7 @@ type ScriptPrompt interface {
 // ImagePrompt は、AIプロンプトを構築する契約です。
 type ImagePrompt interface {
 	// BuildPanel は、単一の漫画パネル用のユーザープロンプト、システムプロンプト、および使用するseed値を決定します。
-	BuildPanel(panel domain.Panel, char *domain.Character) (userPrompt string, systemPrompt string)
+	BuildPanel(panel Panel, char *Character) (userPrompt string, systemPrompt string)
 	// BuildPage は、統合された漫画ページ画像用のユーザープロンプトと システムプロンプトを生成します。
-	BuildPage(panels []domain.Panel, rm *domain.ResourceMap) (userPrompt string, systemPrompt string)
+	BuildPage(panels []Panel, rm *ResourceMap) (userPrompt string, systemPrompt string)
 }
