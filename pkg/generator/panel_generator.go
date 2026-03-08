@@ -8,10 +8,12 @@ import (
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
+
+// negativePanelPrompt 単体パネルでは「文字」や「フキダシ」を徹底排除します
+const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy, monochrome, black and white, greyscale"
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
@@ -75,7 +77,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
 				Prompt:         userPrompt,
 				SystemPrompt:   systemPrompt,
-				NegativePrompt: prompts.NegativePanelPrompt,
+				NegativePrompt: negativePanelPrompt,
 				AspectRatio:    PanelAspectRatio,
 				ImageSize:      ImageSize1K,
 				Image: imagedom.ImageURI{

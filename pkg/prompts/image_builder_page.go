@@ -17,9 +17,6 @@ const (
 	PosFullWidth      = "Bottom row, covering the entire width of the page"
 	CompositionImpact = "- COMPOSITION: Cinematic wide shot, high impact focus.\n"
 
-	// NegativePagePrompt は生成から除外したい要素を定義します。
-	NegativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
-
 	// MangaStructureHeader は漫画の構造に関する基本ルールを定義します。
 	MangaStructureHeader = `### FORMAT RULES: FULL COLOR ANIME MANGA ###
 - STYLE: Vibrant Full Color Digital Anime Style. High saturation, cinematic lighting.

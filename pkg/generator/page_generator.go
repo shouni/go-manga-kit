@@ -9,10 +9,12 @@ import (
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/prompts"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 )
+
+// negativePagePrompt は生成から除外したい要素を定義します。
+const negativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
 
 type PageGenerator struct {
 	composer         *MangaComposer
@@ -115,7 +117,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	// 3. ImageURI 構造体のスライスを作成
 	req := imagedom.ImagePageRequest{
 		Prompt:         userPrompt,
-		NegativePrompt: prompts.NegativePagePrompt,
+		NegativePrompt: negativePagePrompt,
 		SystemPrompt:   systemPrompt,
 		AspectRatio:    PageAspectRatio,
 		ImageSize:      ImageSize2K,
