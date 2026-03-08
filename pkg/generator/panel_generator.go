@@ -12,10 +12,8 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-const (
-	// negativePanelPrompt 単体パネルでは「文字」や「フキダシ」を徹底排除します
-	negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy, monochrome, black and white, greyscale"
-)
+// negativePanelPrompt 単体パネルでは「文字」や「フキダシ」を徹底排除します
+const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy, monochrome, black and white, greyscale"
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
