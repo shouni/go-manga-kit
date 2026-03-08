@@ -32,7 +32,7 @@ const (
 )
 
 // BuildPage はメインのプロンプト構築フローを管理します。
-func (pb *ImagePromptBuilder) BuildPage(panels []domain.Panel, rm *ResourceMap) (string, string) {
+func (pb *ImagePromptBuilder) BuildPage(panels []domain.Panel, rm *domain.ResourceMap) (string, string) {
 	numPanels := len(panels)
 	bigPanelIdx := pb.calculateBigPanelIndex(numPanels)
 
@@ -92,7 +92,7 @@ func (pb *ImagePromptBuilder) writeLayoutStructure(w *strings.Builder, num int) 
 }
 
 // writeCharacterReferences フォーマットされた文字参照のリストを生成し、提供された文字列ビルダーに追加します。
-func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *ResourceMap) {
+func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *domain.ResourceMap) {
 	w.WriteString("## CHARACTER MASTER REFERENCES\n")
 
 	type charRef struct {
@@ -120,7 +120,7 @@ func (pb *ImagePromptBuilder) writeCharacterReferences(w *strings.Builder, rm *R
 }
 
 // writePanelBreakdown 個々のパネルのフォーマットされた内訳を生成し、提供された文字列ビルダーに追加します。
-func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []domain.Panel, rm *ResourceMap, bigIdx int) {
+func (pb *ImagePromptBuilder) writePanelBreakdown(w *strings.Builder, panels []domain.Panel, rm *domain.ResourceMap, bigIdx int) {
 	num := len(panels)
 	w.WriteString("## PANEL BREAKDOWN\n")
 	for i, panel := range panels {

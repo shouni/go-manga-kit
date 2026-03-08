@@ -16,12 +16,12 @@ import (
 
 type PageGenerator struct {
 	composer         *MangaComposer
-	pb               prompts.ImagePrompt
+	pb               domain.ImagePrompt
 	maxPanelsPerPage int
 }
 
 // NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
-func NewPageGenerator(composer *MangaComposer, pb prompts.ImagePrompt, maxPanelsPerPage int) *PageGenerator {
+func NewPageGenerator(composer *MangaComposer, pb domain.ImagePrompt, maxPanelsPerPage int) *PageGenerator {
 	return &PageGenerator{
 		composer:         composer,
 		pb:               pb,
@@ -133,11 +133,10 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 }
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。
-func (pg *PageGenerator) collectResources(panels []domain.Panel) (*prompts.ResourceMap, error) {
-	res := &prompts.ResourceMap{
+func (pg *PageGenerator) collectResources(panels []domain.Panel) (*domain.ResourceMap, error) {
+	res := &domain.ResourceMap{
 		CharacterFiles: make(map[string]int),
 		PanelFiles:     make(map[string]int),
-		OrderedAssets:  []imagedom.ImageURI{},
 	}
 	addedMap := make(map[string]int) // URL -> index (重複排除用)
 

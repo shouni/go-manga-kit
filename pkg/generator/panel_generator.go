@@ -16,11 +16,11 @@ import (
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
 	composer *MangaComposer
-	pb       prompts.ImagePrompt
+	pb       domain.ImagePrompt
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanelGenerator(composer *MangaComposer, pb prompts.ImagePrompt) *PanelGenerator {
+func NewPanelGenerator(composer *MangaComposer, pb domain.ImagePrompt) *PanelGenerator {
 	return &PanelGenerator{
 		composer: composer,
 		pb:       pb,

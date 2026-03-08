@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
+
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // TextPromptBuilder はレビュープロンプトの構成を管理し、モード選択のロジックを内包します。
@@ -32,7 +34,7 @@ func NewTextPromptBuilder() (*TextPromptBuilder, error) {
 }
 
 // Build は、要求されたモードに応じて適切なテンプレートを実行します。
-func (b *TextPromptBuilder) Build(mode string, data TemplateData) (string, error) {
+func (b *TextPromptBuilder) Build(mode string, data domain.TemplateData) (string, error) {
 	tmpl, ok := b.templates[mode]
 	if !ok {
 		return "", fmt.Errorf("不明なモードです: '%s'", mode)
