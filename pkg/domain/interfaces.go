@@ -1,5 +1,11 @@
 package domain
 
+import (
+	"context"
+
+	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+)
+
 // TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
 type TemplateData struct {
 	InputText string
@@ -17,4 +23,15 @@ type ImagePrompt interface {
 	BuildPanel(panel Panel, char *Character) (userPrompt string, systemPrompt string)
 	// BuildPage は、統合された漫画ページ画像用のユーザープロンプトと システムプロンプトを生成します。
 	BuildPage(panels []Panel, rm *ResourceMap) (userPrompt string, systemPrompt string)
+}
+
+// PanelsImageGenerator は、指定されたコンテキスト内で一連のパネルの画像レスポンスを生成するためのインターフェースを定義します。
+type PanelsImageGenerator interface {
+	Execute(ctx context.Context, panels []Panel) ([]*imagedom.ImageResponse, error)
+}
+
+// PagesImageGenerator は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
+// パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
+type PagesImageGenerator interface {
+	Execute(ctx context.Context, manga *MangaResponse) ([]*imagedom.ImageResponse, error)
 }
