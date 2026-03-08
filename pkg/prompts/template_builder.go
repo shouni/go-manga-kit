@@ -6,6 +6,11 @@ import (
 	"text/template"
 )
 
+// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
+type TemplateData struct {
+	InputText string
+}
+
 // TextPromptBuilder はレビュープロンプトの構成を管理し、モード選択のロジックを内包します。
 type TextPromptBuilder struct {
 	templates map[string]*template.Template
