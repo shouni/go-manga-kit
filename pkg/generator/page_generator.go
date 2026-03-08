@@ -137,7 +137,6 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*domain.Resour
 	res := &domain.ResourceMap{
 		CharacterFiles: make(map[string]int),
 		PanelFiles:     make(map[string]int),
-		OrderedAssets:  []imagedom.ImageURI{},
 	}
 	addedMap := make(map[string]int) // URL -> index (重複排除用)
 
