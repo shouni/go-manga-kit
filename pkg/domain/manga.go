@@ -1,6 +1,6 @@
 package domain
 
-import "github.com/shouni/gemini-image-kit/pkg/domain"
+import imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
 
 // MangaResponse は AI モデルから返される台本全体の構造です。
 type MangaResponse struct {
@@ -36,5 +36,5 @@ type ResourceMap struct {
 	// PanelFiles は ReferenceURL から OrderedAssets のインデックスへのマップです。
 	PanelFiles map[string]int
 	// OrderedAssets は Gemini に渡す画像アセット（File API URI と元の URL のペア）の順序付きリストです。
-	OrderedAssets []domain.ImageURI
+	OrderedAssets []imgdom.ImageURI
 }
