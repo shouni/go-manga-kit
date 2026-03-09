@@ -7,7 +7,7 @@ import (
 
 	"github.com/shouni/go-manga-kit/pkg/domain"
 
-	"github.com/shouni/gemini-image-kit/pkg/generator"
+	imagekit "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
@@ -15,8 +15,8 @@ import (
 )
 
 type MangaComposer struct {
-	AssetManager         generator.AssetManager
-	ImageGenerator       generator.ImageGenerator
+	AssetManager         imagekit.AssetManager
+	ImageGenerator       imagekit.ImageGenerator
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	MaxConcurrency       int64
@@ -28,8 +28,8 @@ type MangaComposer struct {
 
 // NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
 func NewMangaComposer(
-	assetMgr generator.AssetManager,
-	imgGen generator.ImageGenerator,
+	assetMgr imagekit.AssetManager,
+	imgGen imagekit.ImageGenerator,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
 	maxConcurrency int64,
@@ -122,7 +122,7 @@ func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
 	// Vertex AI モード時は Cloud Storage (gs://) を直接参照可能なため、
 	// File API へのアップロード処理をバイパスし、転送コストを削減します。
-	if mc.AssetManager.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
+	if mc.ImageGenerator.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
 		mc.mu.RLock()
 		_, ok := resourceMap[key]
 		mc.mu.RUnlock()
