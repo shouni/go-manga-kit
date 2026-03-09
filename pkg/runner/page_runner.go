@@ -8,14 +8,12 @@ import (
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/config"
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
-	cfg       config.Config
 	generator mangadom.PagesImageGenerator
 	reader    remoteio.InputReader
 	writer    remoteio.OutputWriter
@@ -23,13 +21,11 @@ type MangaPageRunner struct {
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
-	cfg config.Config,
 	generator mangadom.PagesImageGenerator,
 	reader remoteio.InputReader,
 	writer remoteio.OutputWriter,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
-		cfg:       cfg,
 		generator: generator,
 		reader:    reader,
 		writer:    writer,

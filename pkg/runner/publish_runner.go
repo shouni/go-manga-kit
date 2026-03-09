@@ -3,21 +3,18 @@ package runner
 import (
 	"context"
 
-	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
 // MangaPublisherRunner は pkg/publisher を利用して漫画成果物の公開と構築を担います。
 type MangaPublisherRunner struct {
-	cfg       config.Config
 	publisher *publisher.MangaPublisher
 }
 
 // NewMangaPublisherRunner は、指定された構成と MangaPublisher を持つ新しい MangaPublisherRunner インスタンスを作成します。
-func NewMangaPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher) *MangaPublisherRunner {
+func NewMangaPublisherRunner(pub *publisher.MangaPublisher) *MangaPublisherRunner {
 	return &MangaPublisherRunner{
-		cfg:       cfg,
 		publisher: pub,
 	}
 }

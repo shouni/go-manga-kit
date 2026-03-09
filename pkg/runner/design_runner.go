@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 
 	imgdom "github.com/shouni/gemini-image-kit/pkg/domain"
@@ -38,17 +37,17 @@ var fileNameSanitizer = strings.NewReplacer(
 
 // MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
 type MangaDesignRunner struct {
-	cfg      config.Config
-	composer *generator.MangaComposer
-	writer   remoteio.OutputWriter
+	composer    *generator.MangaComposer
+	writer      remoteio.OutputWriter
+	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(cfg config.Config, composer *generator.MangaComposer, writer remoteio.OutputWriter) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *generator.MangaComposer, writer remoteio.OutputWriter, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
-		cfg:      cfg,
-		composer: composer,
-		writer:   writer,
+		composer:    composer,
+		writer:      writer,
+		styleSuffix: styleSuffix,
 	}
 }
 
@@ -139,8 +138,8 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	layout := fmt.Sprintf(designLayoutPromptFormat, designLayoutDefault)
 
 	promptParts := []string{base, layout}
-	if dr.cfg.StyleSuffix != "" {
-		promptParts = append(promptParts, dr.cfg.StyleSuffix)
+	if dr.styleSuffix != "" {
+		promptParts = append(promptParts, dr.styleSuffix)
 	}
 	promptParts = append(promptParts, "white background", "sharp focus", "2k resolution")
 

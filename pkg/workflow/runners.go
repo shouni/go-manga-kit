@@ -50,26 +50,26 @@ func (m *Manager) buildScriptRunner() (runner.ScriptRunner, error) {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
 	}
 
-	return runner.NewMangaScriptRunner(m.cfg, extractor, m.scriptPrompt, m.aiClient, m.reader), nil
+	return runner.NewMangaScriptRunner(extractor, m.scriptPrompt, m.aiClient, m.reader, m.cfg.GeminiModel), nil
 }
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
 func (m *Manager) buildDesignRunner() (runner.DesignRunner, error) {
-	return runner.NewMangaDesignRunner(m.cfg, m.mangaComposer, m.writer), nil
+	return runner.NewMangaDesignRunner(m.mangaComposer, m.writer, m.cfg.StyleSuffix), nil
 }
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *Manager) buildPanelImageRunner() (runner.PanelImageRunner, error) {
 	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.imagePrompt)
 
-	return runner.NewMangaPanelRunner(m.cfg, panelsGen, m.writer), nil
+	return runner.NewMangaPanelRunner(panelsGen, m.writer), nil
 }
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *Manager) buildPageImageRunner() (runner.PageImageRunner, error) {
 	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.imagePrompt, m.cfg.MaxPanelsPerPage)
 
-	return runner.NewMangaPageRunner(m.cfg, pagesGen, m.reader, m.writer), nil
+	return runner.NewMangaPageRunner(pagesGen, m.reader, m.writer), nil
 }
 
 // buildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
@@ -89,5 +89,5 @@ func (m *Manager) buildPublishRunner() (runner.PublishRunner, error) {
 
 	pub := publisher.NewMangaPublisher(m.writer, md2htmlRunner)
 
-	return runner.NewMangaPublisherRunner(m.cfg, pub), nil
+	return runner.NewMangaPublisherRunner(pub), nil
 }
