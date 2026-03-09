@@ -9,26 +9,22 @@ import (
 
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/config"
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelRunner struct {
-	cfg       config.Config
 	generator mangadom.PanelsImageGenerator
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPanelRunner は、依存関係を注入して初期化します。
 func NewMangaPanelRunner(
-	cfg config.Config,
 	generator mangadom.PanelsImageGenerator,
 	writer remoteio.OutputWriter,
 ) *MangaPanelRunner {
 	return &MangaPanelRunner{
-		cfg:       cfg,
 		generator: generator,
 		writer:    writer,
 	}

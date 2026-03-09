@@ -25,19 +25,6 @@ var markdownEscaper = strings.NewReplacer(
 	">", "&gt;",
 )
 
-// Options はパブリッシュ動作および Markdown 構築を制御する設定項目です。
-type Options struct {
-	OutputDir  string
-	ImagePaths []string // 明示的に画像パスを指定する場合に使用。空なら ReferenceURL を使用します。
-}
-
-// PublishResult はパブリッシュ処理の結果として生成されたファイルの情報を保持します。
-type PublishResult struct {
-	MarkdownPath string   // 生成された manga_plot.md のパス
-	HTMLPath     string   // 生成された HTML のパス
-	ImagePaths   []string // 保存された全画像のパスリスト
-}
-
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
 	writer     remoteio.OutputWriter
@@ -53,17 +40,15 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 }
 
 // Publish はドメインモデルを基に Markdown を構築し、HTML への変換・保存を実行します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts Options) (PublishResult, error) {
-	result := PublishResult{}
+func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts domain.PublishOptions) (*domain.PublishResult, error) {
 	if manga == nil {
-		return result, fmt.Errorf("manga データが nil です")
+		return nil, fmt.Errorf("manga データが nil です")
 	}
 
 	markdownPath, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultMangaPlotName)
 	if err != nil {
-		return result, fmt.Errorf("Markdown 出力パスの解決に失敗: %w", err)
+		return nil, fmt.Errorf("Markdown 出力パスの解決に失敗: %w", err)
 	}
-	result.MarkdownPath = markdownPath
 
 	// 保存用に相対パスリストを作成し、opts にセットする
 	imagePaths := make([]string, 0, len(manga.Panels))
@@ -74,36 +59,39 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 		}
 		imagePaths = append(imagePaths, relPath)
 	}
-	result.ImagePaths = imagePaths
-	opts.ImagePaths = imagePaths // 構築用にセット
 
+	opts.ImagePaths = imagePaths // 構築用にセット
 	// 共通の BuildMarkdown を使用
 	content := p.BuildMarkdown(manga, opts)
 
 	// Markdown の保存
 	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdownPath)
 	if err := p.writer.Write(ctx, markdownPath, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
-		return result, fmt.Errorf("Markdown 書き込み失敗: %w", err)
+		return nil, fmt.Errorf("Markdown 書き込み失敗: %w", err)
 	}
 
 	// HTML の生成
+	var htmlPath string
 	if p.htmlRunner != nil {
 		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
 		if err != nil {
-			return result, fmt.Errorf("HTML 変換失敗: %w", err)
+			return nil, fmt.Errorf("HTML 変換失敗: %w", err)
 		}
-		htmlPath := strings.TrimSuffix(markdownPath, path.Ext(markdownPath)) + ".html"
+		htmlPath = strings.TrimSuffix(markdownPath, path.Ext(markdownPath)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
-			return result, fmt.Errorf("HTML 書き込み失敗: %w", err)
+			return nil, fmt.Errorf("HTML 書き込み失敗: %w", err)
 		}
-		result.HTMLPath = htmlPath
 	}
 
-	return result, nil
+	return &domain.PublishResult{
+		MarkdownPath: markdownPath,
+		HTMLPath:     htmlPath,
+		ImagePaths:   imagePaths,
+	}, nil
 }
 
 // BuildMarkdown は画像、話者、セリフ、確認用アンカーを含む Markdown を構築します。
-func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, opts Options) string {
+func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, opts domain.PublishOptions) string {
 	var sb strings.Builder
 
 	// タイトルと説明文

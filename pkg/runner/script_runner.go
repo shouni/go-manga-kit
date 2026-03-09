@@ -11,10 +11,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
-	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
-	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
 const (
@@ -24,31 +22,36 @@ const (
 	maxErrorResponseLength = 200
 )
 
-// jsonBlockRegex は Markdown 形式の JSON ブロックを抽出するための正規表現です。
+// jsonBlockRegex は、Markdown 形式の JSON ブロックを抽出するための正規表現です。
 var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 
+// Extractor は指定された URL からコンテンツを取得し、そこからテキストを抽出するためのインターフェースです。
+type Extractor interface {
+	FetchAndExtractText(ctx context.Context, url string) (string, bool, error)
+}
+
 type MangaScriptRunner struct {
-	cfg           config.Config
-	extractor     *extract.Extractor
+	extractor     Extractor
 	promptBuilder domain.ScriptPrompt
-	aiClient      gemini.GenerativeModel
+	aiClient      gemini.Generator
 	reader        remoteio.InputReader
+	aiModel       string
 }
 
 // NewMangaScriptRunner は依存関係を注入して初期化します。
 func NewMangaScriptRunner(
-	cfg config.Config,
-	ext *extract.Extractor,
+	ext Extractor,
 	pb domain.ScriptPrompt,
-	ai gemini.GenerativeModel,
+	ai gemini.Generator,
 	r remoteio.InputReader,
+	aiModel string,
 ) *MangaScriptRunner {
 	return &MangaScriptRunner{
-		cfg:           cfg,
 		extractor:     ext,
 		promptBuilder: pb,
 		aiClient:      ai,
 		reader:        r,
+		aiModel:       aiModel,
 	}
 }
 
@@ -70,8 +73,8 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 	}
 
 	// 3. Gemini API を呼び出し
-	slog.Info("ScriptRunner: Gemini APIを呼び出し中", "model", sr.cfg.GeminiModel)
-	resp, err := sr.aiClient.GenerateContent(ctx, sr.cfg.GeminiModel, finalPrompt)
+	slog.Info("ScriptRunner: Gemini APIを呼び出し中", "model", sr.aiModel)
+	resp, err := sr.aiClient.GenerateContent(ctx, sr.aiModel, finalPrompt)
 	if err != nil {
 		return nil, fmt.Errorf("Geminiによるコンテンツ生成に失敗しました: %w", err)
 	}

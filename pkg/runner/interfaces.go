@@ -3,10 +3,8 @@ package runner
 import (
 	"context"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
-
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。
@@ -33,6 +31,6 @@ type PageImageRunner interface {
 
 // PublishRunner は、漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
 type PublishRunner interface {
-	Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (publisher.PublishResult, error)
+	Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (*domain.PublishResult, error)
 	BuildMarkdown(manga *domain.MangaResponse) string
 }
