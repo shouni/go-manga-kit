@@ -84,12 +84,13 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	}
 
 	// HTML の生成
-	htmlPath := strings.TrimSuffix(markdownPath, path.Ext(markdownPath)) + ".html"
+	var htmlPath string
 	if p.htmlRunner != nil {
 		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
 		if err != nil {
 			return nil, fmt.Errorf("HTML 変換失敗: %w", err)
 		}
+		htmlPath = strings.TrimSuffix(markdownPath, path.Ext(markdownPath)) + ".html"
 		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
 			return nil, fmt.Errorf("HTML 書き込み失敗: %w", err)
 		}
