@@ -23,7 +23,7 @@ func NewMangaPublisherRunner(cfg config.Config, pub *publisher.MangaPublisher) *
 }
 
 // Run は漫画データの公開処理を実行し、Markdown や HTML などの成果物を指定された出力ディレクトリに保存します。
-func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (publisher.PublishResult, error) {
+func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (*publisher.PublishResult, error) {
 	opts := publisher.Options{
 		OutputDir: outputDir,
 	}
