@@ -20,8 +20,8 @@ func NewMangaPublisherRunner(pub *publisher.MangaPublisher) *MangaPublisherRunne
 }
 
 // Run は漫画データの公開処理を実行し、Markdown や HTML などの成果物を指定された出力ディレクトリに保存します。
-func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (*publisher.PublishResult, error) {
-	opts := publisher.Options{
+func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (*domain.PublishResult, error) {
+	opts := domain.PublishOptions{
 		OutputDir: outputDir,
 	}
 
@@ -32,5 +32,5 @@ func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResp
 func (pr *MangaPublisherRunner) BuildMarkdown(manga *domain.MangaResponse) string {
 	// publisher.Options を空で渡すことで、外部パス指定を行わず、
 	// domain.MangaResponse 内の ReferenceURL をそのまま使用するデフォルト挙動を選択します。
-	return pr.publisher.BuildMarkdown(manga, publisher.Options{})
+	return pr.publisher.BuildMarkdown(manga, domain.PublishOptions{})
 }

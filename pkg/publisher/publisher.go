@@ -25,19 +25,6 @@ var markdownEscaper = strings.NewReplacer(
 	">", "&gt;",
 )
 
-// Options はパブリッシュ動作および Markdown 構築を制御する設定項目です。
-type Options struct {
-	OutputDir  string
-	ImagePaths []string // 明示的に画像パスを指定する場合に使用。空なら ReferenceURL を使用します。
-}
-
-// PublishResult はパブリッシュ処理の結果として生成されたファイルの情報を保持します。
-type PublishResult struct {
-	MarkdownPath string   // 生成された manga_plot.md のパス
-	HTMLPath     string   // 生成された HTML のパス
-	ImagePaths   []string // 保存された全画像のパスリスト
-}
-
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
 	writer     remoteio.OutputWriter
@@ -53,7 +40,7 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Ru
 }
 
 // Publish はドメインモデルを基に Markdown を構築し、HTML への変換・保存を実行します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts Options) (*PublishResult, error) {
+func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts domain.PublishOptions) (*domain.PublishResult, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("manga データが nil です")
 	}
@@ -96,7 +83,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 		}
 	}
 
-	return &PublishResult{
+	return &domain.PublishResult{
 		MarkdownPath: markdownPath,
 		HTMLPath:     htmlPath,
 		ImagePaths:   imagePaths,
@@ -104,7 +91,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 }
 
 // BuildMarkdown は画像、話者、セリフ、確認用アンカーを含む Markdown を構築します。
-func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, opts Options) string {
+func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, opts domain.PublishOptions) string {
 	var sb strings.Builder
 
 	// タイトルと説明文
