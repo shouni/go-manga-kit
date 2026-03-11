@@ -32,7 +32,7 @@ func NewPageGenerator(composer *MangaComposer, pb domain.ImagePrompt, maxPanelsP
 
 // Execute は、errgroupの制限機能を使用して並列数を制御しながらページ画像を生成します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
-	if len(manga.Panels) == 0 {
+	if manga == nil || len(manga.Panels) == 0 {
 		return nil, nil
 	}
 

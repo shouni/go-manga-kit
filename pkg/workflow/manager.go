@@ -49,7 +49,7 @@ type Runners struct {
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
-	if err := validateArgs(args); err != nil {
+	if err := validateArgs(&args); err != nil {
 		return nil, err
 	}
 
@@ -81,7 +81,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 }
 
 // validateArgs 読みやすさのためにバリデーションを分離
-func validateArgs(args ManagerArgs) error {
+func validateArgs(args *ManagerArgs) error {
 	if args.HTTPClient == nil {
 		return fmt.Errorf("httpClient is required")
 	}
