@@ -72,11 +72,13 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 
 	// 3. 生成リクエスト
 	pageReq := imgdom.ImagePageRequest{
-		Prompt:      designPrompt,
-		AspectRatio: "16:9",
-		ImageSize:   generator.ImageSize2K,
-		Images:      imageURIs,
-		Seed:        ptrInt64(seed),
+		GenerationOptions: imgdom.GenerationOptions{
+			Prompt:      designPrompt,
+			AspectRatio: generator.DesignAspectRatio,
+			ImageSize:   generator.ImageSize2K,
+			Seed:        ptrInt64(seed),
+		},
+		Images: imageURIs,
 	}
 
 	// 4. 生成実行

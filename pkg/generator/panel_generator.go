@@ -54,7 +54,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			if char == nil {
 				return fmt.Errorf("character not found for speaker ID '%s'", panel.SpeakerID)
 			}
-			finalSeed := char.Seed
+			seed := char.Seed
 			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
 			fileURI := pg.composer.GetCharacterResourceURI(char.ID)
 
@@ -62,23 +62,25 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 				"panel_index", i+1,
 				"character_id", char.ID,
 				"character_name", char.Name,
-				"seed", finalSeed,
+				"seed", seed,
 				"use_file_api", fileURI != "",
 			)
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
-			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImageGenerationRequest{
-				Prompt:         userPrompt,
-				SystemPrompt:   systemPrompt,
-				NegativePrompt: negativePanelPrompt,
-				AspectRatio:    PanelAspectRatio,
-				ImageSize:      ImageSize1K,
+			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImagePanelRequest{
+				GenerationOptions: imagedom.GenerationOptions{
+					Prompt:         userPrompt,
+					SystemPrompt:   systemPrompt,
+					NegativePrompt: negativePanelPrompt,
+					AspectRatio:    PanelAspectRatio,
+					ImageSize:      ImageSize1K,
+					Seed:           &seed,
+				},
 				Image: imagedom.ImageURI{
 					FileAPIURI:   fileURI,
 					ReferenceURL: char.ReferenceURL,
 				},
-				Seed: &finalSeed,
 			})
 			if err != nil {
 				return fmt.Errorf("panel %d (character_id: %s) generation failed: %w", i+1, char.ID, err)
