@@ -83,7 +83,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 // validateArgs 読みやすさのためにバリデーションを分離
 func validateArgs(args *ManagerArgs) error {
 	if args.HTTPClient == nil {
-		return fmt.Errorf("httpClient is required")
+		return fmt.Errorf("HTTPClient is required")
 	}
 	if args.Reader == nil {
 		return fmt.Errorf("InputReader is required")
