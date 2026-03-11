@@ -49,26 +49,30 @@ type Runners struct {
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
-	if args.HTTPClient == nil {
-		return nil, fmt.Errorf("httpClient は必須です")
+	// 1. 必須依存関係のバリデーション
+	if err := validateArgs(args); err != nil {
+		return nil, err
 	}
-	if args.Reader == nil {
-		return nil, fmt.Errorf("InputReader は必須です")
+
+	// 2. Config のデフォルト値補完
+	cfg := args.Config
+	if cfg.MaxConcurrency <= 0 {
+		cfg.MaxConcurrency = config.DefaultMaxConcurrency
 	}
-	if args.Writer == nil {
-		return nil, fmt.Errorf("OutputWriter は必須です")
+	if cfg.RateInterval <= 0 {
+		cfg.RateInterval = config.DefaultRateInterval
 	}
-	if args.AIClient == nil {
-		return nil, fmt.Errorf("AIClient は必須です")
+	if cfg.GeminiModel == "" {
+		cfg.GeminiModel = config.DefaultGeminiModel
 	}
-	if args.CharactersMap == nil {
-		return nil, fmt.Errorf("CharactersMap は必須です")
+	if cfg.ImageStandardModel == "" {
+		cfg.ImageStandardModel = config.DefaultImageStandardModel
 	}
-	if args.ScriptPrompt == nil {
-		return nil, fmt.Errorf("ScriptPrompt は必須です")
+	if cfg.ImageQualityModel == "" {
+		cfg.ImageQualityModel = config.DefaultImageQualityModel
 	}
-	if args.ImagePrompt == nil {
-		return nil, fmt.Errorf("ImagePrompt は必須です")
+	if cfg.StyleSuffix == "" {
+		cfg.StyleSuffix = config.DefaultStyleSuffix
 	}
 
 	m := &Manager{
@@ -93,4 +97,30 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	}
 
 	return m, nil
+}
+
+// validateArgs 読みやすさのためにバリデーションを分離
+func validateArgs(args ManagerArgs) error {
+	if args.HTTPClient == nil {
+		return fmt.Errorf("httpClient is required")
+	}
+	if args.Reader == nil {
+		return fmt.Errorf("InputReader is required")
+	}
+	if args.Writer == nil {
+		return fmt.Errorf("OutputWriter is required")
+	}
+	if args.AIClient == nil {
+		return fmt.Errorf("AIClient is required")
+	}
+	if args.CharactersMap == nil {
+		return fmt.Errorf("CharactersMap is required")
+	}
+	if args.ScriptPrompt == nil {
+		return fmt.Errorf("ScriptPrompt is required")
+	}
+	if args.ImagePrompt == nil {
+		return fmt.Errorf("ImagePrompt is required")
+	}
+	return nil
 }
