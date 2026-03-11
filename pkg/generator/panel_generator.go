@@ -9,7 +9,6 @@ import (
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 // negativePanelPrompt 単体パネルでは「文字」や「フキダシ」を徹底排除します
@@ -29,26 +28,24 @@ func NewPanelGenerator(composer *MangaComposer, pb domain.ImagePrompt) *PanelGen
 	}
 }
 
-// Execute は、セマフォを使用して同時実行数を制限しながらパネルを並列生成します。
+// Execute は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
 func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
+	if len(panels) == 0 {
+		return nil, nil
+	}
+
 	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
 
 	images := make([]*imagedom.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	sem := semaphore.NewWeighted(pg.composer.MaxConcurrency)
+	eg.SetLimit(int(pg.composer.MaxConcurrency))
 
 	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
 		eg.Go(func() error {
-			if err := sem.Acquire(egCtx, 1); err != nil {
-				return err
-			}
-			defer sem.Release(1)
-
-			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
@@ -59,10 +56,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			}
 			finalSeed := char.Seed
 			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
-
-			pg.composer.mu.RLock()
-			fileURI := pg.composer.CharacterResourceMap[char.ID]
-			pg.composer.mu.RUnlock()
+			fileURI := pg.composer.GetCharacterResourceURI(char.ID)
 
 			logger := slog.With(
 				"panel_index", i+1,
@@ -98,5 +92,8 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 		})
 	}
 
-	return images, eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return nil, err
+	}
+	return images, nil
 }

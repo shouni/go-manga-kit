@@ -10,7 +10,6 @@ import (
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
-	"golang.org/x/sync/semaphore"
 )
 
 // negativePagePrompt は生成から除外したい要素を定義します。
@@ -31,9 +30,9 @@ func NewPageGenerator(composer *MangaComposer, pb domain.ImagePrompt, maxPanelsP
 	}
 }
 
-// Execute は、セマフォを使用して並列数を制限しながらページ画像を生成します。
+// Execute は、errgroupの制限機能を使用して並列数を制御しながらページ画像を生成します。
 func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
-	if len(manga.Panels) == 0 {
+	if manga == nil || len(manga.Panels) == 0 {
 		return nil, nil
 	}
 
@@ -49,24 +48,18 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 		maxPanels = defaultMaxPanelsPerPage
 	}
 
-	sem := semaphore.NewWeighted(pg.composer.MaxConcurrency)
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
-
 	allResponses := make([]*imagedom.ImageResponse, totalPages)
+
 	eg, egCtx := errgroup.WithContext(ctx)
+	eg.SetLimit(int(pg.composer.MaxConcurrency))
 
 	for i, group := range panelGroups {
 		seed := pg.determineDefaultSeed(group)
 		currentPageNum := i + 1
 
 		eg.Go(func() error {
-			if err := sem.Acquire(egCtx, 1); err != nil {
-				return err
-			}
-			defer sem.Release(1)
-
-			// レート制限の待機
 			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}

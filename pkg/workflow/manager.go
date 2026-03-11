@@ -49,30 +49,15 @@ type Runners struct {
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
-	if args.HTTPClient == nil {
-		return nil, fmt.Errorf("httpClient は必須です")
-	}
-	if args.Reader == nil {
-		return nil, fmt.Errorf("InputReader は必須です")
-	}
-	if args.Writer == nil {
-		return nil, fmt.Errorf("OutputWriter は必須です")
-	}
-	if args.AIClient == nil {
-		return nil, fmt.Errorf("AIClient は必須です")
-	}
-	if args.CharactersMap == nil {
-		return nil, fmt.Errorf("CharactersMap は必須です")
-	}
-	if args.ScriptPrompt == nil {
-		return nil, fmt.Errorf("ScriptPrompt は必須です")
-	}
-	if args.ImagePrompt == nil {
-		return nil, fmt.Errorf("ImagePrompt は必須です")
+	if err := validateArgs(&args); err != nil {
+		return nil, err
 	}
 
+	cfg := args.Config
+	cfg.ApplyDefaults()
+
 	m := &Manager{
-		cfg:          args.Config,
+		cfg:          cfg,
 		httpClient:   args.HTTPClient,
 		reader:       args.Reader,
 		writer:       args.Writer,
@@ -93,4 +78,30 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	}
 
 	return m, nil
+}
+
+// validateArgs 読みやすさのためにバリデーションを分離
+func validateArgs(args *ManagerArgs) error {
+	if args.HTTPClient == nil {
+		return fmt.Errorf("HTTPClient is required")
+	}
+	if args.Reader == nil {
+		return fmt.Errorf("InputReader is required")
+	}
+	if args.Writer == nil {
+		return fmt.Errorf("OutputWriter is required")
+	}
+	if args.AIClient == nil {
+		return fmt.Errorf("AIClient is required")
+	}
+	if args.CharactersMap == nil {
+		return fmt.Errorf("CharactersMap is required")
+	}
+	if args.ScriptPrompt == nil {
+		return fmt.Errorf("ScriptPrompt is required")
+	}
+	if args.ImagePrompt == nil {
+		return fmt.Errorf("ImagePrompt is required")
+	}
+	return nil
 }
