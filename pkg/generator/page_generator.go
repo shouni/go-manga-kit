@@ -109,13 +109,15 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 
 	// 3. ImageURI 構造体のスライスを作成
 	req := imagedom.ImagePageRequest{
-		Prompt:         userPrompt,
-		NegativePrompt: negativePagePrompt,
-		SystemPrompt:   systemPrompt,
-		AspectRatio:    PageAspectRatio,
-		ImageSize:      ImageSize2K,
-		Images:         resMap.OrderedAssets,
-		Seed:           &seed,
+		GenerationOptions: imagedom.GenerationOptions{
+			Prompt:         userPrompt,
+			SystemPrompt:   systemPrompt,
+			NegativePrompt: negativePagePrompt,
+			AspectRatio:    PageAspectRatio,
+			ImageSize:      ImageSize2K,
+			Seed:           &seed,
+		},
+		Images: resMap.OrderedAssets,
 	}
 
 	slog.Info("Requesting AI image generation",
