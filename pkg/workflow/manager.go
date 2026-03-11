@@ -57,7 +57,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	cfg.ApplyDefaults()
 
 	m := &Manager{
-		cfg:          args.Config,
+		cfg:          cfg,
 		httpClient:   args.HTTPClient,
 		reader:       args.Reader,
 		writer:       args.Writer,
