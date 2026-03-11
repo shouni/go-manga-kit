@@ -74,7 +74,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	pageReq := imgdom.ImagePageRequest{
 		GenerationOptions: imgdom.GenerationOptions{
 			Prompt:      designPrompt,
-			AspectRatio: generator.PanelAspectRatio,
+			AspectRatio: generator.DesignAspectRatio,
 			ImageSize:   generator.ImageSize2K,
 			Seed:        ptrInt64(seed),
 		},

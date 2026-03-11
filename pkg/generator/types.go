@@ -1,6 +1,8 @@
 package generator
 
 const (
+	// DesignAspectRatio はキャラクターデザインシートの推奨アスペクト比です。
+	DesignAspectRatio = "16:9"
 	// PanelAspectRatio は単体パネル（1コマ）の推奨アスペクト比です。
 	PanelAspectRatio = "16:9"
 	// PageAspectRatio は統合ページ全体の推奨アスペクト比です。
