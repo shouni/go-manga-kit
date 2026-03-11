@@ -55,6 +55,13 @@ func NewMangaComposer(
 	}, nil
 }
 
+// GetCharacterResourceURI はキャラクターの画像URIを取得します。
+func (mc *MangaComposer) GetCharacterResourceURI(charID string) string {
+	mc.mu.RLock()
+	defer mc.mu.RUnlock()
+	return mc.CharacterResourceMap[charID]
+}
+
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
 	targetIDs := make(map[string]struct{})
