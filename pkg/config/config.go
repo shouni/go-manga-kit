@@ -34,14 +34,24 @@ type Config struct {
 	RequestTimeout time.Duration
 }
 
-// DefaultConfig は推奨されるデフォルト設定を返すヘルパー関数です。
-func DefaultConfig() Config {
-	return Config{
-		GeminiModel:        DefaultGeminiModel,
-		ImageStandardModel: DefaultImageStandardModel,
-		ImageQualityModel:  DefaultImageQualityModel,
-		StyleSuffix:        DefaultStyleSuffix,
-		MaxConcurrency:     DefaultMaxConcurrency,
-		RateInterval:       DefaultRateInterval,
+// ApplyDefaults は未設定（ゼロ値）の項目にデフォルト値を適用します。
+func (c *Config) ApplyDefaults() {
+	if c.GeminiModel == "" {
+		c.GeminiModel = DefaultGeminiModel
+	}
+	if c.ImageStandardModel == "" {
+		c.ImageStandardModel = DefaultImageStandardModel
+	}
+	if c.ImageQualityModel == "" {
+		c.ImageQualityModel = DefaultImageQualityModel
+	}
+	if c.MaxConcurrency <= 0 {
+		c.MaxConcurrency = DefaultMaxConcurrency
+	}
+	if c.RateInterval <= 0 {
+		c.RateInterval = DefaultRateInterval
+	}
+	if c.StyleSuffix == "" {
+		c.StyleSuffix = DefaultStyleSuffix
 	}
 }

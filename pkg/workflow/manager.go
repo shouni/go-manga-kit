@@ -49,31 +49,12 @@ type Runners struct {
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
 func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
-	// 1. 必須依存関係のバリデーション
 	if err := validateArgs(args); err != nil {
 		return nil, err
 	}
 
-	// 2. Config のデフォルト値補完
 	cfg := args.Config
-	if cfg.MaxConcurrency <= 0 {
-		cfg.MaxConcurrency = config.DefaultMaxConcurrency
-	}
-	if cfg.RateInterval <= 0 {
-		cfg.RateInterval = config.DefaultRateInterval
-	}
-	if cfg.GeminiModel == "" {
-		cfg.GeminiModel = config.DefaultGeminiModel
-	}
-	if cfg.ImageStandardModel == "" {
-		cfg.ImageStandardModel = config.DefaultImageStandardModel
-	}
-	if cfg.ImageQualityModel == "" {
-		cfg.ImageQualityModel = config.DefaultImageQualityModel
-	}
-	if cfg.StyleSuffix == "" {
-		cfg.StyleSuffix = config.DefaultStyleSuffix
-	}
+	cfg.ApplyDefaults()
 
 	m := &Manager{
 		cfg:          args.Config,
