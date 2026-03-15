@@ -4,8 +4,8 @@ go 1.26
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.3.7
-	github.com/shouni/go-gemini-client v1.1.2
+	github.com/shouni/gemini-image-kit v1.3.8
+	github.com/shouni/go-gemini-client v1.1.4
 	github.com/shouni/go-http-kit v1.3.3
 	github.com/shouni/go-remote-io v1.2.2
 	github.com/shouni/go-text-format v1.2.1
@@ -58,7 +58,7 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/shouni/netarmor v1.0.1 // indirect
+	github.com/shouni/netarmor v1.0.2 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.6.0 // indirect
 	github.com/yuin/goldmark v1.7.16 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
@@ -76,7 +76,7 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/api v0.271.0 // indirect
-	google.golang.org/genai v1.49.0 // indirect
+	google.golang.org/genai v1.50.0 // indirect
 	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260203192932-546029d2fa20 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
