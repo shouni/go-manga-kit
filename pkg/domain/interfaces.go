@@ -6,15 +6,10 @@ import (
 	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
 )
 
-// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
-type TemplateData struct {
-	InputText string
-}
-
 // ScriptPrompt は、AIプロンプトを構築する契約です。
 type ScriptPrompt interface {
 	// Build は、指定されたモード（例: "summary", "character_dialogue"）とデータに基づいてプロンプト文字列を生成します。
-	Build(mode string, data TemplateData) (string, error)
+	Build(mode string, data any) (string, error)
 }
 
 // ImagePrompt は、画像生成AI向けのプロンプトを構築する契約です。

@@ -30,6 +30,11 @@ type Extractor interface {
 	FetchAndExtractText(ctx context.Context, url string) (string, bool, error)
 }
 
+// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
+type TemplateData struct {
+	InputText string
+}
+
 type MangaScriptRunner struct {
 	extractor     Extractor
 	promptBuilder domain.ScriptPrompt
@@ -66,7 +71,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 	}
 
 	// 2. プロンプトの構築
-	templateData := domain.TemplateData{InputText: inputText}
+	templateData := TemplateData{InputText: inputText}
 	finalPrompt, err := sr.promptBuilder.Build(mode, templateData)
 	if err != nil {
 		return nil, fmt.Errorf("プロンプトの構築に失敗しました: %w", err)
