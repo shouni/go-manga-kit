@@ -14,6 +14,7 @@ type TemplateData struct {
 // ScriptPrompt は、AIプロンプトを構築する契約です。
 type ScriptPrompt interface {
 	// Build は、指定されたモードとデータ（TemplateData）に基づいてプロンプトを生成します。
+	// 注意: data に nil を指定することはできません。
 	Build(mode string, data *TemplateData) (string, error)
 }
 
