@@ -30,14 +30,9 @@ type Extractor interface {
 	FetchAndExtractText(ctx context.Context, url string) (string, bool, error)
 }
 
-// TemplateData はスクリプト生成プロンプトのテンプレートに渡すデータ構造です。
-type TemplateData struct {
-	InputText string
-}
-
 type MangaScriptRunner struct {
 	extractor     Extractor
-	promptBuilder domain.ScriptPrompt
+	promptBuilder domain.ScriptPrompt[domain.TemplateData]
 	aiClient      gemini.Generator
 	reader        remoteio.InputReader
 	aiModel       string
@@ -46,7 +41,7 @@ type MangaScriptRunner struct {
 // NewMangaScriptRunner は依存関係を注入して初期化します。
 func NewMangaScriptRunner(
 	ext Extractor,
-	pb domain.ScriptPrompt,
+	pb domain.ScriptPrompt[domain.TemplateData],
 	ai gemini.Generator,
 	r remoteio.InputReader,
 	aiModel string,
@@ -71,8 +66,8 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 	}
 
 	// 2. プロンプトの構築
-	templateData := TemplateData{InputText: inputText}
-	finalPrompt, err := sr.promptBuilder.Build(mode, templateData)
+	data := domain.TemplateData{InputText: inputText}
+	finalPrompt, err := sr.promptBuilder.Build(mode, data)
 	if err != nil {
 		return nil, fmt.Errorf("プロンプトの構築に失敗しました: %w", err)
 	}
