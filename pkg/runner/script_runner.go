@@ -30,7 +30,7 @@ type Extractor interface {
 	FetchAndExtractText(ctx context.Context, url string) (string, bool, error)
 }
 
-// TemplateData はレビュープロンプトのテンプレートに渡すデータ構造です。
+// TemplateData はスクリプト生成プロンプトのテンプレートに渡すデータ構造です。
 type TemplateData struct {
 	InputText string
 }
