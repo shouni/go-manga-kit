@@ -67,7 +67,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 
 	// 2. プロンプトの構築
 	data := domain.TemplateData{InputText: inputText}
-	finalPrompt, err := sr.promptBuilder.Build(mode, data)
+	finalPrompt, err := sr.promptBuilder.Build(mode, &data)
 	if err != nil {
 		return nil, fmt.Errorf("プロンプトの構築に失敗しました: %w", err)
 	}
