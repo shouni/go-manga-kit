@@ -74,6 +74,15 @@ func (m CharactersMap) GetCharacterWithDefault(ID string) *Character {
 	return nil
 }
 
+// GetCharacters はJSONバイト列からキャラクターマップをパースして返します。
+func GetCharacters(charactersJSON []byte) (CharactersMap, error) {
+	var charsMap CharactersMap
+	if err := json.Unmarshal(charactersJSON, &charsMap); err != nil {
+		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
+	}
+	return charsMap, nil
+}
+
 // LoadCharacterMap は指定されたパスからキャラクター設定を読み込みます。
 func LoadCharacterMap(ctx context.Context, reader remoteio.InputReader, path string) (CharactersMap, error) {
 	if path == "" {
@@ -91,7 +100,7 @@ func LoadCharacterMap(ctx context.Context, reader remoteio.InputReader, path str
 		return nil, fmt.Errorf("キャラクター設定ファイルの読み込みに失敗しました (path: %s): %w", path, err)
 	}
 
-	charsMap, err := getCharacters(data)
+	charsMap, err := GetCharacters(data)
 	if err != nil {
 		return nil, fmt.Errorf("キャラクター設定の解析に失敗しました (path: %s): %w", path, err)
 	}
@@ -106,13 +115,4 @@ func GetSeedFromString(s string) int64 {
 	}
 	hash := sha256.Sum256([]byte(s))
 	return int64(binary.BigEndian.Uint64(hash[:8]))
-}
-
-// getCharacters はJSONバイト列からキャラクターマップをパースして返します。
-func getCharacters(charactersJSON []byte) (CharactersMap, error) {
-	var charsMap CharactersMap
-	if err := json.Unmarshal(charactersJSON, &charsMap); err != nil {
-		return nil, fmt.Errorf("キャラクター情報のJSONパースに失敗しました: %w", err)
-	}
-	return charsMap, nil
 }
