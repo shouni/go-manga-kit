@@ -20,7 +20,7 @@ type ManagerArgs struct {
 	Reader        remoteio.InputReader
 	Writer        remoteio.OutputWriter
 	CharactersMap domain.CharactersMap
-	ScriptPrompt  domain.ScriptPrompt
+	ScriptPrompt  domain.ScriptPrompt[domain.TemplateData]
 	ImagePrompt   domain.ImagePrompt
 	AIClient      gemini.GenerativeModel
 }
@@ -32,7 +32,7 @@ type Manager struct {
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
 	aiClient      gemini.GenerativeModel
-	scriptPrompt  domain.ScriptPrompt
+	scriptPrompt  domain.ScriptPrompt[domain.TemplateData]
 	imagePrompt   domain.ImagePrompt
 	mangaComposer *generator.MangaComposer
 	Runners       *Runners
