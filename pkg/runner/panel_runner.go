@@ -44,7 +44,7 @@ func (r *MangaPanelRunner) Run(ctx context.Context, manga *mangadom.MangaRespons
 	return images, nil
 }
 
-// RunAndSave 画像パネルを生成し、インデックスを付けて指定のパスに保存します。エラーを返します。
+// RunAndSave は画像パネルを生成し、インデックスを付けて指定のパスに保存します。
 func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("MangaResponse がありません")

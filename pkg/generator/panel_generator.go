@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// negativePanelPrompt 単体パネルでは「文字」や「フキダシ」を徹底排除します
+// negativePanelPrompt は単体パネルで「文字」や「フキダシ」を徹底排除するための指定です。
 const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy, monochrome, black and white, greyscale"
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。

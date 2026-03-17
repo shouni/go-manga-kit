@@ -20,7 +20,7 @@ type ManagerArgs struct {
 	Reader        remoteio.InputReader
 	Writer        remoteio.OutputWriter
 	CharactersMap domain.CharactersMap
-	ScriptPrompt  domain.ScriptPrompt[domain.TemplateData]
+	ScriptPrompt  domain.ScriptPrompt
 	ImagePrompt   domain.ImagePrompt
 	AIClient      gemini.GenerativeModel
 }
@@ -32,7 +32,7 @@ type Manager struct {
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
 	aiClient      gemini.GenerativeModel
-	scriptPrompt  domain.ScriptPrompt[domain.TemplateData]
+	scriptPrompt  domain.ScriptPrompt
 	imagePrompt   domain.ImagePrompt
 	mangaComposer *generator.MangaComposer
 	Runners       *Runners
@@ -80,7 +80,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	return m, nil
 }
 
-// validateArgs 読みやすさのためにバリデーションを分離
+// validateArgs は読みやすさのために引数バリデーションを分離したヘルパーです。
 func validateArgs(args *ManagerArgs) error {
 	if args.HTTPClient == nil {
 		return fmt.Errorf("HTTPClient is required")

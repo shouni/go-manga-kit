@@ -35,7 +35,7 @@ var fileNameSanitizer = strings.NewReplacer(
 	"|", "_",
 )
 
-// MangaDesignRunner はキャラクターデザインシート生成の実行実体なのだ。
+// MangaDesignRunner はキャラクターデザインシート生成を実行するランナーです。
 type MangaDesignRunner struct {
 	composer    *generator.MangaComposer
 	writer      remoteio.OutputWriter
@@ -117,7 +117,7 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imgdom.
 	return finalPath, nil
 }
 
-// buildDesignPrompt キャラクターデザインシートを生成するための詳細なプロンプト文字列を構築します。
+// buildDesignPrompt はキャラクターデザインシート生成用の詳細なプロンプト文字列を構築します。
 func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	numChars := len(descriptions)
 	if numChars == 0 {
