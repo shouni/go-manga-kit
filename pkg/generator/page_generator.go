@@ -203,7 +203,7 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*domain.Resour
 	return res, nil
 }
 
-// chunkPanels パネルのスライスを指定されたサイズのチャンクに分割し、チャンクの 2D スライスを返します。
+// chunkPanels はパネルのスライスを指定サイズのチャンクに分割して返します。
 func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain.Panel {
 	var chunks [][]domain.Panel
 	for i := 0; i < len(panels); i += size {
@@ -216,7 +216,7 @@ func (pg *PageGenerator) chunkPanels(panels []domain.Panel, size int) [][]domain
 	return chunks
 }
 
-// determineDefaultSeed 利用可能なキャラクターデータに基づいて、マンガパネル生成のデフォルトシード値を決定します
+// determineDefaultSeed はキャラクターデータを基にページ生成時のデフォルトシード値を決定します。
 func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	const defaultSeed = 1000
 	if len(panels) == 0 {
@@ -224,12 +224,12 @@ func (pg *PageGenerator) determineDefaultSeed(panels []domain.Panel) int64 {
 	}
 	cm := pg.composer.CharactersMap
 
-	// パネルの最初のキャラのseed
+	// 最初のパネルの話者 Seed を優先します。
 	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
 		return char.Seed
 	}
 
-	// デフォルトのキャラseed
+	// 次にデフォルトキャラクターの Seed を参照します。
 	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
 		return defaultChar.Seed
 	}

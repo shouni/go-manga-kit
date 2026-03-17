@@ -32,7 +32,7 @@ type Extractor interface {
 
 type MangaScriptRunner struct {
 	extractor     Extractor
-	promptBuilder domain.ScriptPrompt[domain.TemplateData]
+	promptBuilder domain.ScriptPrompt
 	aiClient      gemini.Generator
 	reader        remoteio.InputReader
 	aiModel       string
@@ -41,7 +41,7 @@ type MangaScriptRunner struct {
 // NewMangaScriptRunner は依存関係を注入して初期化します。
 func NewMangaScriptRunner(
 	ext Extractor,
-	pb domain.ScriptPrompt[domain.TemplateData],
+	pb domain.ScriptPrompt,
 	ai gemini.Generator,
 	r remoteio.InputReader,
 	aiModel string,

@@ -39,7 +39,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse
 		return nil, fmt.Errorf("manga データが nil です")
 	}
 
-	// domain パッケージの定義に合わせて Pages か Panels かを確認してください
+	// ページ生成は Panels を入力として扱います。
 	if len(manga.Panels) == 0 {
 		return nil, fmt.Errorf("プロットにページデータが含まれていません")
 	}
@@ -49,8 +49,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse
 		"pageCount", len(manga.Panels),
 	)
 
-	// 2. ページ生成エンジンを実行 (内部でレイアウトやテキスト合成を行う想定)
-	// generator.Execute が *domain.MangaResponse を受け取れるようにします
+	// 2. ページ生成エンジンを実行
 	images, err := r.generator.Execute(ctx, manga)
 	if err != nil {
 		return nil, fmt.Errorf("ページ画像の生成に失敗しました: %w", err)
@@ -78,7 +77,6 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaR
 	}
 
 	// 3. 画像の生成
-	// Run メソッドには、読み込み済みの manga オブジェクトを渡す形に合わせます
 	resps, err := r.Run(ctx, manga)
 	if err != nil {
 		return nil, err
