@@ -11,9 +11,9 @@ type TemplateData struct {
 	InputText string
 }
 
-// ScriptPrompt は、AIプロンプトを構築するジェネリックな契約です。
+// ScriptPrompt は、AIプロンプトを構築する契約です。
 type ScriptPrompt interface {
-	// Build は、指定されたモードとデータ（型 T）に基づいてプロンプトを生成します。
+	// Build は、指定されたモードとデータ（TemplateData）に基づいてプロンプトを生成します。
 	Build(mode string, data TemplateData) (string, error)
 }
 
