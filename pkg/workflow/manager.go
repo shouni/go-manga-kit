@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
@@ -42,7 +41,7 @@ type Manager struct {
 }
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
+func New(args ManagerArgs) (*Manager, error) {
 	if err := validateArgs(&args); err != nil {
 		return nil, err
 	}
@@ -60,6 +59,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	}
 
 	var err error
+	// validateArgs で nil チェック済みのため、安全にアクセス可能
 	m.mangaComposer, err = m.buildMangaComposer(args.PromptDependencies.CharactersMap)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	return m, nil
 }
 
-// validateArgs は読みやすさのために引数バリデーションを分離したヘルパーです。
+// validateArgs は引数のバリデーションを行います。
 func validateArgs(args *ManagerArgs) error {
 	if args.HTTPClient == nil {
 		return fmt.Errorf("HTTPClient is required")
@@ -89,6 +89,9 @@ func validateArgs(args *ManagerArgs) error {
 	}
 	if args.PromptDependencies == nil {
 		return fmt.Errorf("PromptDependencies is required")
+	}
+	if args.PromptDependencies.CharactersMap == nil {
+		return fmt.Errorf("CharactersMap is required")
 	}
 	if args.PromptDependencies.ScriptPrompt == nil {
 		return fmt.Errorf("ScriptPrompt is required")
