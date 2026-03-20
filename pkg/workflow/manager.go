@@ -28,8 +28,8 @@ type ManagerArgs struct {
 	PromptDependencies *PromptDependencies
 }
 
-// Manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
-type Manager struct {
+// manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
+type manager struct {
 	cfg                config.Config
 	httpClient         httpkit.HTTPClient
 	reader             remoteio.InputReader
@@ -39,8 +39,8 @@ type Manager struct {
 	promptDependencies *PromptDependencies
 }
 
-// New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(args ManagerArgs) (*ports.Workflows, error) {
+// NewWorkflows は、設定とキャラクター定義を基に新しい Workflows を初期化します。
+func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
 	if err := validateArgs(&args); err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 	cfg := args.Config
 	cfg.ApplyDefaults()
 
-	m := &Manager{
+	m := &manager{
 		cfg:                cfg,
 		httpClient:         args.HTTPClient,
 		reader:             args.Reader,
@@ -75,9 +75,6 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 // validateArgs は引数のバリデーションを行います。
 func validateArgs(args *ManagerArgs) error {
-	if args == nil {
-		return fmt.Errorf("ManagerArgs is nil")
-	}
 	if args.HTTPClient == nil {
 		return fmt.Errorf("HTTPClient is required")
 	}

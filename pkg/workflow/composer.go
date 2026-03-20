@@ -12,7 +12,7 @@ import (
 )
 
 // buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
-func (m *Manager) buildMangaComposer(
+func (m *manager) buildMangaComposer(
 	chars ports.CharactersMap,
 ) (*generator.MangaComposer, error) {
 	// 画像生成エンジンの初期化
