@@ -75,6 +75,9 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 // validateArgs は引数のバリデーションを行います。
 func validateArgs(args *ManagerArgs) error {
+	if args == nil {
+		return fmt.Errorf("ManagerArgs is nil")
+	}
 	if args.HTTPClient == nil {
 		return fmt.Errorf("HTTPClient is required")
 	}
