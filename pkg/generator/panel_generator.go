@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
 )
@@ -29,7 +29,7 @@ func NewPanelGenerator(composer *MangaComposer, pb domain.ImagePrompt) *PanelGen
 }
 
 // Execute は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
-func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagedom.ImageResponse, error) {
+func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagePorts.ImageResponse, error) {
 	if len(panels) == 0 {
 		return nil, nil
 	}
@@ -38,7 +38,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 		return nil, err
 	}
 
-	images := make([]*imagedom.ImageResponse, len(panels))
+	images := make([]*imagePorts.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.SetLimit(int(pg.composer.MaxConcurrency))
 
@@ -68,8 +68,8 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
-			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagedom.ImagePanelRequest{
-				GenerationOptions: imagedom.GenerationOptions{
+			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
+				GenerationOptions: imagePorts.GenerationOptions{
 					Prompt:         userPrompt,
 					SystemPrompt:   systemPrompt,
 					NegativePrompt: negativePanelPrompt,
@@ -77,7 +77,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([
 					ImageSize:      ImageSize1K,
 					Seed:           &seed,
 				},
-				Image: imagedom.ImageURI{
+				Image: imagePorts.ImageURI{
 					FileAPIURI:   fileURI,
 					ReferenceURL: char.ReferenceURL,
 				},

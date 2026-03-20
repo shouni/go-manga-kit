@@ -3,7 +3,7 @@ package runner
 import (
 	"context"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
@@ -19,13 +19,13 @@ type ScriptRunner interface {
 
 // PanelImageRunner は、解析済みの漫画データと対象パネルのインデックスを基に、パネル画像を生成する責務を持ちます。
 type PanelImageRunner interface {
-	Run(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error)
+	Run(ctx context.Context, manga *domain.MangaResponse) ([]*imagePorts.ImageResponse, error)
 	RunAndSave(ctx context.Context, manga *domain.MangaResponse, scriptPath string) (*domain.MangaResponse, error)
 }
 
 // PageImageRunner は、解析済みの漫画データから漫画のページ画像を生成する責務を持ちます。
 type PageImageRunner interface {
-	Run(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error)
+	Run(ctx context.Context, manga *domain.MangaResponse) ([]*imagePorts.ImageResponse, error)
 	RunAndSave(ctx context.Context, manga *domain.MangaResponse, plotPath string) ([]string, error)
 }
 

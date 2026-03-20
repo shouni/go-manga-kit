@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
@@ -31,7 +31,7 @@ func NewMangaPanelRunner(
 }
 
 // Run は、台本(MangaResponse)を受け取り、パネルの画像を生成します。
-func (r *MangaPanelRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
+func (r *MangaPanelRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	slog.Info("Starting parallel image generation")
 
 	images, err := r.generator.Execute(ctx, manga.Panels)

@@ -7,9 +7,10 @@ import (
 	"sort"
 	"time"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 // negativePagePrompt は生成から除外したい要素を定義します。
@@ -31,7 +32,7 @@ func NewPageGenerator(composer *MangaComposer, pb domain.ImagePrompt, maxPanelsP
 }
 
 // Execute は、errgroupの制限機能を使用して並列数を制御しながらページ画像を生成します。
-func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagedom.ImageResponse, error) {
+func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	if manga == nil || len(manga.Panels) == 0 {
 		return nil, nil
 	}
@@ -50,7 +51,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 
 	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
-	allResponses := make([]*imagedom.ImageResponse, totalPages)
+	allResponses := make([]*imagePorts.ImageResponse, totalPages)
 
 	eg, egCtx := errgroup.WithContext(ctx)
 	eg.SetLimit(int(pg.composer.MaxConcurrency))
@@ -97,7 +98,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *domain.MangaRespons
 }
 
 // generateMangaPage は、提供されたマンガレスポンスとAIベースの画像生成用のシードを使用して、マンガページの画像を生成します。
-func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagedom.ImageResponse, error) {
+func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.MangaResponse, seed int64) (*imagePorts.ImageResponse, error) {
 	// 1. リソース収集とインデックスマッピングの作成
 	resMap, err := pg.collectResources(manga.Panels)
 	if err != nil {
@@ -108,8 +109,8 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga domain.Man
 	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
 
 	// 3. ImageURI 構造体のスライスを作成
-	req := imagedom.ImagePageRequest{
-		GenerationOptions: imagedom.GenerationOptions{
+	req := imagePorts.ImagePageRequest{
+		GenerationOptions: imagePorts.GenerationOptions{
 			Prompt:         userPrompt,
 			SystemPrompt:   systemPrompt,
 			NegativePrompt: negativePagePrompt,
@@ -150,7 +151,7 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*domain.Resour
 					res.CharacterFiles[sID] = idx
 				} else {
 					newIdx := len(res.OrderedAssets)
-					res.OrderedAssets = append(res.OrderedAssets, imagedom.ImageURI{
+					res.OrderedAssets = append(res.OrderedAssets, imagePorts.ImageURI{
 						ReferenceURL: char.ReferenceURL,
 						FileAPIURI:   uri,
 					})
@@ -162,14 +163,14 @@ func (pg *PageGenerator) collectResources(panels []domain.Panel) (*domain.Resour
 	}
 
 	// 2. パネル固有のポーズ参照
-	var panelRefs []imagedom.ImageURI
+	var panelRefs []imagePorts.ImageURI
 	for _, p := range panels {
 		if p.ReferenceURL == "" {
 			continue
 		}
 		if _, exists := addedMap[p.ReferenceURL]; !exists {
 			if uri, ok := pg.composer.PanelResourceMap[p.ReferenceURL]; ok {
-				panelRefs = append(panelRefs, imagedom.ImageURI{
+				panelRefs = append(panelRefs, imagePorts.ImageURI{
 					ReferenceURL: p.ReferenceURL,
 					FileAPIURI:   uri,
 				})

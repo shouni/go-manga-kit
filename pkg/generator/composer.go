@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
-
-	imagekit "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
+
+	"github.com/shouni/go-manga-kit/pkg/domain"
 )
 
 type MangaComposer struct {
-	AssetManager         imagekit.AssetManager
-	ImageGenerator       imagekit.ImageGenerator
+	AssetManager         imagePorts.AssetManager
+	ImageGenerator       imagePorts.ImageGenerator
 	CharactersMap        domain.CharactersMap
 	RateLimiter          *rate.Limiter
 	MaxConcurrency       int64
@@ -28,8 +28,8 @@ type MangaComposer struct {
 
 // NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
 func NewMangaComposer(
-	assetMgr imagekit.AssetManager,
-	imgGen imagekit.ImageGenerator,
+	assetMgr imagePorts.AssetManager,
+	imgGen imagePorts.ImageGenerator,
 	cm domain.CharactersMap,
 	limiter *rate.Limiter,
 	maxConcurrency int64,
