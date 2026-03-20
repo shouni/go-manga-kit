@@ -11,13 +11,13 @@ import (
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 type MangaComposer struct {
 	AssetManager         imagePorts.AssetManager
 	ImageGenerator       imagePorts.ImageGenerator
-	CharactersMap        domain.CharactersMap
+	CharactersMap        ports.CharactersMap
 	RateLimiter          *rate.Limiter
 	MaxConcurrency       int64
 	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
@@ -30,7 +30,7 @@ type MangaComposer struct {
 func NewMangaComposer(
 	assetMgr imagePorts.AssetManager,
 	imgGen imagePorts.ImageGenerator,
-	cm domain.CharactersMap,
+	cm ports.CharactersMap,
 	limiter *rate.Limiter,
 	maxConcurrency int64,
 ) (*MangaComposer, error) {
@@ -63,7 +63,7 @@ func (mc *MangaComposer) GetCharacterResourceURI(charID string) string {
 }
 
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
-func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []domain.Panel) error {
+func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []ports.Panel) error {
 	targetIDs := make(map[string]struct{})
 
 	// デフォルトキャラクターをアップロード対象に追加
@@ -72,7 +72,7 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 	}
 
 	// パネルで使用されているキャラクターをアップロード対象に追加
-	for _, id := range domain.Panels(panels).UniqueSpeakerIDs() {
+	for _, id := range ports.Panels(panels).UniqueSpeakerIDs() {
 		targetIDs[id] = struct{}{}
 	}
 
@@ -98,7 +98,7 @@ func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels [
 }
 
 // PreparePanelResources は各パネル固有の ReferenceURL を事前アップロードします。
-func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []domain.Panel) error {
+func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []ports.Panel) error {
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for _, panel := range panels {

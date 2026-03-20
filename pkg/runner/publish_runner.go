@@ -3,7 +3,7 @@ package runner
 import (
 	"context"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/ports"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 )
 
@@ -20,8 +20,8 @@ func NewMangaPublisherRunner(pub *publisher.MangaPublisher) *MangaPublisherRunne
 }
 
 // Run は漫画データの公開処理を実行し、Markdown や HTML などの成果物を指定された出力ディレクトリに保存します。
-func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResponse, outputDir string) (*domain.PublishResult, error) {
-	opts := domain.PublishOptions{
+func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *ports.MangaResponse, outputDir string) (*ports.PublishResult, error) {
+	opts := ports.PublishOptions{
 		OutputDir: outputDir,
 	}
 
@@ -29,8 +29,8 @@ func (pr *MangaPublisherRunner) Run(ctx context.Context, manga *domain.MangaResp
 }
 
 // BuildMarkdown は保存処理を行わず、構造体から Markdown 文字列のみを生成して返却します。
-func (pr *MangaPublisherRunner) BuildMarkdown(manga *domain.MangaResponse) string {
+func (pr *MangaPublisherRunner) BuildMarkdown(manga *ports.MangaResponse) string {
 	// publisher.Options を空で渡すことで、外部パス指定を行わず、
 	// domain.MangaResponse 内の ReferenceURL をそのまま使用するデフォルト挙動を選択します。
-	return pr.publisher.BuildMarkdown(manga, domain.PublishOptions{})
+	return pr.publisher.BuildMarkdown(manga, ports.PublishOptions{})
 }

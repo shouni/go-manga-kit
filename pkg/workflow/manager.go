@@ -9,8 +9,8 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
 	"github.com/shouni/go-manga-kit/pkg/config"
-	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
+	"github.com/shouni/go-manga-kit/pkg/ports"
 	"github.com/shouni/go-manga-kit/pkg/runner"
 )
 
@@ -19,9 +19,9 @@ type ManagerArgs struct {
 	HTTPClient    httpkit.HTTPClient
 	Reader        remoteio.InputReader
 	Writer        remoteio.OutputWriter
-	CharactersMap domain.CharactersMap
-	ScriptPrompt  domain.ScriptPrompt
-	ImagePrompt   domain.ImagePrompt
+	CharactersMap ports.CharactersMap
+	ScriptPrompt  ports.ScriptPrompt
+	ImagePrompt   ports.ImagePrompt
 	AIClient      gemini.GenerativeModel
 }
 
@@ -32,8 +32,8 @@ type Manager struct {
 	reader        remoteio.InputReader
 	writer        remoteio.OutputWriter
 	aiClient      gemini.GenerativeModel
-	scriptPrompt  domain.ScriptPrompt
-	imagePrompt   domain.ImagePrompt
+	scriptPrompt  ports.ScriptPrompt
+	imagePrompt   ports.ImagePrompt
 	mangaComposer *generator.MangaComposer
 	Runners       *Runners
 }

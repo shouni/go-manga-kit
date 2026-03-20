@@ -11,8 +11,9 @@ import (
 	"unicode/utf8"
 
 	"github.com/shouni/go-gemini-client/pkg/gemini"
-	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
+
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 const (
@@ -32,7 +33,7 @@ type Extractor interface {
 
 type MangaScriptRunner struct {
 	extractor     Extractor
-	promptBuilder domain.ScriptPrompt
+	promptBuilder ports.ScriptPrompt
 	aiClient      gemini.Generator
 	reader        remoteio.InputReader
 	aiModel       string
@@ -41,7 +42,7 @@ type MangaScriptRunner struct {
 // NewMangaScriptRunner は依存関係を注入して初期化します。
 func NewMangaScriptRunner(
 	ext Extractor,
-	pb domain.ScriptPrompt,
+	pb ports.ScriptPrompt,
 	ai gemini.Generator,
 	r remoteio.InputReader,
 	aiModel string,
@@ -56,7 +57,7 @@ func NewMangaScriptRunner(
 }
 
 // Run は Web ページまたは GCS から内容を抽出し、Gemini を用いて漫画の台本 JSON を生成します。
-func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode string) (*domain.MangaResponse, error) {
+func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode string) (*ports.MangaResponse, error) {
 	slog.Info("ScriptRunner: 処理を開始", "url", sourceURL)
 
 	// 1. ソースからテキストを取得
@@ -66,7 +67,7 @@ func (sr *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode str
 	}
 
 	// 2. プロンプトの構築
-	data := domain.TemplateData{InputText: inputText}
+	data := ports.TemplateData{InputText: inputText}
 	finalPrompt, err := sr.promptBuilder.Build(mode, &data)
 	if err != nil {
 		return nil, fmt.Errorf("プロンプトの構築に失敗しました: %w", err)
@@ -143,7 +144,7 @@ func (sr *MangaScriptRunner) readFromWeb(ctx context.Context, url string) (strin
 }
 
 // parseResponse は AI の応答から JSON を抽出し、構造体に変換します。
-func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, error) {
+func (sr *MangaScriptRunner) parseResponse(raw string) (*ports.MangaResponse, error) {
 	jsonStr := extractJSONString(raw)
 	if jsonStr == "" {
 		slog.Warn("AIの応答からJSONを抽出できませんでした。応答全体を対象にパースを試みます。",
@@ -151,7 +152,7 @@ func (sr *MangaScriptRunner) parseResponse(raw string) (*domain.MangaResponse, e
 		jsonStr = raw
 	}
 
-	var manga domain.MangaResponse
+	var manga ports.MangaResponse
 	if err := json.Unmarshal([]byte(jsonStr), &manga); err != nil {
 		return nil, fmt.Errorf("AI応答JSONの解析に失敗しました (抜粋: %q): %w",
 			truncateString(raw, maxErrorResponseLength), err)

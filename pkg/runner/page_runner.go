@@ -7,23 +7,22 @@ import (
 	"log/slog"
 
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
-
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
-	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
-	generator mangadom.PagesImageGenerator
+	generator ports.PagesImageGenerator
 	reader    remoteio.InputReader
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
-	generator mangadom.PagesImageGenerator,
+	generator ports.PagesImageGenerator,
 	reader remoteio.InputReader,
 	writer remoteio.OutputWriter,
 ) *MangaPageRunner {
@@ -35,7 +34,7 @@ func NewMangaPageRunner(
 }
 
 // Run は、構造化された台本データを基に、最終的な漫画ページ画像を生成します。
-func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagePorts.ImageResponse, error) {
+func (r *MangaPageRunner) Run(ctx context.Context, manga *ports.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	// 1. バリデーション
 	if manga == nil {
 		return nil, fmt.Errorf("manga データが nil です")
@@ -61,7 +60,7 @@ func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse
 }
 
 // RunAndSave は、画像の生成から指定ディレクトリへの保存までを一括で行います。
-func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, plotPath string) ([]string, error) {
+func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResponse, plotPath string) ([]string, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("manga データがありません")
 	}

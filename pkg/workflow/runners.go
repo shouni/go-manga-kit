@@ -3,12 +3,12 @@ package workflow
 import (
 	"fmt"
 
+	"github.com/shouni/go-prompt-kit/mdcast/builder"
+	"github.com/shouni/go-web-exact/v2/pkg/extract"
+
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
-
-	"github.com/shouni/go-prompt-kit/mdcast/builder"
-	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
 // buildAllRunners は、ワークフローの実行に必要なすべてのランナーを構築して返します。

@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
+
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 // Parser は解析するためのインターフェースを定義します。
 type Parser interface {
-	ParseFromPath(ctx context.Context, fullPath string) (*domain.MangaResponse, error)
+	ParseFromPath(ctx context.Context, fullPath string) (*ports.MangaResponse, error)
 }
 
 // MangaResponseParser は JSON 形式の台本を解析する構造体です。
@@ -27,7 +28,7 @@ func NewMangaResponseParser(r remoteio.InputReader) *MangaResponseParser {
 
 // ParseFromPath は指定された GCS URIやローカルファイルパスなどから
 // コンテンツを読み込み、解析して domain.MangaResponse を返します。
-func (p *MangaResponseParser) ParseFromPath(ctx context.Context, plotFile string) (*domain.MangaResponse, error) {
+func (p *MangaResponseParser) ParseFromPath(ctx context.Context, plotFile string) (*ports.MangaResponse, error) {
 	slog.InfoContext(ctx, "プロットファイルを読み込んでいます", "path", plotFile)
 	rc, err := p.reader.Open(ctx, plotFile)
 	if err != nil {
@@ -35,7 +36,7 @@ func (p *MangaResponseParser) ParseFromPath(ctx context.Context, plotFile string
 	}
 	defer rc.Close()
 
-	manga := &domain.MangaResponse{}
+	manga := &ports.MangaResponse{}
 	if err := json.NewDecoder(rc).Decode(manga); err != nil {
 		return nil, fmt.Errorf("プロットJSONのパースに失敗しました: %w", err)
 	}
