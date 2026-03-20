@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/patrickmn/go-cache"
-	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
+	imagekit "github.com/shouni/gemini-image-kit/generator"
 	"golang.org/x/time/rate"
 
 	"github.com/shouni/go-manga-kit/generator"

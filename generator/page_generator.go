@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
+	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/shouni/go-manga-kit/ports"

@@ -1,6 +1,6 @@
 package ports
 
-import imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
+import imagePorts "github.com/shouni/gemini-image-kit/ports"
 
 // MangaResponse は AI モデルから返される台本全体の構造です。
 type MangaResponse struct {

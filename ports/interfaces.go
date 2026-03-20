@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
+	imagePorts "github.com/shouni/gemini-image-kit/ports"
 )
 
 // TemplateData はスクリプト生成プロンプトのテンプレートに渡すデータ構造です。
