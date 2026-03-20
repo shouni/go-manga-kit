@@ -1,4 +1,4 @@
-package domain
+package ports
 
 // PublishOptions はパブリッシュ動作および Markdown 構築を制御する設定項目です。
 type PublishOptions struct {

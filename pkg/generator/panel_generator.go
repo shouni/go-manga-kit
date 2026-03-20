@@ -7,8 +7,9 @@ import (
 	"time"
 
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
-	"github.com/shouni/go-manga-kit/pkg/domain"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 // negativePanelPrompt は単体パネルで「文字」や「フキダシ」を徹底排除するための指定です。
@@ -17,11 +18,11 @@ const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, le
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
 	composer *MangaComposer
-	pb       domain.ImagePrompt
+	pb       ports.ImagePrompt
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanelGenerator(composer *MangaComposer, pb domain.ImagePrompt) *PanelGenerator {
+func NewPanelGenerator(composer *MangaComposer, pb ports.ImagePrompt) *PanelGenerator {
 	return &PanelGenerator{
 		composer: composer,
 		pb:       pb,
@@ -29,7 +30,7 @@ func NewPanelGenerator(composer *MangaComposer, pb domain.ImagePrompt) *PanelGen
 }
 
 // Execute は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
-func (pg *PanelGenerator) Execute(ctx context.Context, panels []domain.Panel) ([]*imagePorts.ImageResponse, error) {
+func (pg *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*imagePorts.ImageResponse, error) {
 	if len(panels) == 0 {
 		return nil, nil
 	}

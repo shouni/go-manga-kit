@@ -1,4 +1,4 @@
-package domain
+package ports
 
 import imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 

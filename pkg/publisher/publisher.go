@@ -11,7 +11,7 @@ import (
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
 	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/domain"
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 // markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
@@ -41,7 +41,7 @@ func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner mdcastPorts.Runn
 }
 
 // Publish はドメインモデルを基に Markdown を構築し、HTML への変換・保存を実行します。
-func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaResponse, opts domain.PublishOptions) (*domain.PublishResult, error) {
+func (p *MangaPublisher) Publish(ctx context.Context, manga *ports.MangaResponse, opts ports.PublishOptions) (*ports.PublishResult, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("manga データが nil です")
 	}
@@ -84,7 +84,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 		}
 	}
 
-	return &domain.PublishResult{
+	return &ports.PublishResult{
 		MarkdownPath: markdownPath,
 		HTMLPath:     htmlPath,
 		ImagePaths:   imagePaths,
@@ -92,7 +92,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 }
 
 // BuildMarkdown は画像、話者、セリフ、確認用アンカーを含む Markdown を構築します。
-func (p *MangaPublisher) BuildMarkdown(manga *domain.MangaResponse, opts domain.PublishOptions) string {
+func (p *MangaPublisher) BuildMarkdown(manga *ports.MangaResponse, opts ports.PublishOptions) string {
 	var sb strings.Builder
 
 	// タイトルと説明文

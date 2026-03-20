@@ -8,20 +8,21 @@ import (
 	"log/slog"
 
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
-	"github.com/shouni/go-manga-kit/pkg/asset"
-	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
+
+	"github.com/shouni/go-manga-kit/pkg/asset"
+	"github.com/shouni/go-manga-kit/pkg/ports"
 )
 
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelRunner struct {
-	generator mangadom.PanelsImageGenerator
+	generator ports.PanelsImageGenerator
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPanelRunner は、依存関係を注入して初期化します。
 func NewMangaPanelRunner(
-	generator mangadom.PanelsImageGenerator,
+	generator ports.PanelsImageGenerator,
 	writer remoteio.OutputWriter,
 ) *MangaPanelRunner {
 	return &MangaPanelRunner{
@@ -31,7 +32,7 @@ func NewMangaPanelRunner(
 }
 
 // Run は、台本(MangaResponse)を受け取り、パネルの画像を生成します。
-func (r *MangaPanelRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagePorts.ImageResponse, error) {
+func (r *MangaPanelRunner) Run(ctx context.Context, manga *ports.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	slog.Info("Starting parallel image generation")
 
 	images, err := r.generator.Execute(ctx, manga.Panels)
@@ -45,7 +46,7 @@ func (r *MangaPanelRunner) Run(ctx context.Context, manga *mangadom.MangaRespons
 }
 
 // RunAndSave は画像パネルを生成し、インデックスを付けて指定のパスに保存します。
-func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *mangadom.MangaResponse, scriptPath string) (*mangadom.MangaResponse, error) {
+func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *ports.MangaResponse, scriptPath string) (*ports.MangaResponse, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("MangaResponse がありません")
 	}
