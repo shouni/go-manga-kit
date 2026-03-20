@@ -36,12 +36,11 @@ type Manager struct {
 	writer             remoteio.OutputWriter
 	aiClient           gemini.GenerativeModel
 	mangaComposer      *generator.MangaComposer
-	PromptDependencies *PromptDependencies
-	Runners            *ports.Runners
+	promptDependencies *PromptDependencies
 }
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
-func New(args ManagerArgs) (*Manager, error) {
+func New(args ManagerArgs) (*ports.Workflows, error) {
 	if err := validateArgs(&args); err != nil {
 		return nil, err
 	}
@@ -55,7 +54,7 @@ func New(args ManagerArgs) (*Manager, error) {
 		reader:             args.Reader,
 		writer:             args.Writer,
 		aiClient:           args.AIClient,
-		PromptDependencies: args.PromptDependencies,
+		promptDependencies: args.PromptDependencies,
 	}
 
 	var err error
@@ -65,12 +64,13 @@ func New(args ManagerArgs) (*Manager, error) {
 		return nil, err
 	}
 
-	m.Runners, err = m.buildAllRunners()
+	// 内部で全ての Runner インスタンスを生成して返す
+	runners, err := m.buildAllRunners()
 	if err != nil {
 		return nil, err
 	}
 
-	return m, nil
+	return runners, nil
 }
 
 // validateArgs は引数のバリデーションを行います。

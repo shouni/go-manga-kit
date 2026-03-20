@@ -6,8 +6,8 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 )
 
-// Runners は、構築済みの各 Runner を保持します。
-type Runners struct {
+// Workflows は、構築済みの各 Runner を保持します。
+type Workflows struct {
 	Design     DesignRunner
 	Script     ScriptRunner
 	PanelImage PanelImageRunner

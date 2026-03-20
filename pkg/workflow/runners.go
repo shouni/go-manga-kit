@@ -13,7 +13,7 @@ import (
 )
 
 // buildAllRunners は、ワークフローの実行に必要なすべてのランナーを構築して返します。
-func (m *Manager) buildAllRunners() (*ports.Runners, error) {
+func (m *Manager) buildAllRunners() (*ports.Workflows, error) {
 	dr, err := m.buildDesignRunner()
 	if err != nil {
 		return nil, fmt.Errorf("DesignRunner のビルドに失敗しました: %w", err)
@@ -35,7 +35,7 @@ func (m *Manager) buildAllRunners() (*ports.Runners, error) {
 		return nil, fmt.Errorf("PublishRunner のビルドに失敗しました: %w", err)
 	}
 
-	return &ports.Runners{
+	return &ports.Workflows{
 		Design:     dr,
 		Script:     sr,
 		PanelImage: panR,
@@ -51,7 +51,7 @@ func (m *Manager) buildScriptRunner() (ports.ScriptRunner, error) {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
 	}
 
-	return runner.NewMangaScriptRunner(extractor, m.PromptDependencies.ScriptPrompt, m.aiClient, m.reader, m.cfg.GeminiModel), nil
+	return runner.NewMangaScriptRunner(extractor, m.promptDependencies.ScriptPrompt, m.aiClient, m.reader, m.cfg.GeminiModel), nil
 }
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
@@ -61,14 +61,14 @@ func (m *Manager) buildDesignRunner() (ports.DesignRunner, error) {
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *Manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
-	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.PromptDependencies.ImagePrompt)
+	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt)
 
 	return runner.NewMangaPanelRunner(panelsGen, m.writer), nil
 }
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *Manager) buildPageImageRunner() (ports.PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.PromptDependencies.ImagePrompt, m.cfg.MaxPanelsPerPage)
+	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt, m.cfg.MaxPanelsPerPage)
 
 	return runner.NewMangaPageRunner(pagesGen, m.reader, m.writer), nil
 }
