@@ -11,40 +11,34 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/ports"
-	"github.com/shouni/go-manga-kit/pkg/runner"
 )
 
-type ManagerArgs struct {
-	Config        config.Config
-	HTTPClient    httpkit.HTTPClient
-	Reader        remoteio.InputReader
-	Writer        remoteio.OutputWriter
+// PromptDependencies はプロンプト関連の依存関係をまとめた構造体です。
+type PromptDependencies struct {
 	CharactersMap ports.CharactersMap
 	ScriptPrompt  ports.ScriptPrompt
 	ImagePrompt   ports.ImagePrompt
-	AIClient      gemini.GenerativeModel
+}
+
+type ManagerArgs struct {
+	Config             config.Config
+	HTTPClient         httpkit.HTTPClient
+	Reader             remoteio.InputReader
+	Writer             remoteio.OutputWriter
+	AIClient           gemini.GenerativeModel
+	PromptDependencies *PromptDependencies
 }
 
 // Manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type Manager struct {
-	cfg           config.Config
-	httpClient    httpkit.HTTPClient
-	reader        remoteio.InputReader
-	writer        remoteio.OutputWriter
-	aiClient      gemini.GenerativeModel
-	scriptPrompt  ports.ScriptPrompt
-	imagePrompt   ports.ImagePrompt
-	mangaComposer *generator.MangaComposer
-	Runners       *Runners
-}
-
-// Runners は、構築済みの各 Runner を保持します。
-type Runners struct {
-	Design     runner.DesignRunner
-	Script     runner.ScriptRunner
-	PanelImage runner.PanelImageRunner
-	PageImage  runner.PageImageRunner
-	Publish    runner.PublishRunner
+	cfg                config.Config
+	httpClient         httpkit.HTTPClient
+	reader             remoteio.InputReader
+	writer             remoteio.OutputWriter
+	aiClient           gemini.GenerativeModel
+	mangaComposer      *generator.MangaComposer
+	PromptDependencies *PromptDependencies
+	Runners            *ports.Runners
 }
 
 // New は、設定とキャラクター定義を基に新しい Manager を初期化します。
@@ -57,17 +51,16 @@ func New(ctx context.Context, args ManagerArgs) (*Manager, error) {
 	cfg.ApplyDefaults()
 
 	m := &Manager{
-		cfg:          cfg,
-		httpClient:   args.HTTPClient,
-		reader:       args.Reader,
-		writer:       args.Writer,
-		aiClient:     args.AIClient,
-		scriptPrompt: args.ScriptPrompt,
-		imagePrompt:  args.ImagePrompt,
+		cfg:                cfg,
+		httpClient:         args.HTTPClient,
+		reader:             args.Reader,
+		writer:             args.Writer,
+		aiClient:           args.AIClient,
+		PromptDependencies: args.PromptDependencies,
 	}
 
 	var err error
-	m.mangaComposer, err = m.buildMangaComposer(args.CharactersMap)
+	m.mangaComposer, err = m.buildMangaComposer(args.PromptDependencies.CharactersMap)
 	if err != nil {
 		return nil, err
 	}
@@ -94,14 +87,15 @@ func validateArgs(args *ManagerArgs) error {
 	if args.AIClient == nil {
 		return fmt.Errorf("AIClient is required")
 	}
-	if args.CharactersMap == nil {
-		return fmt.Errorf("CharactersMap is required")
+	if args.PromptDependencies == nil {
+		return fmt.Errorf("PromptDependencies is required")
 	}
-	if args.ScriptPrompt == nil {
+	if args.PromptDependencies.ScriptPrompt == nil {
 		return fmt.Errorf("ScriptPrompt is required")
 	}
-	if args.ImagePrompt == nil {
+	if args.PromptDependencies.ImagePrompt == nil {
 		return fmt.Errorf("ImagePrompt is required")
 	}
+
 	return nil
 }
