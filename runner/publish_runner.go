@@ -3,8 +3,8 @@ package runner
 import (
 	"context"
 
-	"github.com/shouni/go-manga-kit/pkg/ports"
-	"github.com/shouni/go-manga-kit/pkg/publisher"
+	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-manga-kit/publisher"
 )
 
 // MangaPublisherRunner は pkg/publisher を利用して漫画成果物の公開と構築を担います。

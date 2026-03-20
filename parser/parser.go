@@ -8,7 +8,7 @@ import (
 
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // Parser は解析するためのインターフェースを定義します。

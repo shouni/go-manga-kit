@@ -9,8 +9,8 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/asset"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。

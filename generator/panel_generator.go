@@ -9,7 +9,7 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // negativePanelPrompt は単体パネルで「文字」や「フキダシ」を徹底排除するための指定です。

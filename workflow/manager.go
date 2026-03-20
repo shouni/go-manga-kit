@@ -7,8 +7,8 @@ import (
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/generator"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // PromptDependencies はプロンプト関連の依存関係をまとめた構造体です。
