@@ -7,7 +7,6 @@ import (
 	"github.com/shouni/go-http-kit/pkg/httpkit"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/ports"
 )
@@ -20,7 +19,7 @@ type PromptDependencies struct {
 }
 
 type ManagerArgs struct {
-	Config             config.Config
+	Config             ports.Config
 	HTTPClient         httpkit.HTTPClient
 	Reader             remoteio.InputReader
 	Writer             remoteio.OutputWriter
@@ -30,7 +29,7 @@ type ManagerArgs struct {
 
 // manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type manager struct {
-	cfg                config.Config
+	cfg                ports.Config
 	httpClient         httpkit.HTTPClient
 	reader             remoteio.InputReader
 	writer             remoteio.OutputWriter
