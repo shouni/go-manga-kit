@@ -11,8 +11,8 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/generator"
+	"github.com/shouni/go-manga-kit/asset"
+	"github.com/shouni/go-manga-kit/generator"
 )
 
 const (

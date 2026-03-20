@@ -7,8 +7,8 @@ import (
 	imagekit "github.com/shouni/gemini-image-kit/pkg/generator"
 	"golang.org/x/time/rate"
 
-	"github.com/shouni/go-manga-kit/pkg/generator"
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/generator"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。

@@ -10,8 +10,8 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/asset"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。

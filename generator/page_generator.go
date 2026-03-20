@@ -10,7 +10,7 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // negativePagePrompt は生成から除外したい要素を定義します。

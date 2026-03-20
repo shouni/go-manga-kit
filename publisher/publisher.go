@@ -10,8 +10,8 @@ import (
 	mdcastPorts "github.com/shouni/go-prompt-kit/mdcast/ports"
 	"github.com/shouni/go-remote-io/pkg/remoteio"
 
-	"github.com/shouni/go-manga-kit/pkg/asset"
-	"github.com/shouni/go-manga-kit/pkg/ports"
+	"github.com/shouni/go-manga-kit/asset"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 // markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
