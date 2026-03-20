@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/shouni/go-gemini-client/pkg/gemini"
+	"github.com/shouni/go-http-kit/pkg/httpkit"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
+
 	"github.com/shouni/go-manga-kit/pkg/config"
 	"github.com/shouni/go-manga-kit/pkg/domain"
 	"github.com/shouni/go-manga-kit/pkg/generator"
 	"github.com/shouni/go-manga-kit/pkg/runner"
-
-	"github.com/shouni/go-gemini-client/pkg/gemini"
-	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 type ManagerArgs struct {

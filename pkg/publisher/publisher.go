@@ -7,10 +7,11 @@ import (
 	"path"
 	"strings"
 
+	mdcastPorts "github.com/shouni/go-prompt-kit/mdcast/ports"
+	"github.com/shouni/go-remote-io/pkg/remoteio"
+
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	"github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-remote-io/pkg/remoteio"
-	"github.com/shouni/go-text-format/pkg/md2htmlrunner"
 )
 
 // markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
@@ -28,11 +29,11 @@ var markdownEscaper = strings.NewReplacer(
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
 	writer     remoteio.OutputWriter
-	htmlRunner md2htmlrunner.Runner
+	htmlRunner mdcastPorts.Runner
 }
 
 // NewMangaPublisher は新しいインスタンスを作成します。
-func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner md2htmlrunner.Runner) *MangaPublisher {
+func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner mdcastPorts.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer:     writer,
 		htmlRunner: htmlRunner,
@@ -73,7 +74,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *domain.MangaRespons
 	// HTML の生成
 	var htmlPath string
 	if p.htmlRunner != nil {
-		htmlBuffer, err := p.htmlRunner.Run(ctx, manga.Title, []byte(content))
+		htmlBuffer, err := p.htmlRunner.Run(manga.Title, []byte(content))
 		if err != nil {
 			return nil, fmt.Errorf("HTML 変換失敗: %w", err)
 		}

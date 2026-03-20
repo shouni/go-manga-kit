@@ -7,7 +7,7 @@ import (
 	"github.com/shouni/go-manga-kit/pkg/publisher"
 	"github.com/shouni/go-manga-kit/pkg/runner"
 
-	"github.com/shouni/go-text-format/pkg/builder"
+	"github.com/shouni/go-prompt-kit/mdcast/builder"
 	"github.com/shouni/go-web-exact/v2/pkg/extract"
 )
 
@@ -74,17 +74,14 @@ func (m *Manager) buildPageImageRunner() (runner.PageImageRunner, error) {
 
 // buildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
 func (m *Manager) buildPublishRunner() (runner.PublishRunner, error) {
-	htmlCfg := builder.BuilderConfig{
-		EnableHardWraps: true,
-		Mode:            "webtoon",
-	}
-	md2htmlBuilder, err := builder.NewBuilder(htmlCfg)
+	b, err := builder.New()
 	if err != nil {
-		return nil, fmt.Errorf("md2htmlBuilder の初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("mdcast builderの初期化に失敗: %w", err)
 	}
-	md2htmlRunner, err := md2htmlBuilder.BuildRunner()
+
+	md2htmlRunner, err := b.BuildRunner()
 	if err != nil {
-		return nil, fmt.Errorf("md2htmlRunner の初期化に失敗しました: %w", err)
+		return nil, fmt.Errorf("MarkdownToHtmlRunnerの構築に失敗: %w", err)
 	}
 
 	pub := publisher.NewMangaPublisher(m.writer, md2htmlRunner)

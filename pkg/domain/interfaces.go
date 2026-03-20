@@ -3,7 +3,7 @@ package domain
 import (
 	"context"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
 )
 
 // TemplateData はスクリプト生成プロンプトのテンプレートに渡すデータ構造です。
@@ -28,11 +28,11 @@ type ImagePrompt interface {
 
 // PanelsImageGenerator は、指定されたコンテキスト内で一連のパネルの画像レスポンスを生成するためのインターフェースを定義します。
 type PanelsImageGenerator interface {
-	Execute(ctx context.Context, panels []Panel) ([]*imagedom.ImageResponse, error)
+	Execute(ctx context.Context, panels []Panel) ([]*imagePorts.ImageResponse, error)
 }
 
 // PagesImageGenerator は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
 // パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
 type PagesImageGenerator interface {
-	Execute(ctx context.Context, manga *MangaResponse) ([]*imagedom.ImageResponse, error)
+	Execute(ctx context.Context, manga *MangaResponse) ([]*imagePorts.ImageResponse, error)
 }

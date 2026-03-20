@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	imagedom "github.com/shouni/gemini-image-kit/pkg/domain"
+	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
+
+	"github.com/shouni/go-remote-io/pkg/remoteio"
+
 	"github.com/shouni/go-manga-kit/pkg/asset"
 	mangadom "github.com/shouni/go-manga-kit/pkg/domain"
-	"github.com/shouni/go-remote-io/pkg/remoteio"
 )
 
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
@@ -33,7 +35,7 @@ func NewMangaPageRunner(
 }
 
 // Run は、構造化された台本データを基に、最終的な漫画ページ画像を生成します。
-func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagedom.ImageResponse, error) {
+func (r *MangaPageRunner) Run(ctx context.Context, manga *mangadom.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	// 1. バリデーション
 	if manga == nil {
 		return nil, fmt.Errorf("manga データが nil です")
