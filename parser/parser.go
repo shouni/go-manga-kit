@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/shouni/go-remote-io/pkg/remoteio"
+	"github.com/shouni/go-remote-io/remoteio"
 
 	"github.com/shouni/go-manga-kit/ports"
 )

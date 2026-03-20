@@ -3,7 +3,7 @@ package ports
 import (
 	"context"
 
-	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
+	imagePorts "github.com/shouni/gemini-image-kit/ports"
 )
 
 // Workflows は、構築済みの各 Runner を保持します。

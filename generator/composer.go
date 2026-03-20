@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	imagePorts "github.com/shouni/gemini-image-kit/pkg/ports"
-	"github.com/shouni/go-remote-io/pkg/remoteio"
+	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
 	"golang.org/x/time/rate"

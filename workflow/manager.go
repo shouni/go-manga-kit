@@ -3,9 +3,9 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/shouni/go-gemini-client/pkg/gemini"
-	"github.com/shouni/go-http-kit/pkg/httpkit"
-	"github.com/shouni/go-remote-io/pkg/remoteio"
+	"github.com/shouni/go-gemini-client/gemini"
+	"github.com/shouni/go-http-kit/httpkit"
+	"github.com/shouni/go-remote-io/remoteio"
 
 	"github.com/shouni/go-manga-kit/generator"
 	"github.com/shouni/go-manga-kit/ports"

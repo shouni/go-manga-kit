@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/shouni/go-remote-io/pkg/remoteio"
+	"github.com/shouni/go-remote-io/remoteio"
 )
 
 // GetCharacter は、指定されたID（またはその小文字版）からキャラクター情報を特定します。
