@@ -16,19 +16,16 @@ import (
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	generator ports.PagesImageGenerator
-	reader    remoteio.InputReader
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	generator ports.PagesImageGenerator,
-	reader remoteio.InputReader,
 	writer remoteio.OutputWriter,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		generator: generator,
-		reader:    reader,
 		writer:    writer,
 	}
 }
@@ -84,11 +81,11 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResp
 	}
 
 	// 4. 連番を付けて保存
-	return r.savePage(ctx, responses, basePath)
+	return r.savePages(ctx, responses, basePath)
 }
 
 // savePage は、一連の画像応答を、ファイル名に連番を付けて保存します。
-func (r *MangaPageRunner) savePage(ctx context.Context, responses []*imagePorts.ImageResponse, basePath string) ([]string, error) {
+func (r *MangaPageRunner) savePages(ctx context.Context, responses []*imagePorts.ImageResponse, basePath string) ([]string, error) {
 	var savedPaths []string
 	for i, resp := range responses {
 		// 例: manga_page.png -> manga_page_1.png
