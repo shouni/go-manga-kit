@@ -68,6 +68,13 @@ func (mc *MangaComposer) GetCharacterResourceURI(charID string) string {
 	return mc.resourceMap.character[charID]
 }
 
+// GetPanelResourceURI はパネルの画像URIを取得します。
+func (mc *MangaComposer) GetPanelResourceURI(referenceURL string) string {
+	mc.mu.RLock()
+	defer mc.mu.RUnlock()
+	return mc.resourceMap.panel[referenceURL]
+}
+
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []ports.Panel) error {
 	targetIDs := make(map[string]struct{})

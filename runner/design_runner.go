@@ -166,8 +166,18 @@ func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]ports.ImageUR
 			missingIDs = append(missingIDs, id)
 			continue
 		}
+
+		// File API URI があれば取得
+		fileURI := dr.composer.GetCharacterResourceURI(char.ID)
+
+		if char.ReferenceURL == "" && fileURI == "" {
+			slog.Warn("キャラクターに有効な参照画像がないためスキップします", "id", id)
+			continue
+		}
+
 		uris = append(uris, ports.ImageURI{
 			ReferenceURL: char.ReferenceURL,
+			FileAPIURI:   fileURI,
 		})
 
 		desc := char.Name
