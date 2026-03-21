@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	mdcastPorts "github.com/shouni/go-prompt-kit/mdcast/ports"
+	mdcastPorts "github.com/shouni/go-prompt-kit/md/ports"
 	"github.com/shouni/go-remote-io/remoteio"
 
 	"github.com/shouni/go-manga-kit/asset"
