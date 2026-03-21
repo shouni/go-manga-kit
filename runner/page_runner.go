@@ -84,7 +84,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResp
 	return r.savePages(ctx, responses, basePath)
 }
 
-// savePage は、一連の画像応答を、ファイル名に連番を付けて保存します。
+// savePages は、一連の画像応答を、ファイル名に連番を付けて保存します。
 func (r *MangaPageRunner) savePages(ctx context.Context, responses []*imagePorts.ImageResponse, basePath string) ([]string, error) {
 	var savedPaths []string
 	for i, resp := range responses {
