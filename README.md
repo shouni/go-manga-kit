@@ -53,7 +53,7 @@
 go-manga-kit/
 ├── workflow/    # 【統合管理】各工程を組み合わせ、Workflows インターフェースを実装。
 ├── runner/      # 【実行実体】Design/Script/Panel/Page/Publish の具体的なプロセス実装。
-├── generator/   # 【生成戦略】Page/Panel構成、Composerによるレイアウト計算。
+├── layout/      # 【生成戦略】Page/Panel構成、Composerによるレイアウト計算。
 ├── parser/      # 【解析】入力テキストやAIレスポンスを構造化データへ変換。
 ├── ports/       # 【契約・定義】Interface、共通モデル、動作設定(Config)。※全ての起点。
 ├── publisher/   # 【出力】生成された画像とテキストを最終成果物として統合。

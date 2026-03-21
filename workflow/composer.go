@@ -4,19 +4,19 @@ import (
 	"fmt"
 
 	"github.com/patrickmn/go-cache"
-	imagekit "github.com/shouni/gemini-image-kit/generator"
+	"github.com/shouni/gemini-image-kit/generator"
 	"golang.org/x/time/rate"
 
-	"github.com/shouni/go-manga-kit/generator"
+	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
 // buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
 func (m *manager) buildMangaComposer(
 	chars ports.CharactersMap,
-) (*generator.MangaComposer, error) {
+) (*layout.MangaComposer, error) {
 	// 画像生成エンジンの初期化
-	core, err := imagekit.NewGeminiImageCore(
+	core, err := generator.NewGeminiImageCore(
 		m.aiClient,
 		m.reader,
 		m.httpClient,
@@ -28,7 +28,7 @@ func (m *manager) buildMangaComposer(
 		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
 	}
 
-	imageGenerator, err := imagekit.NewGeminiGenerator(
+	imageGenerator, err := generator.NewGeminiGenerator(
 		m.cfg.ImageStandardModel,
 		m.cfg.ImageQualityModel,
 		core,
@@ -37,7 +37,7 @@ func (m *manager) buildMangaComposer(
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
 	}
 
-	composer, err := generator.NewMangaComposer(
+	composer, err := layout.NewMangaComposer(
 		core,
 		imageGenerator,
 		chars,

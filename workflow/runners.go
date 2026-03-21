@@ -6,7 +6,7 @@ import (
 	"github.com/shouni/go-prompt-kit/mdcast/builder"
 	"github.com/shouni/go-web-exact/v2/extract"
 
-	"github.com/shouni/go-manga-kit/generator"
+	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 	"github.com/shouni/go-manga-kit/publisher"
 	"github.com/shouni/go-manga-kit/runner"
@@ -61,14 +61,14 @@ func (m *manager) buildDesignRunner() (ports.DesignRunner, error) {
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
-	panelsGen := generator.NewPanelGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt)
+	panelsGen := layout.NewPanelGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt)
 
 	return runner.NewMangaPanelRunner(panelsGen, m.writer), nil
 }
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
-	pagesGen := generator.NewPageGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt, m.cfg.MaxPanelsPerPage)
+	pagesGen := layout.NewPageGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt, m.cfg.MaxPanelsPerPage)
 
 	return runner.NewMangaPageRunner(pagesGen, m.reader, m.writer), nil
 }
