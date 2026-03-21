@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/shouni/gemini-image-kit/ports"
+	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-remote-io/remoteio"
 
 	"github.com/shouni/go-manga-kit/asset"
@@ -71,8 +71,8 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 3. 生成リクエスト
-	pageReq := ports.ImagePageRequest{
-		GenerationOptions: ports.GenerationOptions{
+	pageReq := imagePorts.ImagePageRequest{
+		GenerationOptions: imagePorts.GenerationOptions{
 			Prompt:      designPrompt,
 			AspectRatio: layout.DesignAspectRatio,
 			ImageSize:   layout.ImageSize2K,
@@ -99,7 +99,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 }
 
 // saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
-func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp ports.ImageResponse, charIDs []string, outputDir string) (string, error) {
+func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imagePorts.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	charTags := strings.Join(charIDs, "_")
 	sanitizedCharTags := fileNameSanitizer.Replace(charTags)
 
@@ -149,8 +149,8 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 }
 
 // collectCharacterURIs はキャラクター情報を収集し、ImageURIスライスと説明文を返します。
-func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]ports.ImageURI, []string, error) {
-	var uris []ports.ImageURI
+func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imagePorts.ImageURI, []string, error) {
+	var uris []imagePorts.ImageURI
 	var descriptions []string
 	var missingIDs []string
 	processedIDs := make(map[string]struct{})
@@ -175,7 +175,7 @@ func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]ports.ImageUR
 			continue
 		}
 
-		uris = append(uris, ports.ImageURI{
+		uris = append(uris, imagePorts.ImageURI{
 			ReferenceURL: char.ReferenceURL,
 			FileAPIURI:   fileURI,
 		})
