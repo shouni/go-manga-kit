@@ -15,39 +15,39 @@ import (
 // negativePanelPrompt は単体パネルで「文字」や「フキダシ」を徹底排除するための指定です。
 const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, letters, words, signatures, watermark, username, low quality, distorted, bad anatomy, monochrome, black and white, greyscale"
 
-// Panel は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
-type Panel struct {
+// PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
+type PanelGenerator struct {
 	composer *MangaComposer
 	pb       ports.ImagePrompt
 }
 
-// NewPanel は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanel(composer *MangaComposer, pb ports.ImagePrompt) *Panel {
-	return &Panel{
+// NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
+func NewPanelGenerator(composer *MangaComposer, pb ports.ImagePrompt) *PanelGenerator {
+	return &PanelGenerator{
 		composer: composer,
 		pb:       pb,
 	}
 }
 
-// Generate は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
-func (p *Panel) Generate(ctx context.Context, panels []ports.Panel) ([]*imagePorts.ImageResponse, error) {
+// Execute は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
+func (pg *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*imagePorts.ImageResponse, error) {
 	if len(panels) == 0 {
 		return nil, nil
 	}
 
-	if err := p.composer.PrepareCharacterResources(ctx, panels); err != nil {
+	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
 
 	images := make([]*imagePorts.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(p.composer.MaxConcurrency))
+	eg.SetLimit(int(pg.composer.MaxConcurrency))
 
-	cm := p.composer.CharactersMap
+	cm := pg.composer.CharactersMap
 
 	for i, panel := range panels {
 		eg.Go(func() error {
-			if err := p.composer.RateLimiter.Wait(egCtx); err != nil {
+			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
@@ -56,8 +56,8 @@ func (p *Panel) Generate(ctx context.Context, panels []ports.Panel) ([]*imagePor
 				return fmt.Errorf("character not found for speaker ID '%s'", panel.SpeakerID)
 			}
 			seed := char.Seed
-			userPrompt, systemPrompt := p.pb.BuildPanel(panel, char)
-			fileURI := p.composer.GetCharacterResourceURI(char.ID)
+			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
+			fileURI := pg.composer.GetCharacterResourceURI(char.ID)
 
 			logger := slog.With(
 				"panel_index", i+1,
@@ -69,7 +69,7 @@ func (p *Panel) Generate(ctx context.Context, panels []ports.Panel) ([]*imagePor
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
-			resp, err := p.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
+			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
 				GenerationOptions: imagePorts.GenerationOptions{
 					Prompt:         userPrompt,
 					SystemPrompt:   systemPrompt,

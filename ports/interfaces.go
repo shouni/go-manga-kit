@@ -26,13 +26,13 @@ type ImagePrompt interface {
 	BuildPage(panels []Panel, rm *ResourceMap) (userPrompt string, systemPrompt string)
 }
 
-// PanelDesigner は、指定されたコンテキスト内で一連のパネルの画像レスポンスを生成するためのインターフェースを定義します。
-type PanelDesigner interface {
-	Generate(ctx context.Context, panels []Panel) ([]*imagePorts.ImageResponse, error)
+// PanelsImageGenerator は、指定されたコンテキスト内で一連のパネルの画像レスポンスを生成するためのインターフェースを定義します。
+type PanelsImageGenerator interface {
+	Execute(ctx context.Context, panels []Panel) ([]*imagePorts.ImageResponse, error)
 }
 
-// PageDesigner は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
+// PagesImageGenerator は、与えられた漫画レスポンスに基づいて漫画ページの画像データを生成します。
 // パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
-type PageDesigner interface {
-	Generate(ctx context.Context, manga *MangaResponse) ([]*imagePorts.ImageResponse, error)
+type PagesImageGenerator interface {
+	Execute(ctx context.Context, manga *MangaResponse) ([]*imagePorts.ImageResponse, error)
 }
