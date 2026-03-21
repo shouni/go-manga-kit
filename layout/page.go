@@ -16,52 +16,52 @@ import (
 // negativePagePrompt は生成から除外したい要素を定義します。
 const negativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
 
-type PageGenerator struct {
+type Page struct {
 	composer         *MangaComposer
 	pb               ports.ImagePrompt
 	maxPanelsPerPage int
 }
 
-// NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
-func NewPageGenerator(composer *MangaComposer, pb ports.ImagePrompt, maxPanelsPerPage int) *PageGenerator {
-	return &PageGenerator{
+// NewPage は、Pageの新しいインスタンスを作成します。
+func NewPage(composer *MangaComposer, pb ports.ImagePrompt, maxPanelsPerPage int) *Page {
+	return &Page{
 		composer:         composer,
 		pb:               pb,
 		maxPanelsPerPage: maxPanelsPerPage,
 	}
 }
 
-// Execute は、errgroupの制限機能を使用して並列数を制御しながらページ画像を生成します。
-func (pg *PageGenerator) Execute(ctx context.Context, manga *ports.MangaResponse) ([]*imagePorts.ImageResponse, error) {
+// Generate は、errgroupの制限機能を使用して並列数を制御しながらページ画像を生成します。
+func (p *Page) Generate(ctx context.Context, manga *ports.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	if manga == nil || len(manga.Panels) == 0 {
 		return nil, nil
 	}
 
-	if err := pg.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
+	if err := p.composer.PrepareCharacterResources(ctx, manga.Panels); err != nil {
 		return nil, fmt.Errorf("failed to prepare character resources: %w", err)
 	}
-	if err := pg.composer.PreparePanelResources(ctx, manga.Panels); err != nil {
+	if err := p.composer.PreparePanelResources(ctx, manga.Panels); err != nil {
 		return nil, fmt.Errorf("failed to prepare panel resources: %w", err)
 	}
 
-	maxPanels := pg.maxPanelsPerPage
+	maxPanels := p.maxPanelsPerPage
 	if maxPanels <= 0 {
 		maxPanels = defaultMaxPanelsPerPage
 	}
 
-	panelGroups := pg.chunkPanels(manga.Panels, maxPanels)
+	panelGroups := p.chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
 	allResponses := make([]*imagePorts.ImageResponse, totalPages)
 
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(pg.composer.MaxConcurrency))
+	eg.SetLimit(int(p.composer.MaxConcurrency))
 
 	for i, group := range panelGroups {
-		seed := pg.determineDefaultSeed(group)
+		seed := p.determineDefaultSeed(group)
 		currentPageNum := i + 1
 
 		eg.Go(func() error {
-			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
+			if err := p.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
@@ -80,7 +80,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *ports.MangaResponse
 			logger.Info("Starting manga page generation")
 
 			startTime := time.Now()
-			res, err := pg.generateMangaPage(egCtx, subManga, seed)
+			res, err := p.generateMangaPage(egCtx, subManga, seed)
 			if err != nil {
 				return fmt.Errorf("failed to generate page %d: %w", currentPageNum, err)
 			}
@@ -98,15 +98,15 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *ports.MangaResponse
 }
 
 // generateMangaPage は、提供されたマンガレスポンスとAIベースの画像生成用のシードを使用して、マンガページの画像を生成します。
-func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.MangaResponse, seed int64) (*imagePorts.ImageResponse, error) {
+func (p *Page) generateMangaPage(ctx context.Context, manga ports.MangaResponse, seed int64) (*imagePorts.ImageResponse, error) {
 	// 1. リソース収集とインデックスマッピングの作成
-	resMap, err := pg.collectResources(manga.Panels)
+	resMap, err := p.collectResources(manga.Panels)
 	if err != nil {
 		return nil, fmt.Errorf("failed to collect resources: %w", err)
 	}
 
 	// 2. プロンプト構築
-	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
+	userPrompt, systemPrompt := p.pb.BuildPage(manga.Panels, resMap)
 
 	// 3. ImageURI 構造体のスライスを作成
 	req := imagePorts.ImagePageRequest{
@@ -127,26 +127,26 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Mang
 		"total_assets", len(resMap.OrderedAssets),
 	)
 
-	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
+	return p.composer.ImageGenerator.GenerateMangaPage(ctx, req)
 }
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。
-func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.ResourceMap, error) {
+func (p *Page) collectResources(panels []ports.Panel) (*ports.ResourceMap, error) {
 	res := &ports.ResourceMap{
 		CharacterFiles: make(map[string]int),
 		PanelFiles:     make(map[string]int),
 	}
 	addedMap := make(map[string]int) // URL -> index (重複排除用)
 
-	pg.composer.mu.RLock()
-	defer pg.composer.mu.RUnlock()
+	p.composer.mu.RLock()
+	defer p.composer.mu.RUnlock()
 
 	// 1. ページ内に登場する全キャラクターの立ち絵を優先的に登録
 	speakerIDs := ports.Panels(panels).UniqueSpeakerIDs()
 	for _, sID := range speakerIDs {
-		char := pg.composer.CharactersMap.GetCharacter(sID)
+		char := p.composer.CharactersMap.GetCharacter(sID)
 		if char != nil && char.ReferenceURL != "" {
-			uri := pg.composer.GetCharacterResourceURI(char.ID)
+			uri := p.composer.GetCharacterResourceURI(char.ID)
 			if uri != "" {
 				if idx, exists := addedMap[char.ReferenceURL]; exists {
 					res.CharacterFiles[sID] = idx
@@ -165,18 +165,18 @@ func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.Resource
 
 	// 2. パネル固有のポーズ参照
 	var panelRefs []imagePorts.ImageURI
-	for _, p := range panels {
-		if p.ReferenceURL == "" {
+	for _, panel := range panels {
+		if panel.ReferenceURL == "" {
 			continue
 		}
-		if _, exists := addedMap[p.ReferenceURL]; !exists {
-			uri := pg.composer.GetPanelResourceURI(p.ReferenceURL)
+		if _, exists := addedMap[panel.ReferenceURL]; !exists {
+			uri := p.composer.GetPanelResourceURI(panel.ReferenceURL)
 			if uri != "" {
 				panelRefs = append(panelRefs, imagePorts.ImageURI{
-					ReferenceURL: p.ReferenceURL,
+					ReferenceURL: panel.ReferenceURL,
 					FileAPIURI:   uri,
 				})
-				addedMap[p.ReferenceURL] = -1 // 仮登録
+				addedMap[panel.ReferenceURL] = -1 // 仮登録
 			}
 		}
 	}
@@ -206,26 +206,13 @@ func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.Resource
 	return res, nil
 }
 
-// chunkPanels はパネルのスライスを指定サイズのチャンクに分割して返します。
-func (pg *PageGenerator) chunkPanels(panels []ports.Panel, size int) [][]ports.Panel {
-	var chunks [][]ports.Panel
-	for i := 0; i < len(panels); i += size {
-		end := i + size
-		if end > len(panels) {
-			end = len(panels)
-		}
-		chunks = append(chunks, panels[i:end])
-	}
-	return chunks
-}
-
 // determineDefaultSeed はキャラクターデータを基にページ生成時のデフォルトシード値を決定します。
-func (pg *PageGenerator) determineDefaultSeed(panels []ports.Panel) int64 {
+func (p *Page) determineDefaultSeed(panels []ports.Panel) int64 {
 	const defaultSeed = 1000
 	if len(panels) == 0 {
 		return defaultSeed
 	}
-	cm := pg.composer.CharactersMap
+	cm := p.composer.CharactersMap
 
 	// 最初のパネルの話者 Seed を優先します。
 	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
@@ -238,4 +225,17 @@ func (pg *PageGenerator) determineDefaultSeed(panels []ports.Panel) int64 {
 	}
 
 	return defaultSeed
+}
+
+// chunkPanels はパネルのスライスを指定サイズのチャンクに分割して返します。
+func (p *Page) chunkPanels(panels []ports.Panel, size int) [][]ports.Panel {
+	var chunks [][]ports.Panel
+	for i := 0; i < len(panels); i += size {
+		end := i + size
+		if end > len(panels) {
+			end = len(panels)
+		}
+		chunks = append(chunks, panels[i:end])
+	}
+	return chunks
 }

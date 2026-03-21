@@ -16,13 +16,13 @@ import (
 
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelRunner struct {
-	generator ports.PanelsImageGenerator
+	generator ports.PanelDesigner
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPanelRunner は、依存関係を注入して初期化します。
 func NewMangaPanelRunner(
-	generator ports.PanelsImageGenerator,
+	generator ports.PanelDesigner,
 	writer remoteio.OutputWriter,
 ) *MangaPanelRunner {
 	return &MangaPanelRunner{
@@ -35,7 +35,7 @@ func NewMangaPanelRunner(
 func (r *MangaPanelRunner) Run(ctx context.Context, manga *ports.MangaResponse) ([]*imagePorts.ImageResponse, error) {
 	slog.Info("Starting parallel image generation")
 
-	images, err := r.generator.Execute(ctx, manga.Panels)
+	images, err := r.generator.Generate(ctx, manga.Panels)
 	if err != nil {
 		slog.Error("Image generation pipeline failed", "error", err)
 		return nil, err
