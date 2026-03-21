@@ -15,15 +15,19 @@ import (
 )
 
 type MangaComposer struct {
-	AssetManager         imagePorts.AssetManager
-	ImageGenerator       imagePorts.ImageGenerator
-	CharactersMap        ports.CharactersMap
-	RateLimiter          *rate.Limiter
-	MaxConcurrency       int64
-	CharacterResourceMap map[string]string // CharacterID -> FileAPIURI
-	PanelResourceMap     map[string]string // ReferenceURL -> FileAPIURI
-	mu                   sync.RWMutex
-	uploadGroup          singleflight.Group
+	AssetManager   imagePorts.AssetManager
+	ImageGenerator imagePorts.ImageGenerator
+	CharactersMap  ports.CharactersMap
+	RateLimiter    *rate.Limiter
+	MaxConcurrency int64
+	resourceMap    ResourceMap
+	mu             sync.RWMutex
+	uploadGroup    singleflight.Group
+}
+
+type ResourceMap struct {
+	character map[string]string // CharacterID -> FileAPIURI
+	panel     map[string]string // ReferenceURL -> FileAPIURI
 }
 
 // NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
@@ -45,13 +49,15 @@ func NewMangaComposer(
 	}
 
 	return &MangaComposer{
-		AssetManager:         assetMgr,
-		ImageGenerator:       imgGen,
-		CharactersMap:        cm,
-		RateLimiter:          limiter,
-		MaxConcurrency:       maxConcurrency,
-		CharacterResourceMap: make(map[string]string),
-		PanelResourceMap:     make(map[string]string),
+		AssetManager:   assetMgr,
+		ImageGenerator: imgGen,
+		CharactersMap:  cm,
+		RateLimiter:    limiter,
+		MaxConcurrency: maxConcurrency,
+		resourceMap: ResourceMap{
+			character: make(map[string]string),
+			panel:     make(map[string]string),
+		},
 	}, nil
 }
 
@@ -59,7 +65,7 @@ func NewMangaComposer(
 func (mc *MangaComposer) GetCharacterResourceURI(charID string) string {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	return mc.CharacterResourceMap[charID]
+	return mc.resourceMap.character[charID]
 }
 
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
@@ -116,13 +122,13 @@ func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []por
 
 // getOrUploadAsset はキャラクター用アセットをキャッシュ制御しつつ取得またはアップロードします。
 func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, referenceURL string) (string, error) {
-	return mc.getOrUploadResource(ctx, charID, referenceURL, mc.CharacterResourceMap)
+	return mc.getOrUploadResource(ctx, charID, referenceURL, mc.resourceMap.character)
 }
 
 // getOrUploadPanelAsset はパネル用参照URLをキャッシュ制御しつつ取得またはアップロードします。
 func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL string) (string, error) {
 	// パネルアセットの場合、検索キーとソースURLは同一です。
-	return mc.getOrUploadResource(ctx, referenceURL, referenceURL, mc.PanelResourceMap)
+	return mc.getOrUploadResource(ctx, referenceURL, referenceURL, mc.resourceMap.panel)
 }
 
 // getOrUploadResource は二重チェックロッキングと singleflight を用いてアセットアップロードの共通ロジックを提供します。
