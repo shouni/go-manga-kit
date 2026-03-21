@@ -8,7 +8,7 @@ import (
 	"path"
 	"strings"
 
-	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	"github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-remote-io/remoteio"
 
 	"github.com/shouni/go-manga-kit/asset"
@@ -71,8 +71,8 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 3. 生成リクエスト
-	pageReq := imagePorts.ImagePageRequest{
-		GenerationOptions: imagePorts.GenerationOptions{
+	pageReq := ports.ImagePageRequest{
+		GenerationOptions: ports.GenerationOptions{
 			Prompt:      designPrompt,
 			AspectRatio: layout.DesignAspectRatio,
 			ImageSize:   layout.ImageSize2K,
@@ -99,7 +99,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 }
 
 // saveResponseImage は、生成された画像データを指定されたディレクトリに保存します。
-func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imagePorts.ImageResponse, charIDs []string, outputDir string) (string, error) {
+func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp ports.ImageResponse, charIDs []string, outputDir string) (string, error) {
 	charTags := strings.Join(charIDs, "_")
 	sanitizedCharTags := fileNameSanitizer.Replace(charTags)
 
@@ -149,8 +149,8 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 }
 
 // collectCharacterURIs はキャラクター情報を収集し、ImageURIスライスと説明文を返します。
-func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imagePorts.ImageURI, []string, error) {
-	var uris []imagePorts.ImageURI
+func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]ports.ImageURI, []string, error) {
+	var uris []ports.ImageURI
 	var descriptions []string
 	var missingIDs []string
 	processedIDs := make(map[string]struct{})
@@ -166,18 +166,8 @@ func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imagePorts.Im
 			missingIDs = append(missingIDs, id)
 			continue
 		}
-
-		// File API URI があれば取得
-		fileURI := dr.composer.CharacterResourceMap[char.ID]
-
-		if char.ReferenceURL == "" && fileURI == "" {
-			slog.Warn("キャラクターに有効な参照画像がないためスキップします", "id", id)
-			continue
-		}
-
-		uris = append(uris, imagePorts.ImageURI{
+		uris = append(uris, ports.ImageURI{
 			ReferenceURL: char.ReferenceURL,
-			FileAPIURI:   fileURI,
 		})
 
 		desc := char.Name

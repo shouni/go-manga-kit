@@ -20,12 +20,12 @@ type MangaComposer struct {
 	CharactersMap  ports.CharactersMap
 	RateLimiter    *rate.Limiter
 	MaxConcurrency int64
-	resourceMap    ResourceMap
+	resourceMap    resourceMap
 	mu             sync.RWMutex
 	uploadGroup    singleflight.Group
 }
 
-type ResourceMap struct {
+type resourceMap struct {
 	character map[string]string // CharacterID -> FileAPIURI
 	panel     map[string]string // ReferenceURL -> FileAPIURI
 }
@@ -54,7 +54,7 @@ func NewMangaComposer(
 		CharactersMap:  cm,
 		RateLimiter:    limiter,
 		MaxConcurrency: maxConcurrency,
-		resourceMap: ResourceMap{
+		resourceMap: resourceMap{
 			character: make(map[string]string),
 			panel:     make(map[string]string),
 		},

@@ -146,7 +146,7 @@ func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.Resource
 	for _, sID := range speakerIDs {
 		char := pg.composer.CharactersMap.GetCharacter(sID)
 		if char != nil && char.ReferenceURL != "" {
-			if uri, ok := pg.composer.CharacterResourceMap[char.ID]; ok {
+			if uri, ok := pg.composer.resourceMap.character[char.ID]; ok {
 				if idx, exists := addedMap[char.ReferenceURL]; exists {
 					res.CharacterFiles[sID] = idx
 				} else {
@@ -169,7 +169,7 @@ func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.Resource
 			continue
 		}
 		if _, exists := addedMap[p.ReferenceURL]; !exists {
-			if uri, ok := pg.composer.PanelResourceMap[p.ReferenceURL]; ok {
+			if uri, ok := pg.composer.resourceMap.panel[p.ReferenceURL]; ok {
 				panelRefs = append(panelRefs, imagePorts.ImageURI{
 					ReferenceURL: p.ReferenceURL,
 					FileAPIURI:   uri,
