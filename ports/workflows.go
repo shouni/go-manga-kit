@@ -28,13 +28,13 @@ type ScriptRunner interface {
 // PanelImageRunner は、解析済みの漫画データと対象パネルのインデックスを基に、パネル画像を生成する責務を持ちます。
 type PanelImageRunner interface {
 	Run(ctx context.Context, manga *MangaResponse) ([]*imagePorts.ImageResponse, error)
-	RunAndSave(ctx context.Context, manga *MangaResponse, scriptPath string) (*MangaResponse, error)
+	RunAndSave(ctx context.Context, manga *MangaResponse, outputPath string) (*MangaResponse, error)
 }
 
 // PageImageRunner は、解析済みの漫画データから漫画のページ画像を生成する責務を持ちます。
 type PageImageRunner interface {
 	Run(ctx context.Context, manga *MangaResponse) ([]*imagePorts.ImageResponse, error)
-	RunAndSave(ctx context.Context, manga *MangaResponse, plotPath string) ([]string, error)
+	RunAndSave(ctx context.Context, manga *MangaResponse, outputPath string) ([]string, error)
 }
 
 // PublishRunner は、漫画データを統合し、指定された形式（例: HTML）で出力する責務を持ちます。
