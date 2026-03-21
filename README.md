@@ -53,7 +53,7 @@
 go-manga-kit/
 ├── workflow/    # 【統合管理】各工程を組み合わせ、Workflows インターフェースを実装。
 ├── runner/      # 【実行実体】Design/Script/Panel/Page/Publish の具体的なプロセス実装。
-├── generator/   # 【生成戦略】Page/Panel構成、Composerによるレイアウト計算。
+├── layout/      # 【生成戦略】Page/Panel構成、Composerによるレイアウト計算。
 ├── parser/      # 【解析】入力テキストやAIレスポンスを構造化データへ変換。
 ├── ports/       # 【契約・定義】Interface、共通モデル、動作設定(Config)。※全ての起点。
 ├── publisher/   # 【出力】生成された画像とテキストを最終成果物として統合。
@@ -67,24 +67,25 @@ go-manga-kit/
 
 ```mermaid
 sequenceDiagram
-    participant APP as Application
-    participant Runner as runner.PageImageRunner
-    participant API as Gemini API / Vertex AI
+  participant WF as workflow.Workflows
+  participant Runner as runner.PageImageRunner
+  participant API as Gemini API / Vertex AI
 
-    Note over APP, Runner: 1. アセット準備 & Seed特定
-    Runner->>Runner: キャラSeed(10001等)を特定
+  Note over WF, Runner: 1. アセット準備 & Seed特定
+  WF->>Runner: RunPageImage(assetPath)
+  Runner->>Runner: キャラSeed(10001等)を特定
 
-    alt Vertex AI Mode
-        Runner->>Runner: GCS (gs://) パスを直接解決
-    else Gemini API Mode
-        Runner->>Runner: Gemini File API へ準備 (Upload/Cache)
-    end
+  alt Vertex AI Mode
+    Runner->>Runner: GCS (gs://) パスを直接解決
+  else Gemini API Mode
+    Runner->>Runner: Gemini File API へ準備 (Upload/Cache)
+  end
 
-    Note over Runner, API: 2. ページ一括生成
-    Runner->>API: GenerateContent(Prompt + Seed + AssetURIs)
-    Note over Runner, API: バックエンドに応じたURI形式でリクエスト
-    API-->>Runner: 生成画像データ (Full Color)
-    Runner-->>APP: []ImageResponse
+  Note over Runner, API: 2. ページ一括生成
+  Runner->>API: GenerateContent(Prompt + Seed + AssetURIs)
+  Note over Runner, API: バックエンドに応じたURI形式でリクエスト
+  API-->>Runner: 生成画像データ (Full Color)
+  Runner-->>WF: []*imgdom.ImageResponse
 
 ```
 

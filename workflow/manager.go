@@ -7,7 +7,7 @@ import (
 	"github.com/shouni/go-http-kit/httpkit"
 	"github.com/shouni/go-remote-io/remoteio"
 
-	"github.com/shouni/go-manga-kit/generator"
+	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
@@ -34,7 +34,7 @@ type manager struct {
 	reader             remoteio.InputReader
 	writer             remoteio.OutputWriter
 	aiClient           gemini.GenerativeModel
-	mangaComposer      *generator.MangaComposer
+	mangaComposer      *layout.MangaComposer
 	promptDependencies *PromptDependencies
 }
 

@@ -12,7 +12,7 @@ import (
 	"github.com/shouni/go-remote-io/remoteio"
 
 	"github.com/shouni/go-manga-kit/asset"
-	"github.com/shouni/go-manga-kit/generator"
+	"github.com/shouni/go-manga-kit/layout"
 )
 
 const (
@@ -37,13 +37,13 @@ var fileNameSanitizer = strings.NewReplacer(
 
 // MangaDesignRunner はキャラクターデザインシート生成を実行するランナーです。
 type MangaDesignRunner struct {
-	composer    *generator.MangaComposer
+	composer    *layout.MangaComposer
 	writer      remoteio.OutputWriter
 	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(composer *generator.MangaComposer, writer remoteio.OutputWriter, styleSuffix string) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *layout.MangaComposer, writer remoteio.OutputWriter, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		composer:    composer,
 		writer:      writer,
@@ -74,8 +74,8 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	pageReq := imagePorts.ImagePageRequest{
 		GenerationOptions: imagePorts.GenerationOptions{
 			Prompt:      designPrompt,
-			AspectRatio: generator.DesignAspectRatio,
-			ImageSize:   generator.ImageSize2K,
+			AspectRatio: layout.DesignAspectRatio,
+			ImageSize:   layout.ImageSize2K,
 			Seed:        ptrInt64(seed),
 		},
 		Images: imageURIs,
@@ -137,9 +137,9 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	}
 
 	base := fmt.Sprintf(designPromptBaseTemplate, subjects)
-	layout := fmt.Sprintf(designLayoutPromptFormat, designLayoutDefault)
+	layoutPrompt := fmt.Sprintf(designLayoutPromptFormat, designLayoutDefault)
 
-	promptParts := []string{base, layout}
+	promptParts := []string{base, layoutPrompt}
 	if dr.styleSuffix != "" {
 		promptParts = append(promptParts, dr.styleSuffix)
 	}

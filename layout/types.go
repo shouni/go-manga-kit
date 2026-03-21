@@ -1,4 +1,4 @@
-package generator
+package layout
 
 const (
 	// DesignAspectRatio はキャラクターデザインシートの推奨アスペクト比です。
