@@ -70,14 +70,14 @@ func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
 func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
 	pagesGen := layout.NewPageGenerator(m.mangaComposer, m.promptDependencies.ImagePrompt, m.cfg.MaxPanelsPerPage)
 
-	return runner.NewMangaPageRunner(pagesGen, m.reader, m.writer), nil
+	return runner.NewMangaPageRunner(pagesGen, m.writer), nil
 }
 
 // buildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
 func (m *manager) buildPublishRunner() (ports.PublishRunner, error) {
 	b, err := builder.New()
 	if err != nil {
-		return nil, fmt.Errorf("mdcast builderの初期化に失敗: %w", err)
+		return nil, fmt.Errorf("MarkdownBuilderの初期化に失敗: %w", err)
 	}
 
 	md2htmlRunner, err := b.BuildRunner()

@@ -16,19 +16,16 @@ import (
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	generator ports.PagesImageGenerator
-	reader    remoteio.InputReader
 	writer    remoteio.OutputWriter
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	generator ports.PagesImageGenerator,
-	reader remoteio.InputReader,
 	writer remoteio.OutputWriter,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		generator: generator,
-		reader:    reader,
 		writer:    writer,
 	}
 }
@@ -78,14 +75,19 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResp
 	}
 
 	// 3. 画像の生成
-	resps, err := r.Run(ctx, manga)
+	responses, err := r.Run(ctx, manga)
 	if err != nil {
 		return nil, err
 	}
 
 	// 4. 連番を付けて保存
+	return r.savePages(ctx, responses, basePath)
+}
+
+// savePages は、一連の画像応答を、ファイル名に連番を付けて保存します。
+func (r *MangaPageRunner) savePages(ctx context.Context, responses []*imagePorts.ImageResponse, basePath string) ([]string, error) {
 	var savedPaths []string
-	for i, resp := range resps {
+	for i, resp := range responses {
 		// 例: manga_page.png -> manga_page_1.png
 		pagePath, err := asset.GenerateIndexedPath(basePath, i+1)
 		if err != nil {
@@ -97,7 +99,7 @@ func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResp
 			"path", pagePath,
 		)
 
-		if err := r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+		if err = r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
 			return nil, fmt.Errorf("第 %d ページの保存に失敗しました (path: %s): %w", i+1, pagePath, err)
 		}
 		savedPaths = append(savedPaths, pagePath)
