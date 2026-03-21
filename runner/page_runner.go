@@ -60,15 +60,15 @@ func (r *MangaPageRunner) Run(ctx context.Context, manga *ports.MangaResponse) (
 }
 
 // RunAndSave は、画像の生成から指定ディレクトリへの保存までを一括で行います。
-func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResponse, plotPath string) ([]string, error) {
+func (r *MangaPageRunner) RunAndSave(ctx context.Context, manga *ports.MangaResponse, outputPath string) ([]string, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("manga データがありません")
 	}
 
 	// 1. 保存先ディレクトリの決定
-	targetDir := asset.ResolveBaseURL(plotPath)
+	targetDir := asset.ResolveBaseURL(outputPath)
 	if targetDir == "" {
-		return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", plotPath)
+		return nil, fmt.Errorf("アセットパスからベースURLを解決できませんでした: %s", outputPath)
 	}
 
 	// 2. ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）

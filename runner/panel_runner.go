@@ -46,13 +46,13 @@ func (r *MangaPanelRunner) Run(ctx context.Context, manga *ports.MangaResponse) 
 }
 
 // RunAndSave は画像パネルを生成し、インデックスを付けて指定のパスに保存します。
-func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *ports.MangaResponse, scriptPath string) (*ports.MangaResponse, error) {
+func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *ports.MangaResponse, outputPath string) (*ports.MangaResponse, error) {
 	if manga == nil {
 		return nil, fmt.Errorf("MangaResponse がありません")
 	}
 
 	// 保存先ディレクトリの決定
-	targetDir := asset.ResolveBaseURL(scriptPath)
+	targetDir := asset.ResolveBaseURL(outputPath)
 
 	// ベースとなる出力パスを解決します（GCS/ローカルを判別し、ベースファイル名を結合）
 	basePath, err := asset.ResolveOutputPath(targetDir, asset.DefaultPanelImagePath())
