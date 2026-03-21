@@ -3,7 +3,7 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/shouni/go-prompt-kit/mdcast/builder"
+	"github.com/shouni/go-prompt-kit/md/builder"
 	"github.com/shouni/go-web-exact/v2/extract"
 
 	"github.com/shouni/go-manga-kit/layout"
