@@ -87,7 +87,7 @@ func validateArgs(args *ManagerArgs) error {
 		return fmt.Errorf("AIClient is required")
 	}
 	if args.PromptDeps == nil {
-		return fmt.Errorf("PromptDependencies is required")
+		return fmt.Errorf("PromptDeps is required")
 	}
 	if args.PromptDeps.CharactersMap == nil {
 		return fmt.Errorf("CharactersMap is required")
