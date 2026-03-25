@@ -123,6 +123,7 @@ func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL
 	return mc.getOrUploadResource(ctx, referenceURL, referenceURL, mc.resourceMap.panel)
 }
 
+// prepareResources は指定されたリソースを事前アップロードします。
 func (mc *MangaComposer) prepareResources(
 	ctx context.Context,
 	targets map[string]string,
