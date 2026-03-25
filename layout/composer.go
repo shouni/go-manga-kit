@@ -77,54 +77,39 @@ func (mc *MangaComposer) GetPanelResourceURI(referenceURL string) string {
 
 // PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []ports.Panel) error {
-	targetIDs := make(map[string]struct{})
+	targets := make(map[string]string)
 
 	// デフォルトキャラクターをアップロード対象に追加
 	if def := mc.CharactersMap.GetDefault(); def != nil && def.ReferenceURL != "" {
-		targetIDs[def.ID] = struct{}{}
+		targets[def.ID] = def.ReferenceURL
 	}
 
 	// パネルで使用されているキャラクターをアップロード対象に追加
 	for _, id := range ports.Panels(panels).UniqueSpeakerIDs() {
-		targetIDs[id] = struct{}{}
+		char := mc.CharactersMap.GetCharacterWithDefault(id)
+		if char == nil || char.ReferenceURL == "" {
+			continue
+		}
+		targets[char.ID] = char.ReferenceURL
 	}
 
-	eg, egCtx := errgroup.WithContext(ctx)
-
-	for id := range targetIDs {
-		charID := id // ループ変数のキャプチャ
-		eg.Go(func() error {
-			char := mc.CharactersMap.GetCharacterWithDefault(charID)
-			if char == nil || char.ReferenceURL == "" {
-				return nil
-			}
-
-			_, err := mc.getOrUploadAsset(egCtx, char.ID, char.ReferenceURL)
-			if err != nil {
-				return fmt.Errorf("キャラクター '%s' のリソース準備に失敗しました: %w", charID, err)
-			}
-			return nil
-		})
-	}
-
-	return eg.Wait()
+	return mc.prepareResources(ctx, targets, mc.getOrUploadAsset, "character")
 }
 
 // PreparePanelResources は各パネル固有の ReferenceURL を事前アップロードします。
 func (mc *MangaComposer) PreparePanelResources(ctx context.Context, panels []ports.Panel) error {
-	eg, egCtx := errgroup.WithContext(ctx)
+	targets := make(map[string]string)
 
 	for _, panel := range panels {
 		if panel.ReferenceURL == "" {
 			continue
 		}
-
-		eg.Go(func() error {
-			_, err := mc.getOrUploadPanelAsset(egCtx, panel.ReferenceURL)
-			return err
-		})
+		targets[panel.ReferenceURL] = panel.ReferenceURL
 	}
-	return eg.Wait()
+
+	return mc.prepareResources(ctx, targets, func(ctx context.Context, key, _ string) (string, error) {
+		return mc.getOrUploadPanelAsset(ctx, key)
+	}, "panel")
 }
 
 // getOrUploadAsset はキャラクター用アセットをキャッシュ制御しつつ取得またはアップロードします。
@@ -136,6 +121,27 @@ func (mc *MangaComposer) getOrUploadAsset(ctx context.Context, charID, reference
 func (mc *MangaComposer) getOrUploadPanelAsset(ctx context.Context, referenceURL string) (string, error) {
 	// パネルアセットの場合、検索キーとソースURLは同一です。
 	return mc.getOrUploadResource(ctx, referenceURL, referenceURL, mc.resourceMap.panel)
+}
+
+// prepareResources は指定されたリソースを事前アップロードします。
+func (mc *MangaComposer) prepareResources(
+	ctx context.Context,
+	targets map[string]string,
+	upload func(context.Context, string, string) (string, error),
+	resourceType string,
+) error {
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	for key, referenceURL := range targets {
+		eg.Go(func() error {
+			if _, err := upload(egCtx, key, referenceURL); err != nil {
+				return fmt.Errorf("%s resource preparation failed for '%s': %w", resourceType, key, err)
+			}
+			return nil
+		})
+	}
+
+	return eg.Wait()
 }
 
 // getOrUploadResource は二重チェックロッキングと singleflight を用いてアセットアップロードの共通ロジックを提供します。

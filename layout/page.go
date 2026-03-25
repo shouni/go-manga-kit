@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sort"
 	"time"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
@@ -100,10 +99,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *ports.MangaResponse
 // generateMangaPage は、提供されたマンガレスポンスとAIベースの画像生成用のシードを使用して、マンガページの画像を生成します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.MangaResponse, seed int64) (*imagePorts.ImageResponse, error) {
 	// 1. リソース収集とインデックスマッピングの作成
-	resMap, err := pg.collectResources(manga.Panels)
-	if err != nil {
-		return nil, fmt.Errorf("failed to collect resources: %w", err)
-	}
+	resMap := pg.collectResources(manga.Panels)
 
 	// 2. プロンプト構築
 	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
@@ -131,79 +127,14 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Mang
 }
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。
-func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.ResourceMap, error) {
-	res := &ports.ResourceMap{
-		CharacterFiles: make(map[string]int),
-		PanelFiles:     make(map[string]int),
-	}
-	addedMap := make(map[string]int) // URL -> index (重複排除用)
-
+func (pg *PageGenerator) collectResources(panels []ports.Panel) *ports.ResourceMap {
 	pg.composer.mu.RLock()
 	defer pg.composer.mu.RUnlock()
 
-	// 1. ページ内に登場する全キャラクターの立ち絵を優先的に登録
-	speakerIDs := ports.Panels(panels).UniqueSpeakerIDs()
-	for _, sID := range speakerIDs {
-		char := pg.composer.CharactersMap.GetCharacter(sID)
-		if char != nil && char.ReferenceURL != "" {
-			uri := pg.composer.GetCharacterResourceURI(char.ID)
-			if uri != "" {
-				if idx, exists := addedMap[char.ReferenceURL]; exists {
-					res.CharacterFiles[sID] = idx
-				} else {
-					newIdx := len(res.OrderedAssets)
-					res.OrderedAssets = append(res.OrderedAssets, imagePorts.ImageURI{
-						ReferenceURL: char.ReferenceURL,
-						FileAPIURI:   uri,
-					})
-					res.CharacterFiles[sID] = newIdx
-					addedMap[char.ReferenceURL] = newIdx
-				}
-			}
-		}
-	}
-
-	// 2. パネル固有のポーズ参照
-	var panelRefs []imagePorts.ImageURI
-	for _, p := range panels {
-		if p.ReferenceURL == "" {
-			continue
-		}
-		if _, exists := addedMap[p.ReferenceURL]; !exists {
-			uri := pg.composer.GetPanelResourceURI(p.ReferenceURL)
-			if uri != "" {
-				panelRefs = append(panelRefs, imagePorts.ImageURI{
-					ReferenceURL: p.ReferenceURL,
-					FileAPIURI:   uri,
-				})
-				addedMap[p.ReferenceURL] = -1 // 仮登録
-			}
-		}
-	}
-
-	// 決定論的な順序のためにURLでソート
-	sort.Slice(panelRefs, func(i, j int) bool {
-		return panelRefs[i].ReferenceURL < panelRefs[j].ReferenceURL
-	})
-
-	// 3. ソート済みパネル参照を OrderedAssets に追加し、インデックスを確定
-	for _, r := range panelRefs {
-		newIdx := len(res.OrderedAssets)
-		res.OrderedAssets = append(res.OrderedAssets, r)
-		res.PanelFiles[r.ReferenceURL] = newIdx
-		addedMap[r.ReferenceURL] = newIdx
-	}
-
-	// 4. 重複していた ReferenceURL のマッピングを補完
-	for _, p := range panels {
-		if p.ReferenceURL != "" {
-			if idx, ok := addedMap[p.ReferenceURL]; ok && idx != -1 {
-				res.PanelFiles[p.ReferenceURL] = idx
-			}
-		}
-	}
-
-	return res, nil
+	collector := newPageResourceCollector(pg.composer)
+	collector.addCharacterAssets(panels)
+	collector.addPanelAssets(panels)
+	return collector.resourceMap
 }
 
 // chunkPanels はパネルのスライスを指定サイズのチャンクに分割して返します。
