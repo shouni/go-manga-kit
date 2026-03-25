@@ -40,7 +40,7 @@ func (m *manager) buildComposerAndGenerator(
 
 	composer, err := layout.NewMangaComposer(
 		core,
-		imageGenerator,
+		core,
 		chars,
 		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
 		m.cfg.MaxConcurrency,
