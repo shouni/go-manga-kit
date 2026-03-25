@@ -44,15 +44,17 @@ type MangaDesignRunner struct {
 	composer    *layout.MangaComposer
 	generator   DesignImageGenerator
 	writer      remoteio.OutputWriter
+	model       string
 	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.OutputWriter, styleSuffix string) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.OutputWriter, model, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		composer:    composer,
 		generator:   generator,
 		writer:      writer,
+		model:       model,
 		styleSuffix: styleSuffix,
 	}
 }
@@ -79,6 +81,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	// 3. 生成リクエスト
 	pageReq := imagePorts.ImagePageRequest{
 		GenerationOptions: imagePorts.GenerationOptions{
+			Model:       dr.model,
 			Prompt:      designPrompt,
 			AspectRatio: layout.DesignAspectRatio,
 			ImageSize:   layout.ImageSize2K,
