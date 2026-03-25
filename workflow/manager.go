@@ -3,6 +3,7 @@ package workflow
 import (
 	"fmt"
 
+	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-gemini-client/gemini"
 	"github.com/shouni/go-http-kit/httpkit"
 	"github.com/shouni/go-remote-io/remoteio"
@@ -29,13 +30,14 @@ type ManagerArgs struct {
 
 // manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type manager struct {
-	cfg           ports.Config
-	httpClient    httpkit.HTTPClient
-	reader        remoteio.InputReader
-	writer        remoteio.OutputWriter
-	aiClient      gemini.GenerativeModel
-	mangaComposer *layout.MangaComposer
-	promptDeps    *PromptDeps
+	cfg            ports.Config
+	httpClient     httpkit.HTTPClient
+	reader         remoteio.InputReader
+	writer         remoteio.OutputWriter
+	aiClient       gemini.GenerativeModel
+	imageGenerator imagePorts.ImageGenerator
+	mangaComposer  *layout.MangaComposer
+	promptDeps     *PromptDeps
 }
 
 // NewWorkflows は、設定とキャラクター定義を基に新しい Workflows を初期化します。
@@ -58,7 +60,7 @@ func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
 
 	var err error
 	// validateArgs で nil チェック済みのため、安全にアクセス可能
-	m.mangaComposer, err = m.buildMangaComposer(args.PromptDeps.CharactersMap)
+	m.mangaComposer, m.imageGenerator, err = m.buildComposerAndGenerator(args.PromptDeps.CharactersMap)
 	if err != nil {
 		return nil, err
 	}

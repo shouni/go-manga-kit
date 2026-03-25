@@ -56,19 +56,19 @@ func (m *manager) buildScriptRunner() (ports.ScriptRunner, error) {
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
 func (m *manager) buildDesignRunner() (ports.DesignRunner, error) {
-	return runner.NewMangaDesignRunner(m.mangaComposer, m.writer, m.cfg.StyleSuffix), nil
+	return runner.NewMangaDesignRunner(m.mangaComposer, m.imageGenerator, m.writer, m.cfg.StyleSuffix), nil
 }
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
-	panelsGen := layout.NewPanelGenerator(m.mangaComposer, m.promptDeps.ImagePrompt)
+	panelsGen := layout.NewPanelGenerator(m.mangaComposer, m.imageGenerator, m.promptDeps.ImagePrompt)
 
 	return runner.NewMangaPanelRunner(panelsGen, m.writer), nil
 }
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
-	pagesGen := layout.NewPageGenerator(m.mangaComposer, m.promptDeps.ImagePrompt, m.cfg.MaxPanelsPerPage)
+	pagesGen := layout.NewPageGenerator(m.mangaComposer, m.imageGenerator, m.promptDeps.ImagePrompt, m.cfg.MaxPanelsPerPage)
 
 	return runner.NewMangaPageRunner(pagesGen, m.writer), nil
 }
