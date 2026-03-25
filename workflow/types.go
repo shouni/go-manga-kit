@@ -5,10 +5,6 @@ import (
 )
 
 const (
-	// defaultRateBurst は、短時間に許容される最大リクエスト数（バースト）です。
-	// パネルの並列生成時などに、API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
-	defaultRateBurst = 1
-
 	// defaultCacheExpiration は、インメモリに保持されたアセット情報の有効期限です。
 	// フェッチ済みの画像バイナリや、既に Gemini File API にアップロード済みの
 	// URI 情報を再利用し、重複した I/O やアップロード処理を抑制します。

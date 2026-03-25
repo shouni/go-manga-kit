@@ -8,6 +8,7 @@ import (
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 
 	"github.com/shouni/go-manga-kit/ports"
 )
@@ -20,6 +21,10 @@ type PageGenerator struct {
 	generator        PageImageGenerator
 	pb               ports.ImagePrompt
 	model            string
+	limiter          *rate.Limiter
+	maxConcurrency   int64
+	rateInterval     time.Duration
+	rateBurst        int
 	maxPanelsPerPage int
 }
 
@@ -28,14 +33,31 @@ type PageImageGenerator interface {
 }
 
 // NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
-func NewPageGenerator(composer *MangaComposer, generator PageImageGenerator, pb ports.ImagePrompt, model string, maxPanelsPerPage int) *PageGenerator {
-	return &PageGenerator{
+func NewPageGenerator(
+	composer *MangaComposer,
+	generator PageImageGenerator,
+	pb ports.ImagePrompt,
+	model string,
+	opts ...PageOption,
+) *PageGenerator {
+	g := &PageGenerator{
 		composer:         composer,
 		generator:        generator,
 		pb:               pb,
 		model:            model,
-		maxPanelsPerPage: maxPanelsPerPage,
+		maxConcurrency:   defaultMaxConcurrency,
+		rateInterval:     defaultRateInterval,
+		rateBurst:        defaultRateBurst,
+		maxPanelsPerPage: defaultMaxPanelsPerPage,
 	}
+
+	for _, opt := range opts {
+		opt(g)
+	}
+
+	g.limiter = rate.NewLimiter(rate.Every(g.rateInterval), g.rateBurst)
+
+	return g
 }
 
 // Execute は、errgroupの制限機能を使用して並列数を制御しながらページ画像を生成します。
@@ -52,23 +74,19 @@ func (g *PageGenerator) Execute(ctx context.Context, manga *ports.MangaResponse)
 	}
 
 	maxPanels := g.maxPanelsPerPage
-	if maxPanels <= 0 {
-		maxPanels = defaultMaxPanelsPerPage
-	}
-
 	panelGroups := chunkPanels(manga.Panels, maxPanels)
 	totalPages := len(panelGroups)
 	allResponses := make([]*imagePorts.ImageResponse, totalPages)
 
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(g.composer.MaxConcurrency))
+	eg.SetLimit(int(g.maxConcurrency))
 
 	for i, group := range panelGroups {
 		seed := g.determineDefaultSeed(group)
 		currentPageNum := i + 1
 
 		eg.Go(func() error {
-			if err := g.composer.RateLimiter.Wait(egCtx); err != nil {
+			if err := g.limiter.Wait(egCtx); err != nil {
 				return err
 			}
 

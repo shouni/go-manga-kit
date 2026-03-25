@@ -8,6 +8,7 @@ import (
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/time/rate"
 
 	"github.com/shouni/go-manga-kit/ports"
 )
@@ -17,10 +18,14 @@ const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, le
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
-	composer  *MangaComposer
-	generator PanelImageGenerator
-	pb        ports.ImagePrompt
-	model     string
+	composer       *MangaComposer
+	generator      PanelImageGenerator
+	pb             ports.ImagePrompt
+	model          string
+	limiter        *rate.Limiter
+	maxConcurrency int64
+	rateInterval   time.Duration
+	rateBurst      int
 }
 
 type PanelImageGenerator interface {
@@ -28,13 +33,30 @@ type PanelImageGenerator interface {
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanelGenerator(composer *MangaComposer, generator PanelImageGenerator, pb ports.ImagePrompt, model string) *PanelGenerator {
-	return &PanelGenerator{
-		composer:  composer,
-		generator: generator,
-		pb:        pb,
-		model:     model,
+func NewPanelGenerator(
+	composer *MangaComposer,
+	generator PanelImageGenerator,
+	pb ports.ImagePrompt,
+	model string,
+	opts ...PanelOption,
+) *PanelGenerator {
+	g := &PanelGenerator{
+		composer:       composer,
+		generator:      generator,
+		pb:             pb,
+		model:          model,
+		maxConcurrency: defaultMaxConcurrency,
+		rateInterval:   defaultRateInterval,
+		rateBurst:      defaultRateBurst,
 	}
+
+	for _, opt := range opts {
+		opt(g)
+	}
+
+	g.limiter = rate.NewLimiter(rate.Every(g.rateInterval), g.rateBurst)
+
+	return g
 }
 
 // Execute は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
@@ -49,13 +71,13 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 
 	images := make([]*imagePorts.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(g.composer.MaxConcurrency))
+	eg.SetLimit(int(g.maxConcurrency))
 
 	cm := g.composer.CharactersMap
 
 	for i, panel := range panels {
 		eg.Go(func() error {
-			if err := g.composer.RateLimiter.Wait(egCtx); err != nil {
+			if err := g.limiter.Wait(egCtx); err != nil {
 				return err
 			}
 

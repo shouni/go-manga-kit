@@ -6,8 +6,6 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/shouni/gemini-image-kit/generator"
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
-	"golang.org/x/time/rate"
-
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 )
@@ -39,8 +37,6 @@ func (m *manager) buildComposer(
 		core,
 		core,
 		chars,
-		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
-		m.cfg.MaxConcurrency,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("MangaComposerの初期化に失敗しました: %w", err)

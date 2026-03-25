@@ -6,20 +6,16 @@ import (
 	"sync"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	"github.com/shouni/go-manga-kit/ports"
 	"github.com/shouni/go-remote-io/remoteio"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
-	"golang.org/x/time/rate"
-
-	"github.com/shouni/go-manga-kit/ports"
 )
 
 type MangaComposer struct {
 	AssetManager    imagePorts.AssetManager
 	BackendProvider imagePorts.Backend
 	CharactersMap   ports.CharactersMap
-	RateLimiter     *rate.Limiter
-	MaxConcurrency  int64
 	resourceMap     resourceMap
 	mu              sync.RWMutex
 	uploadGroup     singleflight.Group
@@ -35,8 +31,6 @@ func NewMangaComposer(
 	assetMgr imagePorts.AssetManager,
 	backend imagePorts.Backend,
 	cm ports.CharactersMap,
-	limiter *rate.Limiter,
-	maxConcurrency int64,
 ) (*MangaComposer, error) {
 	if assetMgr == nil {
 		return nil, fmt.Errorf("assetMgr is required")
@@ -44,16 +38,11 @@ func NewMangaComposer(
 	if backend == nil {
 		return nil, fmt.Errorf("backend is required")
 	}
-	if limiter == nil {
-		return nil, fmt.Errorf("limiter is required")
-	}
 
 	return &MangaComposer{
 		AssetManager:    assetMgr,
 		BackendProvider: backend,
 		CharactersMap:   cm,
-		RateLimiter:     limiter,
-		MaxConcurrency:  maxConcurrency,
 		resourceMap: resourceMap{
 			character: make(map[string]string),
 			panel:     make(map[string]string),

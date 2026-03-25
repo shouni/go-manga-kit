@@ -1,5 +1,7 @@
 package layout
 
+import "time"
+
 const (
 	// DesignAspectRatio はキャラクターデザインシートの推奨アスペクト比です。
 	DesignAspectRatio = "16:9"
@@ -7,8 +9,6 @@ const (
 	PanelAspectRatio = "16:9"
 	// PageAspectRatio は統合ページ全体の推奨アスペクト比です。
 	PageAspectRatio = "3:4"
-	// defaultMaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数です。
-	defaultMaxPanelsPerPage = 6
 
 	// ImageSize1K は標準的な解像度の設定（1024x1024相当）です。
 	ImageSize1K = "1K"
@@ -16,4 +16,14 @@ const (
 	ImageSize2K = "2K"
 	// ImageSize4K は超高解像度の設定（4096x4096相当）です。
 	ImageSize4K = "4K"
+
+	// defaultMaxPanelsPerPage は1枚の漫画ページに含めるパネルの最大数です。
+	defaultMaxPanelsPerPage = 6
+	// defaultRateBurst は、短時間に許容される最大リクエスト数（バースト）です。
+	// API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
+	defaultRateBurst = 1
+	// DefaultMaxConcurrency は、デフォルトの最大並列実行数です。
+	defaultMaxConcurrency = 1
+	// DefaultRateInterval は、リクエスト間のデフォルトの待機間隔です。
+	defaultRateInterval = 60 * time.Second
 )
