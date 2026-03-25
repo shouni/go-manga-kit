@@ -9,10 +9,7 @@ const (
 	DefaultGeminiModel        = "gemini-3-flash-preview"
 	DefaultImageStandardModel = "gemini-3-pro-image-preview"
 	DefaultImageQualityModel  = "gemini-3-pro-image-preview"
-	// DefaultMaxConcurrency は、並行実行数です。
-	DefaultMaxConcurrency = 2
-	DefaultRateInterval   = 10 * time.Second
-	DefaultStyleSuffix    = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
+	DefaultStyleSuffix        = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
 )
 
 // Config は Go Manga Kit の各 Runner を動作させるための基本設定です。
@@ -44,12 +41,6 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.ImageQualityModel == "" {
 		c.ImageQualityModel = DefaultImageQualityModel
-	}
-	if c.MaxConcurrency <= 0 {
-		c.MaxConcurrency = DefaultMaxConcurrency
-	}
-	if c.RateInterval <= 0 {
-		c.RateInterval = DefaultRateInterval
 	}
 	if c.StyleSuffix == "" {
 		c.StyleSuffix = DefaultStyleSuffix
