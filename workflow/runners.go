@@ -80,6 +80,7 @@ func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
 		m.imageGenerator,
 		m.promptDeps.ImagePrompt,
 		m.cfg.ImageQualityModel,
+		layout.WithPageRateInterval(m.cfg.RateInterval),
 		layout.WithMaxPanelsPerPage(m.cfg.MaxPanelsPerPage),
 	)
 
