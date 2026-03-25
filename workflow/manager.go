@@ -3,13 +3,10 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/patrickmn/go-cache"
-	"github.com/shouni/gemini-image-kit/generator"
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-gemini-client/gemini"
 	"github.com/shouni/go-http-kit/httpkit"
 	"github.com/shouni/go-remote-io/remoteio"
-	"golang.org/x/time/rate"
 
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
@@ -43,8 +40,8 @@ type manager struct {
 	promptDeps     *PromptDeps
 }
 
-// NewWorkflows は、設定とキャラクター定義を基に新しい Workflows を初期化します。
-func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
+// New は、設定とキャラクター定義を基に新しい Workflows を初期化します。
+func New(args ManagerArgs) (*ports.Workflows, error) {
 	if err := validateArgs(&args); err != nil {
 		return nil, err
 	}
@@ -61,7 +58,7 @@ func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
 		promptDeps: args.PromptDeps,
 	}
 
-	core, err := m.buildImageCore()
+	core, err := m.buildCore()
 	if err != nil {
 		return nil, err
 	}
@@ -113,53 +110,4 @@ func validateArgs(args *ManagerArgs) error {
 	}
 
 	return nil
-}
-
-// buildImageCore はGeminiImageCoreエンジンを初期化します。
-func (m *manager) buildImageCore() (*generator.GeminiImageCore, error) {
-	// 画像生成エンジンの初期化
-	core, err := generator.NewGeminiImageCore(
-		m.aiClient,
-		m.reader,
-		m.httpClient,
-		cache.New(defaultCacheExpiration, cacheCleanupInterval),
-		defaultTTL,
-		false,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("画像生成エンジンの初期化に失敗しました: %w", err)
-	}
-
-	return core, nil
-}
-
-// buildComposer は提供された構成と依存関係を使用して MangaComposerインスタンスを初期化し、返します。
-func (m *manager) buildComposer(
-	core *generator.GeminiImageCore,
-	chars ports.CharactersMap,
-) (*layout.MangaComposer, error) {
-	composer, err := layout.NewMangaComposer(
-		core,
-		core,
-		chars,
-		rate.NewLimiter(rate.Every(m.cfg.RateInterval), defaultRateBurst),
-		m.cfg.MaxConcurrency,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("MangaComposerの初期化に失敗しました: %w", err)
-	}
-
-	return composer, nil
-}
-
-// buildGenerator は提供された構成と依存関係を使用して ImageGenerator インスタンスを初期化し、返します。
-func (m *manager) buildGenerator(core *generator.GeminiImageCore) (imagePorts.ImageGenerator, error) {
-	gen, err := generator.NewGeminiGenerator(
-		core,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)
-	}
-
-	return gen, nil
 }

@@ -23,7 +23,6 @@ type MangaPageRunner struct {
 func NewMangaPageRunner(
 	generator ports.PagesImageGenerator,
 	writer remoteio.OutputWriter,
-
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		generator: generator,
