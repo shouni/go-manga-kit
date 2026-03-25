@@ -61,7 +61,6 @@ func (m *manager) buildDesignRunner() (ports.DesignRunner, error) {
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
-	// 必要に応じて config から値を注入します
 	panelsGen := layout.NewPanelGenerator(
 		m.mangaComposer,
 		m.imageGenerator,
