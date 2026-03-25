@@ -17,15 +17,21 @@ const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, le
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
-	composer *MangaComposer
-	pb       ports.ImagePrompt
+	composer  *MangaComposer
+	generator PanelImageGenerator
+	pb        ports.ImagePrompt
+}
+
+type PanelImageGenerator interface {
+	GenerateMangaPanel(ctx context.Context, req imagePorts.ImagePanelRequest) (*imagePorts.ImageResponse, error)
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanelGenerator(composer *MangaComposer, pb ports.ImagePrompt) *PanelGenerator {
+func NewPanelGenerator(composer *MangaComposer, generator PanelImageGenerator, pb ports.ImagePrompt) *PanelGenerator {
 	return &PanelGenerator{
-		composer: composer,
-		pb:       pb,
+		composer:  composer,
+		generator: generator,
+		pb:        pb,
 	}
 }
 
@@ -69,7 +75,7 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
-			resp, err := pg.composer.ImageGenerator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
+			resp, err := pg.generator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
 				GenerationOptions: imagePorts.GenerationOptions{
 					Prompt:         userPrompt,
 					SystemPrompt:   systemPrompt,

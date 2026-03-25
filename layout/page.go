@@ -18,14 +18,20 @@ const negativePagePrompt = "monochrome, black and white, greyscale, screentone, 
 
 type PageGenerator struct {
 	composer         *MangaComposer
+	generator        PageImageGenerator
 	pb               ports.ImagePrompt
 	maxPanelsPerPage int
 }
 
+type PageImageGenerator interface {
+	GenerateMangaPage(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error)
+}
+
 // NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
-func NewPageGenerator(composer *MangaComposer, pb ports.ImagePrompt, maxPanelsPerPage int) *PageGenerator {
+func NewPageGenerator(composer *MangaComposer, generator PageImageGenerator, pb ports.ImagePrompt, maxPanelsPerPage int) *PageGenerator {
 	return &PageGenerator{
 		composer:         composer,
+		generator:        generator,
 		pb:               pb,
 		maxPanelsPerPage: maxPanelsPerPage,
 	}
@@ -124,7 +130,7 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Mang
 		"total_assets", len(resMap.OrderedAssets),
 	)
 
-	return pg.composer.ImageGenerator.GenerateMangaPage(ctx, req)
+	return pg.generator.GenerateMangaPage(ctx, req)
 }
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。

@@ -15,14 +15,14 @@ import (
 )
 
 type MangaComposer struct {
-	AssetManager   imagePorts.AssetManager
-	ImageGenerator imagePorts.ImageGenerator
-	CharactersMap  ports.CharactersMap
-	RateLimiter    *rate.Limiter
-	MaxConcurrency int64
-	resourceMap    resourceMap
-	mu             sync.RWMutex
-	uploadGroup    singleflight.Group
+	AssetManager    imagePorts.AssetManager
+	BackendProvider imagePorts.Backend
+	CharactersMap   ports.CharactersMap
+	RateLimiter     *rate.Limiter
+	MaxConcurrency  int64
+	resourceMap     resourceMap
+	mu              sync.RWMutex
+	uploadGroup     singleflight.Group
 }
 
 type resourceMap struct {
@@ -33,7 +33,7 @@ type resourceMap struct {
 // NewMangaComposer は MangaComposer の新しいインスタンスを初期化済みの状態で生成します。
 func NewMangaComposer(
 	assetMgr imagePorts.AssetManager,
-	imgGen imagePorts.ImageGenerator,
+	backend imagePorts.Backend,
 	cm ports.CharactersMap,
 	limiter *rate.Limiter,
 	maxConcurrency int64,
@@ -41,19 +41,19 @@ func NewMangaComposer(
 	if assetMgr == nil {
 		return nil, fmt.Errorf("assetMgr is required")
 	}
-	if imgGen == nil {
-		return nil, fmt.Errorf("imgGen is required")
+	if backend == nil {
+		return nil, fmt.Errorf("backend is required")
 	}
 	if limiter == nil {
 		return nil, fmt.Errorf("limiter is required")
 	}
 
 	return &MangaComposer{
-		AssetManager:   assetMgr,
-		ImageGenerator: imgGen,
-		CharactersMap:  cm,
-		RateLimiter:    limiter,
-		MaxConcurrency: maxConcurrency,
+		AssetManager:    assetMgr,
+		BackendProvider: backend,
+		CharactersMap:   cm,
+		RateLimiter:     limiter,
+		MaxConcurrency:  maxConcurrency,
 		resourceMap: resourceMap{
 			character: make(map[string]string),
 			panel:     make(map[string]string),
@@ -150,7 +150,7 @@ func (mc *MangaComposer) prepareResources(
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
 	// Vertex AI モード時は Cloud Storage (gs://) を直接参照可能なため、
 	// File API へのアップロード処理をバイパスし、転送コストを削減します。
-	if mc.ImageGenerator.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
+	if mc.BackendProvider.IsVertexAI() && remoteio.IsGCSURI(referenceURL) {
 		mc.mu.RLock()
 		_, ok := resourceMap[key]
 		mc.mu.RUnlock()
