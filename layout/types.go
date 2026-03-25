@@ -23,7 +23,7 @@ const (
 	// API のレート制限（429 Too Many Requests）に抵触しないよう制御します。
 	defaultRateBurst = 1
 	// DefaultMaxConcurrency は、デフォルトの最大並列実行数です。
-	DefaultMaxConcurrency = 1
+	defaultMaxConcurrency = 1
 	// DefaultRateInterval は、リクエスト間のデフォルトの待機間隔です。
-	DefaultRateInterval = 60 * time.Second
+	defaultRateInterval = 60 * time.Second
 )

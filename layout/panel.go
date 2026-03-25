@@ -45,8 +45,8 @@ func NewPanelGenerator(
 		generator:      generator,
 		pb:             pb,
 		model:          model,
-		maxConcurrency: DefaultMaxConcurrency,
-		rateInterval:   DefaultRateInterval,
+		maxConcurrency: defaultMaxConcurrency,
+		rateInterval:   defaultRateInterval,
 		rateBurst:      defaultRateBurst,
 	}
 
