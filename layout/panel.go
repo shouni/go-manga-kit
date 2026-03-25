@@ -20,6 +20,7 @@ type PanelGenerator struct {
 	composer  *MangaComposer
 	generator PanelImageGenerator
 	pb        ports.ImagePrompt
+	model     string
 }
 
 type PanelImageGenerator interface {
@@ -27,33 +28,34 @@ type PanelImageGenerator interface {
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
-func NewPanelGenerator(composer *MangaComposer, generator PanelImageGenerator, pb ports.ImagePrompt) *PanelGenerator {
+func NewPanelGenerator(composer *MangaComposer, generator PanelImageGenerator, pb ports.ImagePrompt, model string) *PanelGenerator {
 	return &PanelGenerator{
 		composer:  composer,
 		generator: generator,
 		pb:        pb,
+		model:     model,
 	}
 }
 
 // Execute は、errgroupの制限機能を使用して同時実行数を制限しながらパネルを並列生成します。
-func (pg *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*imagePorts.ImageResponse, error) {
+func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*imagePorts.ImageResponse, error) {
 	if len(panels) == 0 {
 		return nil, nil
 	}
 
-	if err := pg.composer.PrepareCharacterResources(ctx, panels); err != nil {
+	if err := g.composer.PrepareCharacterResources(ctx, panels); err != nil {
 		return nil, err
 	}
 
 	images := make([]*imagePorts.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(pg.composer.MaxConcurrency))
+	eg.SetLimit(int(g.composer.MaxConcurrency))
 
-	cm := pg.composer.CharactersMap
+	cm := g.composer.CharactersMap
 
 	for i, panel := range panels {
 		eg.Go(func() error {
-			if err := pg.composer.RateLimiter.Wait(egCtx); err != nil {
+			if err := g.composer.RateLimiter.Wait(egCtx); err != nil {
 				return err
 			}
 
@@ -62,8 +64,8 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]
 				return fmt.Errorf("character not found for speaker ID '%s'", panel.SpeakerID)
 			}
 			seed := char.Seed
-			userPrompt, systemPrompt := pg.pb.BuildPanel(panel, char)
-			fileURI := pg.composer.GetCharacterResourceURI(char.ID)
+			userPrompt, systemPrompt := g.pb.BuildPanel(panel, char)
+			fileURI := g.composer.GetCharacterResourceURI(char.ID)
 
 			logger := slog.With(
 				"panel_index", i+1,
@@ -75,8 +77,9 @@ func (pg *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
-			resp, err := pg.generator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
+			resp, err := g.generator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
 				GenerationOptions: imagePorts.GenerationOptions{
+					Model:          g.model,
 					Prompt:         userPrompt,
 					SystemPrompt:   systemPrompt,
 					NegativePrompt: negativePanelPrompt,

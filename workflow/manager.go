@@ -40,8 +40,8 @@ type manager struct {
 	promptDeps     *PromptDeps
 }
 
-// NewWorkflows は、設定とキャラクター定義を基に新しい Workflows を初期化します。
-func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
+// New は、設定とキャラクター定義を基に新しい Workflows を初期化します。
+func New(args ManagerArgs) (*ports.Workflows, error) {
 	if err := validateArgs(&args); err != nil {
 		return nil, err
 	}
@@ -58,9 +58,17 @@ func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
 		promptDeps: args.PromptDeps,
 	}
 
-	var err error
-	// validateArgs で nil チェック済みのため、安全にアクセス可能
-	m.mangaComposer, m.imageGenerator, err = m.buildComposerAndGenerator(args.PromptDeps.CharactersMap)
+	core, err := m.buildCore()
+	if err != nil {
+		return nil, err
+	}
+
+	m.mangaComposer, err = m.buildComposer(core, args.PromptDeps.CharactersMap)
+	if err != nil {
+		return nil, err
+	}
+
+	m.imageGenerator, err = m.buildGenerator(core)
 	if err != nil {
 		return nil, err
 	}

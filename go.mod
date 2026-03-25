@@ -4,13 +4,13 @@ go 1.26
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.5.0
+	github.com/shouni/gemini-image-kit v1.5.1
 	github.com/shouni/go-gemini-client v1.2.0
 	github.com/shouni/go-http-kit v1.4.0
 	github.com/shouni/go-prompt-kit v1.0.3
 	github.com/shouni/go-remote-io v1.3.0
 	github.com/shouni/go-utils v1.0.20
-	github.com/shouni/go-web-exact/v2 v2.1.1
+	github.com/shouni/go-web-exact/v2 v2.1.2
 	golang.org/x/sync v0.20.0
 	golang.org/x/time v0.15.0
 )
