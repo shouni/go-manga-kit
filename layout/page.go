@@ -100,10 +100,7 @@ func (pg *PageGenerator) Execute(ctx context.Context, manga *ports.MangaResponse
 // generateMangaPage は、提供されたマンガレスポンスとAIベースの画像生成用のシードを使用して、マンガページの画像を生成します。
 func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.MangaResponse, seed int64) (*imagePorts.ImageResponse, error) {
 	// 1. リソース収集とインデックスマッピングの作成
-	resMap, err := pg.collectResources(manga.Panels)
-	if err != nil {
-		return nil, fmt.Errorf("failed to collect resources: %w", err)
-	}
+	resMap := pg.collectResources(manga.Panels)
 
 	// 2. プロンプト構築
 	userPrompt, systemPrompt := pg.pb.BuildPage(manga.Panels, resMap)
@@ -131,79 +128,11 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Mang
 }
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。
-func (pg *PageGenerator) collectResources(panels []ports.Panel) (*ports.ResourceMap, error) {
-	res := &ports.ResourceMap{
-		CharacterFiles: make(map[string]int),
-		PanelFiles:     make(map[string]int),
-	}
-	addedMap := make(map[string]int) // URL -> index (重複排除用)
-
-	pg.composer.mu.RLock()
-	defer pg.composer.mu.RUnlock()
-
-	// 1. ページ内に登場する全キャラクターの立ち絵を優先的に登録
-	speakerIDs := ports.Panels(panels).UniqueSpeakerIDs()
-	for _, sID := range speakerIDs {
-		char := pg.composer.CharactersMap.GetCharacter(sID)
-		if char != nil && char.ReferenceURL != "" {
-			uri := pg.composer.GetCharacterResourceURI(char.ID)
-			if uri != "" {
-				if idx, exists := addedMap[char.ReferenceURL]; exists {
-					res.CharacterFiles[sID] = idx
-				} else {
-					newIdx := len(res.OrderedAssets)
-					res.OrderedAssets = append(res.OrderedAssets, imagePorts.ImageURI{
-						ReferenceURL: char.ReferenceURL,
-						FileAPIURI:   uri,
-					})
-					res.CharacterFiles[sID] = newIdx
-					addedMap[char.ReferenceURL] = newIdx
-				}
-			}
-		}
-	}
-
-	// 2. パネル固有のポーズ参照
-	var panelRefs []imagePorts.ImageURI
-	for _, p := range panels {
-		if p.ReferenceURL == "" {
-			continue
-		}
-		if _, exists := addedMap[p.ReferenceURL]; !exists {
-			uri := pg.composer.GetPanelResourceURI(p.ReferenceURL)
-			if uri != "" {
-				panelRefs = append(panelRefs, imagePorts.ImageURI{
-					ReferenceURL: p.ReferenceURL,
-					FileAPIURI:   uri,
-				})
-				addedMap[p.ReferenceURL] = -1 // 仮登録
-			}
-		}
-	}
-
-	// 決定論的な順序のためにURLでソート
-	sort.Slice(panelRefs, func(i, j int) bool {
-		return panelRefs[i].ReferenceURL < panelRefs[j].ReferenceURL
-	})
-
-	// 3. ソート済みパネル参照を OrderedAssets に追加し、インデックスを確定
-	for _, r := range panelRefs {
-		newIdx := len(res.OrderedAssets)
-		res.OrderedAssets = append(res.OrderedAssets, r)
-		res.PanelFiles[r.ReferenceURL] = newIdx
-		addedMap[r.ReferenceURL] = newIdx
-	}
-
-	// 4. 重複していた ReferenceURL のマッピングを補完
-	for _, p := range panels {
-		if p.ReferenceURL != "" {
-			if idx, ok := addedMap[p.ReferenceURL]; ok && idx != -1 {
-				res.PanelFiles[p.ReferenceURL] = idx
-			}
-		}
-	}
-
-	return res, nil
+func (pg *PageGenerator) collectResources(panels []ports.Panel) *ports.ResourceMap {
+	collector := newPageResourceCollector(pg.composer)
+	collector.addCharacterAssets(panels)
+	collector.addPanelAssets(panels)
+	return collector.resourceMap
 }
 
 // chunkPanels はパネルのスライスを指定サイズのチャンクに分割して返します。
@@ -238,4 +167,99 @@ func (pg *PageGenerator) determineDefaultSeed(panels []ports.Panel) int64 {
 	}
 
 	return defaultSeed
+}
+
+type pageResourceCollector struct {
+	composer    *MangaComposer
+	resourceMap *ports.ResourceMap
+	addedByURL  map[string]int
+}
+
+func newPageResourceCollector(composer *MangaComposer) *pageResourceCollector {
+	return &pageResourceCollector{
+		composer: composer,
+		resourceMap: &ports.ResourceMap{
+			CharacterFiles: make(map[string]int),
+			PanelFiles:     make(map[string]int),
+		},
+		addedByURL: make(map[string]int),
+	}
+}
+
+func (c *pageResourceCollector) addCharacterAssets(panels []ports.Panel) {
+	for _, speakerID := range ports.Panels(panels).UniqueSpeakerIDs() {
+		char := c.composer.CharactersMap.GetCharacter(speakerID)
+		if char == nil || char.ReferenceURL == "" {
+			continue
+		}
+
+		fileURI := c.composer.GetCharacterResourceURI(char.ID)
+		if fileURI == "" {
+			continue
+		}
+
+		idx := c.addAsset(imagePorts.ImageURI{
+			ReferenceURL: char.ReferenceURL,
+			FileAPIURI:   fileURI,
+		})
+		c.resourceMap.CharacterFiles[speakerID] = idx
+	}
+}
+
+func (c *pageResourceCollector) addPanelAssets(panels []ports.Panel) {
+	panelAssets := c.sortedPanelAssets(panels)
+	for _, asset := range panelAssets {
+		idx := c.addAsset(asset)
+		c.resourceMap.PanelFiles[asset.ReferenceURL] = idx
+	}
+
+	for _, panel := range panels {
+		if panel.ReferenceURL == "" {
+			continue
+		}
+		if idx, ok := c.addedByURL[panel.ReferenceURL]; ok {
+			c.resourceMap.PanelFiles[panel.ReferenceURL] = idx
+		}
+	}
+}
+
+func (c *pageResourceCollector) sortedPanelAssets(panels []ports.Panel) []imagePorts.ImageURI {
+	var panelAssets []imagePorts.ImageURI
+
+	for _, panel := range panels {
+		if panel.ReferenceURL == "" {
+			continue
+		}
+		if _, exists := c.addedByURL[panel.ReferenceURL]; exists {
+			continue
+		}
+
+		fileURI := c.composer.GetPanelResourceURI(panel.ReferenceURL)
+		if fileURI == "" {
+			continue
+		}
+
+		panelAssets = append(panelAssets, imagePorts.ImageURI{
+			ReferenceURL: panel.ReferenceURL,
+			FileAPIURI:   fileURI,
+		})
+		c.addedByURL[panel.ReferenceURL] = -1
+	}
+
+	sort.Slice(panelAssets, func(i, j int) bool {
+		return panelAssets[i].ReferenceURL < panelAssets[j].ReferenceURL
+	})
+
+	return panelAssets
+}
+
+func (c *pageResourceCollector) addAsset(asset imagePorts.ImageURI) int {
+	if idx, exists := c.addedByURL[asset.ReferenceURL]; exists && idx >= 0 {
+		return idx
+	}
+
+	idx := len(c.resourceMap.OrderedAssets)
+	c.resourceMap.OrderedAssets = append(c.resourceMap.OrderedAssets, asset)
+	c.addedByURL[asset.ReferenceURL] = idx
+	return idx
 }
