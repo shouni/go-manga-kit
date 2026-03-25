@@ -40,8 +40,8 @@
 | **1. Designing** | `DesignRunner` | キャラのDNA（Seed/特徴）を固定し、デザインシートを生成。 |
 | **2. Scripting** | `ScriptRunner` | 原稿から、キャラ・セリフ・構図を含むJSON台本を生成。 |
 | **3. Panel Gen** | `PanelImageRunner` |各パネルを、キャラ固有Seedを用いて個別に高精度生成。 |
-| **4. Publishing** | `PublishRunner` | 画像とテキストを統合し、HTML/Markdown等で出力。 |
-| **5. Page Gen** | `PageImageRunner` | 台本に基づき、ページ単位で再レイアウト・一括作画。 |
+| **4. Page Gen**   | `PageImageRunner` | 台本に基づき、ページ単位で再レイアウト・一括作画。 |
+| **5. Publishing** | `PublishRunner` | 画像とテキストを統合し、HTML/Markdown等で出力。 |
 
 ---
 
