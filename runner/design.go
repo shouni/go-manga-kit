@@ -35,16 +35,20 @@ var fileNameSanitizer = strings.NewReplacer(
 	"|", "_",
 )
 
+type DesignImageGenerator interface {
+	GenerateMangaPage(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error)
+}
+
 // MangaDesignRunner はキャラクターデザインシート生成を実行するランナーです。
 type MangaDesignRunner struct {
 	composer    *layout.MangaComposer
-	generator   layout.PageImageGenerator
+	generator   DesignImageGenerator
 	writer      remoteio.OutputWriter
 	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(composer *layout.MangaComposer, generator layout.PageImageGenerator, writer remoteio.OutputWriter, styleSuffix string) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.OutputWriter, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		composer:    composer,
 		generator:   generator,

@@ -60,7 +60,7 @@ func NewWorkflows(args ManagerArgs) (*ports.Workflows, error) {
 
 	var err error
 	// validateArgs で nil チェック済みのため、安全にアクセス可能
-	m.mangaComposer, m.imageGenerator, err = m.buildMangaComposer(args.PromptDeps.CharactersMap)
+	m.mangaComposer, m.imageGenerator, err = m.buildComposerAndGenerator(args.PromptDeps.CharactersMap)
 	if err != nil {
 		return nil, err
 	}

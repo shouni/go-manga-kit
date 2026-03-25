@@ -12,8 +12,8 @@ import (
 	"github.com/shouni/go-manga-kit/ports"
 )
 
-// buildMangaComposer 提供された構成と依存関係を使用して MangaComposer インスタンスを初期化し、返します。
-func (m *manager) buildMangaComposer(
+// buildComposerAndGenerator は提供された構成と依存関係を使用して MangaComposer と ImageGenerator インスタンスを初期化し、返します。
+func (m *manager) buildComposerAndGenerator(
 	chars ports.CharactersMap,
 ) (*layout.MangaComposer, imagePorts.ImageGenerator, error) {
 	// 画像生成エンジンの初期化
