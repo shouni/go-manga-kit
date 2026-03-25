@@ -128,6 +128,9 @@ func (pg *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Mang
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。
 func (pg *PageGenerator) collectResources(panels []ports.Panel) *ports.ResourceMap {
+	pg.composer.mu.RLock()
+	defer pg.composer.mu.RUnlock()
+
 	collector := newPageResourceCollector(pg.composer)
 	collector.addCharacterAssets(panels)
 	collector.addPanelAssets(panels)

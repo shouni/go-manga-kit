@@ -133,9 +133,6 @@ func (mc *MangaComposer) prepareResources(
 	eg, egCtx := errgroup.WithContext(ctx)
 
 	for key, referenceURL := range targets {
-		key := key
-		referenceURL := referenceURL
-
 		eg.Go(func() error {
 			if _, err := upload(egCtx, key, referenceURL); err != nil {
 				return fmt.Errorf("%s resource preparation failed for '%s': %w", resourceType, key, err)
