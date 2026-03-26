@@ -30,14 +30,14 @@ type ManagerArgs struct {
 	PromptDeps      *PromptDeps
 }
 
-// generationUnit 画像生成と構成を処理するユニットを表します
+// generationUnit は、画像生成と構成を処理するユニットを表します
 type generationUnit struct {
 	imageGenerator imagePorts.ImageGenerator
 	mangaComposer  *layout.MangaComposer
 	model          string
 }
 
-// layoutManager レイアウトの生成単位を管理します
+// layoutManager は、レイアウトの生成単位を管理します
 type layoutManager struct {
 	Standard *generationUnit
 	Quality  *generationUnit
@@ -81,16 +81,14 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 	var err error
 
-	// --- Panel 用 ユニットの構築 ---
 	m.layoutManager.Standard, err = m.buildGenerationUnit(m.aiClient, cfg.ImageStandardModel)
 	if err != nil {
-		return nil, fmt.Errorf("panel generationUnit の構築に失敗: %w", err)
+		return nil, fmt.Errorf("panel GenerationUnit の構築に失敗: %w", err)
 	}
 
-	// --- Page 用 ユニットの構築 ---
 	m.layoutManager.Quality, err = m.buildGenerationUnit(m.aiClientQuality, cfg.ImageQualityModel)
 	if err != nil {
-		return nil, fmt.Errorf("page generationUnit の構築に失敗: %w", err)
+		return nil, fmt.Errorf("page GenerationUnit の構築に失敗: %w", err)
 	}
 
 	return m.buildAllRunners()
