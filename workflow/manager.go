@@ -83,12 +83,12 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 	m.layoutManager.Standard, err = m.buildGenerationUnit(m.aiClient, cfg.ImageStandardModel)
 	if err != nil {
-		return nil, fmt.Errorf("panel GenerationUnit の構築に失敗: %w", err)
+		return nil, fmt.Errorf("standard GenerationUnit の構築に失敗: %w", err)
 	}
 
 	m.layoutManager.Quality, err = m.buildGenerationUnit(m.aiClientQuality, cfg.ImageQualityModel)
 	if err != nil {
-		return nil, fmt.Errorf("page GenerationUnit の構築に失敗: %w", err)
+		return nil, fmt.Errorf("quality GenerationUnit の構築に失敗: %w", err)
 	}
 
 	return m.buildAllRunners()

@@ -56,22 +56,24 @@ func (m *manager) buildScriptRunner() (ports.ScriptRunner, error) {
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
 func (m *manager) buildDesignRunner() (ports.DesignRunner, error) {
+	quality := m.layoutManager.Quality
 	return runner.NewMangaDesignRunner(
-		m.layoutManager.Quality.mangaComposer,
-		m.layoutManager.Quality.imageGenerator,
+		quality.mangaComposer,
+		quality.imageGenerator,
 		m.writer,
-		m.layoutManager.Quality.model,
+		quality.model,
 		m.cfg.StyleSuffix,
 	), nil
 }
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
 func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
+	standard := m.layoutManager.Standard
 	panelsGen := layout.NewPanelGenerator(
-		m.layoutManager.Standard.mangaComposer,
-		m.layoutManager.Standard.imageGenerator,
+		standard.mangaComposer,
+		standard.imageGenerator,
 		m.promptDeps.ImagePrompt,
-		m.layoutManager.Standard.model,
+		standard.model,
 		layout.WithPanelMaxConcurrency(m.cfg.MaxConcurrency),
 		layout.WithPanelRateInterval(m.cfg.RateInterval),
 	)
@@ -81,11 +83,12 @@ func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
 func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
+	quality := m.layoutManager.Quality
 	pagesGen := layout.NewPageGenerator(
-		m.layoutManager.Quality.mangaComposer,
-		m.layoutManager.Quality.imageGenerator,
+		quality.mangaComposer,
+		quality.imageGenerator,
 		m.promptDeps.ImagePrompt,
-		m.layoutManager.Quality.model,
+		quality.model,
 		layout.WithPageRateInterval(m.cfg.RateInterval),
 		layout.WithMaxPanelsPerPage(m.cfg.MaxPanelsPerPage),
 	)
