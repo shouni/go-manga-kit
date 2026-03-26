@@ -5,18 +5,21 @@ import (
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 )
 
 type pageResourceCollector struct {
 	composer    *MangaComposer
 	resourceMap *ports.ResourceMap
 	addedByURL  map[string]int
+	isVertex    bool
 }
 
 // newPageResourceCollector は指定されたコンポーザーからページリソースコレクターを初期化します。
 func newPageResourceCollector(composer *MangaComposer) *pageResourceCollector {
 	return &pageResourceCollector{
 		composer: composer,
+		isVertex: composer.BackendProvider.IsVertexAI(),
 		resourceMap: &ports.ResourceMap{
 			CharacterFiles: make(map[string]int),
 			PanelFiles:     make(map[string]int),
@@ -25,7 +28,8 @@ func newPageResourceCollector(composer *MangaComposer) *pageResourceCollector {
 	}
 }
 
-// addCharacterAssets は指定されたパネルのキャラクターアセットをリソースマップに追加し、リソースインデックスをキャラクター参照URLに関連付けます。
+// addCharacterAssets は指定されたパネルのキャラクターアセットをリソースマップに追加します。
+// Vertex AI モード時は GCS パス (gs://) を優先し、File API URI が空でも登録を継続します。
 func (c *pageResourceCollector) addCharacterAssets(panels []ports.Panel) {
 	for _, speakerID := range ports.Panels(panels).UniqueSpeakerIDs() {
 		char := c.composer.CharactersMap.GetCharacter(speakerID)
@@ -34,7 +38,7 @@ func (c *pageResourceCollector) addCharacterAssets(panels []ports.Panel) {
 		}
 
 		fileURI := c.composer.GetCharacterResourceURI(char.ID)
-		if fileURI == "" {
+		if !c.canRegister(fileURI, char.ReferenceURL) {
 			continue
 		}
 
@@ -46,7 +50,7 @@ func (c *pageResourceCollector) addCharacterAssets(panels []ports.Panel) {
 	}
 }
 
-// addPanelAssets はソートされたパネルアセットをリソースマップに追加し、リソースインデックスをパネル参照URLに関連付けます。
+// addPanelAssets はソートされたパネルアセットをリソースマップに追加します。
 func (c *pageResourceCollector) addPanelAssets(panels []ports.Panel) {
 	panelAssets := c.sortedPanelAssets(panels)
 	for _, asset := range panelAssets {
@@ -77,7 +81,7 @@ func (c *pageResourceCollector) sortedPanelAssets(panels []ports.Panel) []imageP
 		}
 
 		fileURI := c.composer.GetPanelResourceURI(panel.ReferenceURL)
-		if fileURI == "" {
+		if !c.canRegister(fileURI, panel.ReferenceURL) {
 			continue
 		}
 
@@ -85,6 +89,7 @@ func (c *pageResourceCollector) sortedPanelAssets(panels []ports.Panel) []imageP
 			ReferenceURL: panel.ReferenceURL,
 			FileAPIURI:   fileURI,
 		})
+		// 重複追加防止のための一時マーク
 		c.addedByURL[panel.ReferenceURL] = -1
 	}
 
@@ -105,4 +110,15 @@ func (c *pageResourceCollector) addAsset(asset imagePorts.ImageURI) int {
 	c.resourceMap.OrderedAssets = append(c.resourceMap.OrderedAssets, asset)
 	c.addedByURL[asset.ReferenceURL] = idx
 	return idx
+}
+
+// canRegister は、リソースを登録可能かどうかを判定します。
+// Vertex AI モードで GCS パスを持つか、あるいは File API URI が存在する場合に true を返します。
+func (c *pageResourceCollector) canRegister(fileURI, referenceURL string) bool {
+	// File API URI が既にあるなら OK
+	if fileURI != "" {
+		return true
+	}
+	// Vertex AI モード かつ GCS URI なら OK (File API URI が空でも許容)
+	return c.isVertex && remoteio.IsGCSURI(referenceURL)
 }
