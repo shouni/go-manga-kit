@@ -38,10 +38,7 @@ func (c *pageResourceCollector) addCharacterAssets(panels []ports.Panel) {
 		}
 
 		fileURI := c.composer.GetCharacterResourceURI(char.ID)
-
-		// Vertex AI + GCS パスの組み合わせでない場合、File API URI が空ならスキップします。
-		isGCS := remoteio.IsGCSURI(char.ReferenceURL)
-		if !(c.isVertex && isGCS) && fileURI == "" {
+		if !c.canRegister(fileURI, char.ReferenceURL) {
 			continue
 		}
 
@@ -84,10 +81,7 @@ func (c *pageResourceCollector) sortedPanelAssets(panels []ports.Panel) []imageP
 		}
 
 		fileURI := c.composer.GetPanelResourceURI(panel.ReferenceURL)
-
-		// キャラクター同様、Vertex AI + GCS パスの組み合わせなら登録を許可します。
-		isGCS := remoteio.IsGCSURI(panel.ReferenceURL)
-		if !(c.isVertex && isGCS) && fileURI == "" {
+		if !c.canRegister(fileURI, panel.ReferenceURL) {
 			continue
 		}
 
@@ -116,4 +110,15 @@ func (c *pageResourceCollector) addAsset(asset imagePorts.ImageURI) int {
 	c.resourceMap.OrderedAssets = append(c.resourceMap.OrderedAssets, asset)
 	c.addedByURL[asset.ReferenceURL] = idx
 	return idx
+}
+
+// canRegister は、リソースを登録可能かどうかを判定します。
+// Vertex AI モードで GCS パスを持つか、あるいは File API URI が存在する場合に true を返します。
+func (c *pageResourceCollector) canRegister(fileURI, referenceURL string) bool {
+	// File API URI が既にあるなら OK
+	if fileURI != "" {
+		return true
+	}
+	// Vertex AI モード かつ GCS URI なら OK (File API URI が空でも許容)
+	return c.isVertex && remoteio.IsGCSURI(referenceURL)
 }
