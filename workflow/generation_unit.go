@@ -6,15 +6,40 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/shouni/gemini-image-kit/generator"
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	"github.com/shouni/go-gemini-client/gemini"
+
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
+// buildGenerationUnit は、特定の AI クライアントとモデル設定に基づき、 core, composer, generator をひとまとめにした LLM 構造体を構築します。
+func (m *manager) buildGenerationUnit(client gemini.GenerativeModel, modelName string) (*generationUnit, error) {
+	core, err := m.buildCore(client)
+	if err != nil {
+		return nil, err
+	}
+
+	composer, err := m.buildComposer(core, m.promptDeps.CharactersMap)
+	if err != nil {
+		return nil, err
+	}
+
+	gen, err := m.buildGenerator(core)
+	if err != nil {
+		return nil, err
+	}
+
+	return &generationUnit{
+		imageGenerator: gen,
+		mangaComposer:  composer,
+		model:          modelName,
+	}, nil
+}
+
 // buildCore はGeminiImageCoreエンジンを初期化します。
-func (m *manager) buildCore() (*generator.GeminiImageCore, error) {
-	// 画像生成エンジンの初期化
+func (m *manager) buildCore(aiClient gemini.GenerativeModel) (*generator.GeminiImageCore, error) {
 	core, err := generator.NewGeminiImageCore(
-		m.aiClient,
+		aiClient,
 		m.reader,
 		m.httpClient,
 		cache.New(defaultCacheExpiration, cacheCleanupInterval),

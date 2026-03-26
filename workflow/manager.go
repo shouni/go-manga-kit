@@ -19,25 +19,40 @@ type PromptDeps struct {
 	ImagePrompt   ports.ImagePrompt
 }
 
+// ManagerArgs は、ワークフローの初期化と管理に必要な引数の集合を表します。
 type ManagerArgs struct {
-	Config     ports.Config
-	HTTPClient httpkit.HTTPClient
-	Reader     remoteio.InputReader
-	Writer     remoteio.OutputWriter
-	AIClient   gemini.GenerativeModel
-	PromptDeps *PromptDeps
+	Config          ports.Config
+	HTTPClient      httpkit.HTTPClient
+	Reader          remoteio.InputReader
+	Writer          remoteio.OutputWriter
+	AIClient        gemini.GenerativeModel
+	AIClientQuality gemini.GenerativeModel
+	PromptDeps      *PromptDeps
+}
+
+// generationUnit は、画像生成と構成を処理するユニットを表します
+type generationUnit struct {
+	imageGenerator imagePorts.ImageGenerator
+	mangaComposer  *layout.MangaComposer
+	model          string
+}
+
+// layoutManager は、レイアウトの生成単位を管理します
+type layoutManager struct {
+	Standard *generationUnit
+	Quality  *generationUnit
 }
 
 // manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type manager struct {
-	cfg            ports.Config
-	httpClient     httpkit.HTTPClient
-	reader         remoteio.InputReader
-	writer         remoteio.OutputWriter
-	aiClient       gemini.GenerativeModel
-	imageGenerator imagePorts.ImageGenerator
-	mangaComposer  *layout.MangaComposer
-	promptDeps     *PromptDeps
+	cfg             ports.Config
+	httpClient      httpkit.HTTPClient
+	reader          remoteio.InputReader
+	writer          remoteio.OutputWriter
+	aiClient        gemini.GenerativeModel
+	aiClientQuality gemini.GenerativeModel
+	layoutManager   layoutManager
+	promptDeps      *PromptDeps
 }
 
 // New は、設定とキャラクター定義を基に新しい Workflows を初期化します。
@@ -49,37 +64,34 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 	cfg := args.Config
 	cfg.ApplyDefaults()
 
+	aiClientQuality := args.AIClientQuality
+	if aiClientQuality == nil {
+		aiClientQuality = args.AIClient
+	}
+
 	m := &manager{
-		cfg:        cfg,
-		httpClient: args.HTTPClient,
-		reader:     args.Reader,
-		writer:     args.Writer,
-		aiClient:   args.AIClient,
-		promptDeps: args.PromptDeps,
+		cfg:             cfg,
+		httpClient:      args.HTTPClient,
+		reader:          args.Reader,
+		writer:          args.Writer,
+		aiClient:        args.AIClient,
+		aiClientQuality: aiClientQuality,
+		promptDeps:      args.PromptDeps,
 	}
 
-	core, err := m.buildCore()
+	var err error
+
+	m.layoutManager.Standard, err = m.buildGenerationUnit(m.aiClient, cfg.ImageStandardModel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("standard GenerationUnit の構築に失敗: %w", err)
 	}
 
-	m.mangaComposer, err = m.buildComposer(core, args.PromptDeps.CharactersMap)
+	m.layoutManager.Quality, err = m.buildGenerationUnit(m.aiClientQuality, cfg.ImageQualityModel)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("quality GenerationUnit の構築に失敗: %w", err)
 	}
 
-	m.imageGenerator, err = m.buildGenerator(core)
-	if err != nil {
-		return nil, err
-	}
-
-	// 内部で全ての Runner インスタンスを生成して返す
-	runners, err := m.buildAllRunners()
-	if err != nil {
-		return nil, err
-	}
-
-	return runners, nil
+	return m.buildAllRunners()
 }
 
 // validateArgs は引数のバリデーションを行います。
