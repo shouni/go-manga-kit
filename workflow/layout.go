@@ -6,15 +6,16 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/shouni/gemini-image-kit/generator"
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	"github.com/shouni/go-gemini-client/gemini"
+
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
 // buildCore はGeminiImageCoreエンジンを初期化します。
-func (m *manager) buildCore() (*generator.GeminiImageCore, error) {
-	// 画像生成エンジンの初期化
+func (m *manager) buildCore(aiClient gemini.GenerativeModel) (*generator.GeminiImageCore, error) {
 	core, err := generator.NewGeminiImageCore(
-		m.aiClient,
+		aiClient,
 		m.reader,
 		m.httpClient,
 		cache.New(defaultCacheExpiration, cacheCleanupInterval),

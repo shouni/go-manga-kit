@@ -12,6 +12,18 @@ import (
 	"github.com/shouni/go-manga-kit/ports"
 )
 
+type LLM struct {
+	aiClient       gemini.GenerativeModel
+	imageGenerator imagePorts.ImageGenerator
+	mangaComposer  *layout.MangaComposer
+	model          string
+}
+
+type LayoutManager struct {
+	Standard *LLM
+	Quality  *LLM
+}
+
 // PromptDeps はプロンプト関連の依存関係をまとめた構造体です。
 type PromptDeps struct {
 	CharactersMap ports.CharactersMap
@@ -20,24 +32,25 @@ type PromptDeps struct {
 }
 
 type ManagerArgs struct {
-	Config     ports.Config
-	HTTPClient httpkit.HTTPClient
-	Reader     remoteio.InputReader
-	Writer     remoteio.OutputWriter
-	AIClient   gemini.GenerativeModel
-	PromptDeps *PromptDeps
+	Config          ports.Config
+	HTTPClient      httpkit.HTTPClient
+	Reader          remoteio.InputReader
+	Writer          remoteio.OutputWriter
+	AIClient        gemini.GenerativeModel
+	AIClientQuality gemini.GenerativeModel
+	PromptDeps      *PromptDeps
 }
 
 // manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
 type manager struct {
-	cfg            ports.Config
-	httpClient     httpkit.HTTPClient
-	reader         remoteio.InputReader
-	writer         remoteio.OutputWriter
-	aiClient       gemini.GenerativeModel
-	imageGenerator imagePorts.ImageGenerator
-	mangaComposer  *layout.MangaComposer
-	promptDeps     *PromptDeps
+	cfg             ports.Config
+	httpClient      httpkit.HTTPClient
+	reader          remoteio.InputReader
+	writer          remoteio.OutputWriter
+	aiClient        gemini.GenerativeModel
+	aiClientQuality gemini.GenerativeModel
+	layoutManager   LayoutManager
+	promptDeps      *PromptDeps
 }
 
 // New は、設定とキャラクター定義を基に新しい Workflows を初期化します。
@@ -50,36 +63,55 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 	cfg.ApplyDefaults()
 
 	m := &manager{
-		cfg:        cfg,
-		httpClient: args.HTTPClient,
-		reader:     args.Reader,
-		writer:     args.Writer,
-		aiClient:   args.AIClient,
-		promptDeps: args.PromptDeps,
+		cfg:             cfg,
+		httpClient:      args.HTTPClient,
+		reader:          args.Reader,
+		writer:          args.Writer,
+		aiClient:        args.AIClient,
+		aiClientQuality: args.AIClientQuality,
+		promptDeps:      args.PromptDeps,
 	}
 
-	core, err := m.buildCore()
+	var err error
+
+	// --- Panel 用 LLM ユニットの構築 ---
+	m.layoutManager.Standard, err = m.buildLLMUnit(m.aiClient, cfg.ImageStandardModel)
+	if err != nil {
+		return nil, fmt.Errorf("panel LLM unit の構築に失敗: %w", err)
+	}
+
+	// --- Page 用 LLM ユニットの構築 ---
+	m.layoutManager.Quality, err = m.buildLLMUnit(m.aiClientQuality, cfg.ImageQualityModel)
+	if err != nil {
+		return nil, fmt.Errorf("page LLM unit の構築に失敗: %w", err)
+	}
+
+	return m.buildAllRunners()
+}
+
+// buildLLMUnit は、特定の AI クライアントとモデル設定に基づき、 core, composer, generator をひとまとめにした LLM 構造体を構築します。
+func (m *manager) buildLLMUnit(client gemini.GenerativeModel, modelName string) (*LLM, error) {
+	core, err := m.buildCore(client)
 	if err != nil {
 		return nil, err
 	}
 
-	m.mangaComposer, err = m.buildComposer(core, args.PromptDeps.CharactersMap)
+	composer, err := m.buildComposer(core, m.promptDeps.CharactersMap)
 	if err != nil {
 		return nil, err
 	}
 
-	m.imageGenerator, err = m.buildGenerator(core)
+	gen, err := m.buildGenerator(core)
 	if err != nil {
 		return nil, err
 	}
 
-	// 内部で全ての Runner インスタンスを生成して返す
-	runners, err := m.buildAllRunners()
-	if err != nil {
-		return nil, err
-	}
-
-	return runners, nil
+	return &LLM{
+		aiClient:       client,
+		imageGenerator: gen,
+		mangaComposer:  composer,
+		model:          modelName,
+	}, nil
 }
 
 // validateArgs は引数のバリデーションを行います。
