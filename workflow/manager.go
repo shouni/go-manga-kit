@@ -12,16 +12,16 @@ import (
 	"github.com/shouni/go-manga-kit/ports"
 )
 
-type GenerationUnit struct {
+type generationUnit struct {
 	aiClient       gemini.GenerativeModel
 	imageGenerator imagePorts.ImageGenerator
 	mangaComposer  *layout.MangaComposer
 	model          string
 }
 
-type LayoutManager struct {
-	Standard *GenerationUnit
-	Quality  *GenerationUnit
+type layoutManager struct {
+	Standard *generationUnit
+	Quality  *generationUnit
 }
 
 // PromptDeps はプロンプト関連の依存関係をまとめた構造体です。
@@ -49,7 +49,7 @@ type manager struct {
 	writer          remoteio.OutputWriter
 	aiClient        gemini.GenerativeModel
 	aiClientQuality gemini.GenerativeModel
-	layoutManager   LayoutManager
+	layoutManager   layoutManager
 	promptDeps      *PromptDeps
 }
 
@@ -61,6 +61,11 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 	cfg := args.Config
 	cfg.ApplyDefaults()
+
+	aiClientQuality := args.AIClientQuality
+	if aiClientQuality == nil {
+		aiClientQuality = args.AIClient
+	}
 
 	m := &manager{
 		cfg:             cfg,
@@ -90,7 +95,7 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 }
 
 // buildLLMUnit は、特定の AI クライアントとモデル設定に基づき、 core, composer, generator をひとまとめにした LLM 構造体を構築します。
-func (m *manager) buildLLMUnit(client gemini.GenerativeModel, modelName string) (*GenerationUnit, error) {
+func (m *manager) buildLLMUnit(client gemini.GenerativeModel, modelName string) (*generationUnit, error) {
 	core, err := m.buildCore(client)
 	if err != nil {
 		return nil, err
@@ -106,7 +111,7 @@ func (m *manager) buildLLMUnit(client gemini.GenerativeModel, modelName string) 
 		return nil, err
 	}
 
-	return &GenerationUnit{
+	return &generationUnit{
 		aiClient:       client,
 		imageGenerator: gen,
 		mangaComposer:  composer,
@@ -127,10 +132,6 @@ func validateArgs(args *ManagerArgs) error {
 	}
 	if args.AIClient == nil {
 		return fmt.Errorf("AIClient is required")
-	}
-	if args.AIClientQuality == nil {
-		// フォールバック
-		args.AIClientQuality = args.AIClient
 	}
 	if args.PromptDeps == nil {
 		return fmt.Errorf("PromptDeps is required")
