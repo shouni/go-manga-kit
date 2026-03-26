@@ -12,18 +12,6 @@ import (
 	"github.com/shouni/go-manga-kit/ports"
 )
 
-type generationUnit struct {
-	aiClient       gemini.GenerativeModel
-	imageGenerator imagePorts.ImageGenerator
-	mangaComposer  *layout.MangaComposer
-	model          string
-}
-
-type layoutManager struct {
-	Standard *generationUnit
-	Quality  *generationUnit
-}
-
 // PromptDeps はプロンプト関連の依存関係をまとめた構造体です。
 type PromptDeps struct {
 	CharactersMap ports.CharactersMap
@@ -31,6 +19,7 @@ type PromptDeps struct {
 	ImagePrompt   ports.ImagePrompt
 }
 
+// ManagerArgs は、ワークフローの初期化と管理に必要な引数の集合を表します。
 type ManagerArgs struct {
 	Config          ports.Config
 	HTTPClient      httpkit.HTTPClient
@@ -39,6 +28,19 @@ type ManagerArgs struct {
 	AIClient        gemini.GenerativeModel
 	AIClientQuality gemini.GenerativeModel
 	PromptDeps      *PromptDeps
+}
+
+// generationUnit 画像生成と構成を処理するユニットを表します
+type generationUnit struct {
+	imageGenerator imagePorts.ImageGenerator
+	mangaComposer  *layout.MangaComposer
+	model          string
+}
+
+// layoutManager レイアウトの生成単位を管理します
+type layoutManager struct {
+	Standard *generationUnit
+	Quality  *generationUnit
 }
 
 // manager は、ワークフローの各工程を担う Runner 群を構築・管理します。
@@ -73,50 +75,25 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 		reader:          args.Reader,
 		writer:          args.Writer,
 		aiClient:        args.AIClient,
-		aiClientQuality: args.AIClientQuality,
+		aiClientQuality: aiClientQuality,
 		promptDeps:      args.PromptDeps,
 	}
 
 	var err error
 
 	// --- Panel 用 LLM ユニットの構築 ---
-	m.layoutManager.Standard, err = m.buildLLMUnit(m.aiClient, cfg.ImageStandardModel)
+	m.layoutManager.Standard, err = m.buildGenerationUnit(m.aiClient, cfg.ImageStandardModel)
 	if err != nil {
 		return nil, fmt.Errorf("panel LLM unit の構築に失敗: %w", err)
 	}
 
 	// --- Page 用 LLM ユニットの構築 ---
-	m.layoutManager.Quality, err = m.buildLLMUnit(m.aiClientQuality, cfg.ImageQualityModel)
+	m.layoutManager.Quality, err = m.buildGenerationUnit(m.aiClientQuality, cfg.ImageQualityModel)
 	if err != nil {
 		return nil, fmt.Errorf("page LLM unit の構築に失敗: %w", err)
 	}
 
 	return m.buildAllRunners()
-}
-
-// buildLLMUnit は、特定の AI クライアントとモデル設定に基づき、 core, composer, generator をひとまとめにした LLM 構造体を構築します。
-func (m *manager) buildLLMUnit(client gemini.GenerativeModel, modelName string) (*generationUnit, error) {
-	core, err := m.buildCore(client)
-	if err != nil {
-		return nil, err
-	}
-
-	composer, err := m.buildComposer(core, m.promptDeps.CharactersMap)
-	if err != nil {
-		return nil, err
-	}
-
-	gen, err := m.buildGenerator(core)
-	if err != nil {
-		return nil, err
-	}
-
-	return &generationUnit{
-		aiClient:       client,
-		imageGenerator: gen,
-		mangaComposer:  composer,
-		model:          modelName,
-	}, nil
 }
 
 // validateArgs は引数のバリデーションを行います。
