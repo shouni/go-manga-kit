@@ -81,16 +81,16 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 	var err error
 
-	// --- Panel 用 LLM ユニットの構築 ---
+	// --- Panel 用 ユニットの構築 ---
 	m.layoutManager.Standard, err = m.buildGenerationUnit(m.aiClient, cfg.ImageStandardModel)
 	if err != nil {
-		return nil, fmt.Errorf("panel LLM unit の構築に失敗: %w", err)
+		return nil, fmt.Errorf("panel generationUnit の構築に失敗: %w", err)
 	}
 
-	// --- Page 用 LLM ユニットの構築 ---
+	// --- Page 用 ユニットの構築 ---
 	m.layoutManager.Quality, err = m.buildGenerationUnit(m.aiClientQuality, cfg.ImageQualityModel)
 	if err != nil {
-		return nil, fmt.Errorf("page LLM unit の構築に失敗: %w", err)
+		return nil, fmt.Errorf("page generationUnit の構築に失敗: %w", err)
 	}
 
 	return m.buildAllRunners()
