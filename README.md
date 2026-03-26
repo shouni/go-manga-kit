@@ -19,11 +19,11 @@
 
 * **🧬 3-Factor Consistency Control**:
     * キャラクターの一貫性を担保するため、**Seed値**（基盤）、**参照アセット**（外見）、**VisualCues/言語指示**（詳細）の3要素を組み合わせて制御します。
-* **Multi-Backend Asset Support**: 
+* **🌍 Multi-Backend Asset Support**: 
     * Gemini API モードでは **File API**、Vertex AI モードでは **Cloud Storage (GCS)** 上の画像を直接参照可能です。
 * **🛡 Production-Ready Concurrency Control**:
     * セマフォ（Semaphore）を用いた細やかな並列実行制御を内包。API の `RESOURCE_EXHAUSTED` (429) エラーを未然に防ぎ、スロットルを効かせた堅牢なバッチ処理を可能にします。
-* **⚡ Smart Asset Management**: 
+* **⚡  Smart Asset Management**: 
     * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドを軽減します。
     * Gemini API 利用時は `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
 
@@ -59,7 +59,7 @@ go-manga-kit/
 
 ---
 
-## 🏗️ 作画生成シーケンスフロー (Image Generation Sequence)
+## 🏗️ 画像生成シーケンスフロー (Image Generation Sequence)
 
 ```mermaid
 sequenceDiagram
@@ -89,7 +89,7 @@ sequenceDiagram
 
 ### 🤝 依存関係 (Dependencies)
 
-* [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - Gemini 画像作成コア
+* [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - Gemini画像生成コア
 * [shouni/go-remote-io](https://github.com/shouni/go-remote-io) - マルチストレージ I/O
 
 ### 📜 ライセンス (License)
