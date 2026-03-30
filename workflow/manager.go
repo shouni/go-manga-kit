@@ -23,8 +23,8 @@ type PromptDeps struct {
 type ManagerArgs struct {
 	Config          ports.Config
 	HTTPClient      httpkit.HTTPClient
-	Reader          remoteio.InputReader
-	Writer          remoteio.OutputWriter
+	Reader          remoteio.Reader
+	Writer          remoteio.Writer
 	AIClient        gemini.GenerativeModel
 	AIClientQuality gemini.GenerativeModel
 	PromptDeps      *PromptDeps
@@ -47,8 +47,8 @@ type layoutManager struct {
 type manager struct {
 	cfg             ports.Config
 	httpClient      httpkit.HTTPClient
-	reader          remoteio.InputReader
-	writer          remoteio.OutputWriter
+	reader          remoteio.Reader
+	writer          remoteio.Writer
 	aiClient        gemini.GenerativeModel
 	aiClientQuality gemini.GenerativeModel
 	layoutManager   layoutManager

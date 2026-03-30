@@ -5,7 +5,6 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/shouni/gemini-image-kit/generator"
-	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-gemini-client/gemini"
 
 	"github.com/shouni/go-manga-kit/layout"
@@ -71,7 +70,7 @@ func (m *manager) buildComposer(
 }
 
 // buildGenerator は提供された構成と依存関係を使用して ImageGenerator インスタンスを初期化し、返します。
-func (m *manager) buildGenerator(core *generator.GeminiImageCore) (imagePorts.ImageGenerator, error) {
+func (m *manager) buildGenerator(core *generator.GeminiImageCore) (*generator.GeminiGenerator, error) {
 	gen, err := generator.NewGeminiGenerator(core)
 	if err != nil {
 		return nil, fmt.Errorf("GeminiGeneratorの初期化に失敗しました: %w", err)

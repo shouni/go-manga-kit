@@ -45,7 +45,7 @@ func (m *manager) buildAllRunners() (*ports.Workflows, error) {
 }
 
 // buildScriptRunner は、台本生成を担当する Runner を作成します。
-func (m *manager) buildScriptRunner() (ports.ScriptRunner, error) {
+func (m *manager) buildScriptRunner() (*runner.MangaScriptRunner, error) {
 	extractor, err := extract.NewExtractor(m.httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
@@ -55,7 +55,7 @@ func (m *manager) buildScriptRunner() (ports.ScriptRunner, error) {
 }
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
-func (m *manager) buildDesignRunner() (ports.DesignRunner, error) {
+func (m *manager) buildDesignRunner() (*runner.MangaDesignRunner, error) {
 	quality := m.layoutManager.Quality
 	return runner.NewMangaDesignRunner(
 		quality.mangaComposer,
@@ -67,7 +67,7 @@ func (m *manager) buildDesignRunner() (ports.DesignRunner, error) {
 }
 
 // buildPanelImageRunner は、パネル画像生成を担当する Runner を作成します。
-func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
+func (m *manager) buildPanelImageRunner() (*runner.MangaPanelRunner, error) {
 	standard := m.layoutManager.Standard
 	panelsGen := layout.NewPanelGenerator(
 		standard.mangaComposer,
@@ -82,7 +82,7 @@ func (m *manager) buildPanelImageRunner() (ports.PanelImageRunner, error) {
 }
 
 // buildPageImageRunner は、Markdown からのページ画像一括生成を担当する Runner を作成します。
-func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
+func (m *manager) buildPageImageRunner() (*runner.MangaPageRunner, error) {
 	quality := m.layoutManager.Quality
 	pagesGen := layout.NewPageGenerator(
 		quality.mangaComposer,
@@ -97,7 +97,7 @@ func (m *manager) buildPageImageRunner() (ports.PageImageRunner, error) {
 }
 
 // buildPublishRunner は、成果物のパブリッシュを担当する Runner を作成します。
-func (m *manager) buildPublishRunner() (ports.PublishRunner, error) {
+func (m *manager) buildPublishRunner() (*runner.MangaPublisherRunner, error) {
 	b, err := builder.New()
 	if err != nil {
 		return nil, fmt.Errorf("MarkdownBuilderの初期化に失敗: %w", err)

@@ -34,8 +34,8 @@ type Extractor interface {
 type MangaScriptRunner struct {
 	extractor     Extractor
 	promptBuilder ports.ScriptPrompt
-	aiClient      gemini.Generator
-	reader        remoteio.InputReader
+	aiClient      gemini.ContentGenerator
+	reader        remoteio.Reader
 	aiModel       string
 }
 
@@ -43,8 +43,8 @@ type MangaScriptRunner struct {
 func NewMangaScriptRunner(
 	ext Extractor,
 	pb ports.ScriptPrompt,
-	ai gemini.Generator,
-	r remoteio.InputReader,
+	ai gemini.ContentGenerator,
+	r remoteio.Reader,
 	aiModel string,
 ) *MangaScriptRunner {
 	return &MangaScriptRunner{

@@ -43,13 +43,13 @@ type DesignImageGenerator interface {
 type MangaDesignRunner struct {
 	composer    *layout.MangaComposer
 	generator   DesignImageGenerator
-	writer      remoteio.OutputWriter
+	writer      remoteio.Writer
 	model       string
 	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.OutputWriter, model, styleSuffix string) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.Writer, model, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		composer:    composer,
 		generator:   generator,
