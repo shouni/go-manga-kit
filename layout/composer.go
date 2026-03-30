@@ -6,10 +6,11 @@ import (
 	"sync"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
-	"github.com/shouni/go-manga-kit/ports"
 	"github.com/shouni/go-remote-io/remoteio"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
+
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 type MangaComposer struct {

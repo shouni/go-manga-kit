@@ -16,13 +16,13 @@ import (
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	generator ports.PagesImageGenerator
-	writer    remoteio.OutputWriter
+	writer    remoteio.Writer
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	generator ports.PagesImageGenerator,
-	writer remoteio.OutputWriter,
+	writer remoteio.Writer,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		generator: generator,

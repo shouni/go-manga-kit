@@ -17,13 +17,13 @@ import (
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelRunner struct {
 	generator ports.PanelsImageGenerator
-	writer    remoteio.OutputWriter
+	writer    remoteio.Writer
 }
 
 // NewMangaPanelRunner は、依存関係を注入して初期化します。
 func NewMangaPanelRunner(
 	generator ports.PanelsImageGenerator,
-	writer remoteio.OutputWriter,
+	writer remoteio.Writer,
 ) *MangaPanelRunner {
 	return &MangaPanelRunner{
 		generator: generator,
