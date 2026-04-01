@@ -28,12 +28,12 @@ var markdownEscaper = strings.NewReplacer(
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
-	writer     remoteio.OutputWriter
+	writer     remoteio.Writer
 	htmlRunner mdcastPorts.Runner
 }
 
 // NewMangaPublisher は新しいインスタンスを作成します。
-func NewMangaPublisher(writer remoteio.OutputWriter, htmlRunner mdcastPorts.Runner) *MangaPublisher {
+func NewMangaPublisher(writer remoteio.Writer, htmlRunner mdcastPorts.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer:     writer,
 		htmlRunner: htmlRunner,

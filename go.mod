@@ -4,11 +4,11 @@ go 1.26
 
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shouni/gemini-image-kit v1.5.4
-	github.com/shouni/go-gemini-client v1.2.2
+	github.com/shouni/gemini-image-kit v1.5.5
+	github.com/shouni/go-gemini-client v1.2.3
 	github.com/shouni/go-http-kit v1.4.0
 	github.com/shouni/go-prompt-kit v1.0.3
-	github.com/shouni/go-remote-io v1.3.1
+	github.com/shouni/go-remote-io v1.3.2
 	github.com/shouni/go-utils v1.0.20
 	github.com/shouni/go-web-exact/v2 v2.1.2
 	golang.org/x/sync v0.20.0
@@ -24,7 +24,7 @@ require (
 	cloud.google.com/go/iam v1.5.3 // indirect
 	cloud.google.com/go/monitoring v1.24.3 // indirect
 	cloud.google.com/go/storage v1.61.3 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.30.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.55.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.55.0 // indirect
 	github.com/PuerkitoBio/goquery v1.12.0 // indirect
@@ -76,10 +76,10 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	google.golang.org/api v0.273.0 // indirect
-	google.golang.org/genai v1.52.0 // indirect
+	google.golang.org/genai v1.52.1 // indirect
 	google.golang.org/genproto v0.0.0-20260316180232-0b37fe3546d5 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260316180232-0b37fe3546d5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260319201613-d00831a3d3e7 // indirect
-	google.golang.org/grpc v1.79.3 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )

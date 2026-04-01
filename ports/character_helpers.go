@@ -84,7 +84,7 @@ func GetCharacters(charactersJSON []byte) (CharactersMap, error) {
 }
 
 // LoadCharacterMap は指定されたパスからキャラクター設定を読み込みます。
-func LoadCharacterMap(ctx context.Context, reader remoteio.InputReader, path string) (CharactersMap, error) {
+func LoadCharacterMap(ctx context.Context, reader remoteio.Reader, path string) (CharactersMap, error) {
 	if path == "" {
 		return nil, fmt.Errorf("キャラクター設定のパスが空です")
 	}
