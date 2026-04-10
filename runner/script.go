@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/shouni/go-gemini-client/gemini"
 	"github.com/shouni/go-manga-kit/ports"
@@ -106,6 +107,11 @@ func (r *MangaScriptRunner) readContent(ctx context.Context, url string) (string
 		slog.WarnContext(ctx, "制限サイズに達したため切り捨てられました",
 			"url", url,
 			"limit_bytes", maxInputSize)
+
+		// UTF-8の文字境界に合わせて末尾の不正なバイトを取り除く
+		for len(content) > 0 && !utf8.RuneStart(content[len(content)-1]) {
+			content = content[:len(content)-1]
+		}
 	}
 
 	return string(content), nil
