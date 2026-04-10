@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"io"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 )
@@ -35,4 +36,10 @@ type PanelsImageGenerator interface {
 // パネルを処理し、画像レスポンスのスライスまたは失敗時にエラーを出力します。
 type PagesImageGenerator interface {
 	Execute(ctx context.Context, manga *MangaResponse) ([]*imagePorts.ImageResponse, error)
+}
+
+// ContentReader は、指定されたURIからコンテンツを取得するためのインターフェースです。
+type ContentReader interface {
+	Open(ctx context.Context, uri string) (io.ReadCloser, error)
+	io.Closer
 }
