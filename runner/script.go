@@ -109,8 +109,14 @@ func (r *MangaScriptRunner) readContent(ctx context.Context, url string) (string
 			"limit_bytes", maxInputSize)
 
 		// UTF-8の文字境界に合わせて末尾の不正なバイトを取り除く
-		for len(content) > 0 && !utf8.RuneStart(content[len(content)-1]) {
-			content = content[:len(content)-1]
+		if !utf8.Valid(content) {
+			for len(content) > 0 {
+				isStart := utf8.RuneStart(content[len(content)-1])
+				content = content[:len(content)-1]
+				if isStart {
+					break
+				}
+			}
 		}
 	}
 
