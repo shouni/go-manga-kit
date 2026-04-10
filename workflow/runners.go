@@ -3,13 +3,11 @@ package workflow
 import (
 	"fmt"
 
-	"github.com/shouni/go-prompt-kit/md/builder"
-	"github.com/shouni/go-web-exact/v2/extract"
-
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 	"github.com/shouni/go-manga-kit/publisher"
 	"github.com/shouni/go-manga-kit/runner"
+	"github.com/shouni/go-prompt-kit/md/builder"
 )
 
 // buildAllRunners は、ワークフローの実行に必要なすべてのランナーを構築して返します。
@@ -46,12 +44,7 @@ func (m *manager) buildAllRunners() (*ports.Workflows, error) {
 
 // buildScriptRunner は、台本生成を担当する Runner を作成します。
 func (m *manager) buildScriptRunner() (*runner.MangaScriptRunner, error) {
-	extractor, err := extract.NewExtractor(m.httpClient)
-	if err != nil {
-		return nil, fmt.Errorf("extractor の初期化に失敗しました: %w", err)
-	}
-
-	return runner.NewMangaScriptRunner(extractor, m.promptDeps.ScriptPrompt, m.aiClient, m.reader, m.cfg.GeminiModel), nil
+	return runner.NewMangaScriptRunner(m.promptDeps.ScriptPrompt, m.aiClient, m.reader, m.cfg.GeminiModel), nil
 }
 
 // buildDesignRunner は、キャラクターデザインを担当する Runner を作成します。
