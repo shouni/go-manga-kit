@@ -20,9 +20,9 @@ type Config struct {
 	ImageQualityModel  string // 高品質・高知能（ページ用）
 
 	// --- Generation Settings ---
-	StyleSuffix    string
-	MaxConcurrency int64
-	RateInterval   time.Duration
+	StyleSuffix  string
+	Concurrency  int
+	RateInterval time.Duration
 
 	// --- Layout Settings ---
 	MaxPanelsPerPage int

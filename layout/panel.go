@@ -18,14 +18,14 @@ const negativePanelPrompt = "speech bubble, dialogue balloon, text, alphabet, le
 
 // PanelGenerator は、キャラクターの一貫性を保ちながら並列で複数パネルを生成します。
 type PanelGenerator struct {
-	composer       *MangaComposer
-	generator      PanelImageGenerator
-	pb             ports.ImagePrompt
-	model          string
-	limiter        *rate.Limiter
-	maxConcurrency int64
-	rateInterval   time.Duration
-	rateBurst      int
+	composer     *MangaComposer
+	generator    PanelImageGenerator
+	pb           ports.ImagePrompt
+	model        string
+	limiter      *rate.Limiter
+	concurrency  int
+	rateInterval time.Duration
+	rateBurst    int
 }
 
 type PanelImageGenerator interface {
@@ -41,13 +41,13 @@ func NewPanelGenerator(
 	opts ...PanelOption,
 ) *PanelGenerator {
 	g := &PanelGenerator{
-		composer:       composer,
-		generator:      generator,
-		pb:             pb,
-		model:          model,
-		maxConcurrency: defaultMaxConcurrency,
-		rateInterval:   defaultRateInterval,
-		rateBurst:      defaultRateBurst,
+		composer:     composer,
+		generator:    generator,
+		pb:           pb,
+		model:        model,
+		concurrency:  defaultMaxConcurrency,
+		rateInterval: defaultRateInterval,
+		rateBurst:    defaultRateBurst,
 	}
 
 	for _, opt := range opts {
@@ -71,7 +71,7 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 
 	images := make([]*imagePorts.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(g.maxConcurrency))
+	eg.SetLimit(g.concurrency)
 
 	cm := g.composer.CharactersMap
 
