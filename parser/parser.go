@@ -18,11 +18,11 @@ type Parser interface {
 
 // MangaResponseParser は JSON 形式の台本を解析する構造体です。
 type MangaResponseParser struct {
-	reader remoteio.InputReader
+	reader remoteio.Reader
 }
 
 // NewMangaResponseParser は新しい MangaResponseParser インスタンスを生成します。
-func NewMangaResponseParser(r remoteio.InputReader) *MangaResponseParser {
+func NewMangaResponseParser(r remoteio.Reader) *MangaResponseParser {
 	return &MangaResponseParser{reader: r}
 }
 
