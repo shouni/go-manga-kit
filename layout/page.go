@@ -45,7 +45,7 @@ func NewPageGenerator(
 		generator:        generator,
 		pb:               pb,
 		model:            model,
-		maxConcurrency:   defaultMaxConcurrency,
+		maxConcurrency:   ports.DefaultMaxConcurrency,
 		rateInterval:     defaultRateInterval,
 		rateBurst:        defaultRateBurst,
 		maxPanelsPerPage: defaultMaxPanelsPerPage,

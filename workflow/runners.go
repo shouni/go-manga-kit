@@ -67,7 +67,7 @@ func (m *manager) buildPanelImageRunner() (*runner.MangaPanelRunner, error) {
 		standard.imageGenerator,
 		m.promptDeps.ImagePrompt,
 		standard.model,
-		layout.WithPanelConcurrency(m.cfg.Concurrency),
+		layout.WithPanelMaxConcurrency(m.cfg.MaxConcurrency),
 		layout.WithPanelRateInterval(m.cfg.RateInterval),
 	)
 
