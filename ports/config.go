@@ -34,7 +34,6 @@ type Config struct {
 
 // ApplyDefaults は未設定（ゼロ値）の項目にデフォルト値を適用します。
 func (c *Config) ApplyDefaults() {
-
 	if c.GeminiModel == "" {
 		c.GeminiModel = DefaultGeminiModel
 	}
