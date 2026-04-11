@@ -23,7 +23,7 @@ type PanelGenerator struct {
 	pb             ports.ImagePrompt
 	model          string
 	limiter        *rate.Limiter
-	maxConcurrency int64
+	maxConcurrency int
 	rateInterval   time.Duration
 	rateBurst      int
 }
@@ -45,7 +45,7 @@ func NewPanelGenerator(
 		generator:      generator,
 		pb:             pb,
 		model:          model,
-		maxConcurrency: defaultMaxConcurrency,
+		maxConcurrency: ports.DefaultMaxConcurrency,
 		rateInterval:   defaultRateInterval,
 		rateBurst:      defaultRateBurst,
 	}
@@ -71,7 +71,7 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 
 	images := make([]*imagePorts.ImageResponse, len(panels))
 	eg, egCtx := errgroup.WithContext(ctx)
-	eg.SetLimit(int(g.maxConcurrency))
+	eg.SetLimit(g.maxConcurrency)
 
 	cm := g.composer.CharactersMap
 

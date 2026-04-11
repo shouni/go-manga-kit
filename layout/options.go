@@ -8,7 +8,7 @@ import "time"
 type PanelOption func(*PanelGenerator)
 
 // WithPanelMaxConcurrency は、パネル生成の最大並列数を設定します。
-func WithPanelMaxConcurrency(value int64) PanelOption {
+func WithPanelMaxConcurrency(value int) PanelOption {
 	return func(g *PanelGenerator) {
 		if value > 0 {
 			g.maxConcurrency = value

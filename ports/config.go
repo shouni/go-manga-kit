@@ -9,6 +9,7 @@ const (
 	DefaultGeminiModel        = "gemini-3-flash-preview"
 	DefaultImageStandardModel = "gemini-3-pro-image-preview"
 	DefaultImageQualityModel  = "gemini-3-pro-image-preview"
+	DefaultMaxConcurrency     = 1
 	DefaultStyleSuffix        = "Japanese anime style, official art, cel-shaded, clean line art, high-quality manga coloring, expressive eyes, vibrant colors, cinematic lighting, masterpiece, ultra-detailed, flat shading, clear character features, no 3D effect, high resolution"
 )
 
@@ -20,9 +21,9 @@ type Config struct {
 	ImageQualityModel  string // 高品質・高知能（ページ用）
 
 	// --- Generation Settings ---
-	StyleSuffix    string
-	MaxConcurrency int64
+	MaxConcurrency int
 	RateInterval   time.Duration
+	StyleSuffix    string
 
 	// --- Layout Settings ---
 	MaxPanelsPerPage int
@@ -41,6 +42,9 @@ func (c *Config) ApplyDefaults() {
 	}
 	if c.ImageQualityModel == "" {
 		c.ImageQualityModel = DefaultImageQualityModel
+	}
+	if c.MaxConcurrency <= 0 {
+		c.MaxConcurrency = DefaultMaxConcurrency
 	}
 	if c.StyleSuffix == "" {
 		c.StyleSuffix = DefaultStyleSuffix
