@@ -9,10 +9,9 @@ import (
 	"strings"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
-	"github.com/shouni/go-remote-io/remoteio"
-
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/layout"
+	"github.com/shouni/go-manga-kit/ports"
 )
 
 const (
@@ -43,13 +42,13 @@ type DesignImageGenerator interface {
 type MangaDesignRunner struct {
 	composer    *layout.MangaComposer
 	generator   DesignImageGenerator
-	writer      remoteio.Writer
+	writer      ports.ContentWriter
 	model       string
 	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.Writer, model, styleSuffix string) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer ports.ContentWriter, model, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		composer:    composer,
 		generator:   generator,

@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/shouni/go-remote-io/remoteio"
-
 	"github.com/shouni/go-manga-kit/ports"
 )
 
@@ -18,11 +16,11 @@ type Parser interface {
 
 // MangaResponseParser は JSON 形式の台本を解析する構造体です。
 type MangaResponseParser struct {
-	reader remoteio.Reader
+	reader ports.ContentReader
 }
 
 // NewMangaResponseParser は新しい MangaResponseParser インスタンスを生成します。
-func NewMangaResponseParser(r remoteio.Reader) *MangaResponseParser {
+func NewMangaResponseParser(r ports.ContentReader) *MangaResponseParser {
 	return &MangaResponseParser{reader: r}
 }
 

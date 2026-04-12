@@ -9,8 +9,6 @@ import (
 	"io"
 	"sort"
 	"strings"
-
-	"github.com/shouni/go-remote-io/remoteio"
 )
 
 // GetCharacter は、指定されたID（またはその小文字版）からキャラクター情報を特定します。
@@ -84,7 +82,7 @@ func GetCharacters(charactersJSON []byte) (CharactersMap, error) {
 }
 
 // LoadCharacterMap は指定されたパスからキャラクター設定を読み込みます。
-func LoadCharacterMap(ctx context.Context, reader remoteio.Reader, path string) (CharactersMap, error) {
+func LoadCharacterMap(ctx context.Context, reader ContentReader, path string) (CharactersMap, error) {
 	if path == "" {
 		return nil, fmt.Errorf("キャラクター設定のパスが空です")
 	}

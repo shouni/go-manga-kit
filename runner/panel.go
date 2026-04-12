@@ -8,8 +8,6 @@ import (
 	"log/slog"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
-	"github.com/shouni/go-remote-io/remoteio"
-
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/ports"
 )
@@ -17,13 +15,13 @@ import (
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelRunner struct {
 	generator ports.PanelsImageGenerator
-	writer    remoteio.Writer
+	writer    ports.ContentWriter
 }
 
 // NewMangaPanelRunner は、依存関係を注入して初期化します。
 func NewMangaPanelRunner(
 	generator ports.PanelsImageGenerator,
-	writer remoteio.Writer,
+	writer ports.ContentWriter,
 ) *MangaPanelRunner {
 	return &MangaPanelRunner{
 		generator: generator,

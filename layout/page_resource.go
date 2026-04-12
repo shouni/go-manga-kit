@@ -5,7 +5,6 @@ import (
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-manga-kit/ports"
-	"github.com/shouni/go-remote-io/remoteio"
 )
 
 type pageResourceCollector struct {
@@ -120,5 +119,5 @@ func (c *pageResourceCollector) canRegister(fileURI, referenceURL string) bool {
 		return true
 	}
 	// Vertex AI モード かつ GCS URI なら OK (File API URI が空でも許容)
-	return c.isVertex && remoteio.IsGCSURI(referenceURL)
+	return c.isVertex && IsStorageURI(referenceURL)
 }
