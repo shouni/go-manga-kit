@@ -29,8 +29,8 @@ const (
 	defaultRateInterval = 60 * time.Second
 )
 
-// IsStorageURI は、指定されたURIがGCS（Google Cloud Storage）のストレージURIであるかどうかを判定します。
-func IsStorageURI(uri string) bool {
+// IsGCSURI は、指定されたURIがGCS（Google Cloud Storage）のストレージURIであるかどうかを判定します。
+func IsGCSURI(uri string) bool {
 	const prefixGCS = "gs://"
 	return strings.HasPrefix(uri, prefixGCS)
 }

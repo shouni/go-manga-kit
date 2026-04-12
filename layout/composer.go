@@ -137,7 +137,7 @@ func (mc *MangaComposer) prepareResources(
 func (mc *MangaComposer) getOrUploadResource(ctx context.Context, key, referenceURL string, resourceMap map[string]string) (string, error) {
 	// Vertex AI モード時は Cloud Storage (gs://) を直接参照可能なため、
 	// File API へのアップロード処理をバイパスし、転送コストを削減します。
-	if mc.BackendProvider.IsVertexAI() && IsStorageURI(referenceURL) {
+	if mc.BackendProvider.IsVertexAI() && IsGCSURI(referenceURL) {
 		mc.mu.RLock()
 		_, ok := resourceMap[key]
 		mc.mu.RUnlock()

@@ -119,5 +119,5 @@ func (c *pageResourceCollector) canRegister(fileURI, referenceURL string) bool {
 		return true
 	}
 	// Vertex AI モード かつ GCS URI なら OK (File API URI が空でも許容)
-	return c.isVertex && IsStorageURI(referenceURL)
+	return c.isVertex && IsGCSURI(referenceURL)
 }
