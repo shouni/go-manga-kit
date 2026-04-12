@@ -59,29 +59,76 @@ go-manga-kit/
 
 ---
 
-## 🏗️ 画像生成シーケンスフロー (Image Generation Sequence)
+## 🔄 シーケンスフロー (Sequence Flow)
+
+### Panel Image Flow (`NewMangaPanelRunner`)
 
 ```mermaid
 sequenceDiagram
-  participant WF as workflow.Workflows
-  participant Runner as runner.PageImageRunner
+  participant WF as workflow.manager
+  participant PrFactory as runner.NewMangaPanelRunner
+  participant LPanel as layout.NewPanelGenerator
+  participant Composer as layout.MangaComposer
+  participant PanelRunner as runner.MangaPanelRunner
+  participant PanelGen as layout.PanelGenerator
   participant API as Gemini API / Vertex AI
+  participant Writer as imagePorts.Writer
 
-  Note over WF, Runner: 1. アセット準備 & Seed特定
-  WF->>Runner: RunPageImage(assetPath)
-  Runner->>Runner: キャラSeed(10001等)を特定
+  Note over WF,LPanel: 1) Runner / layout 初期化
+  WF->>LPanel: NewPanelGenerator(composer, imageGenerator, promptBuilder, opts...)
+  LPanel-->>WF: *layout.PanelGenerator
+  WF->>PrFactory: NewMangaPanelRunner(generator, writer)
+  PrFactory-->>WF: *MangaPanelRunner
+
+  Note over WF,PanelRunner: 2) Panel 単位生成
+  WF->>PanelRunner: Run(ctx, manga)
+  PanelRunner->>PanelGen: Execute(ctx, manga.Panels)
+  PanelGen->>Composer: PrepareCharacterResources(ctx, panels)
+  PanelGen->>Composer: PreparePanelResources(ctx, panels)
+  PanelGen->>API: GenerateMangaPanel(PanelPrompt + CharacterSeed + AssetURIs)
+  API-->>PanelGen: パネル画像レスポンス群
+  PanelGen-->>PanelRunner: []*imgdom.ImageResponse
+  PanelRunner->>Writer: Save(ctx, imageData, panelPath)
+  PanelRunner-->>WF: []*imgdom.ImageResponse
+
+```
+
+### Page Image Flow (`NewMangaPageRunner`)
+
+```mermaid
+sequenceDiagram
+  participant WF as workflow.manager
+  participant LPage as layout.NewPageGenerator
+  participant Composer as layout.MangaComposer
+  participant PFactory as runner.NewMangaPageRunner
+  participant PageRunner as runner.MangaPageRunner
+  participant PageGen as layout.PageGenerator
+  participant API as Gemini API / Vertex AI
+  participant Writer as imagePorts.Writer
+
+  Note over WF,LPage: 1) Runner / layout 初期化
+  WF->>LPage: NewPageGenerator(composer, imageGenerator, promptBuilder, opts...)
+  LPage-->>WF: *layout.PageGenerator
+  WF->>PFactory: NewMangaPageRunner(generator, writer)
+  PFactory-->>WF: *MangaPageRunner
+
+  Note over WF,PageRunner: 2) Page 単位生成
+  WF->>PageRunner: Run(ctx, manga)
+  PageRunner->>PageGen: Execute(ctx, manga)
+  PageGen->>Composer: PrepareCharacterResources(ctx, panels)
+  PageGen->>Composer: PreparePanelResources(ctx, panels)
+  PageGen->>PageGen: collectResources + chunkPanels + BuildPagePrompt
 
   alt Vertex AI Mode
-    Runner->>Runner: GCS (gs://) パスを直接解決
+    PageGen->>API: GenerateMangaPage(Prompt + Seed + gs://assets)
   else Gemini API Mode
-    Runner->>Runner: Gemini File API へ準備 (Upload/Cache)
+    PageGen->>API: GenerateMangaPage(Prompt + Seed + File API URIs)
   end
 
-  Note over Runner, API: 2. ページ一括生成
-  Runner->>API: GenerateContent(Prompt + Seed + AssetURIs)
-  Note over Runner, API: バックエンドに応じたURI形式でリクエスト
-  API-->>Runner: 生成画像データ (Full Color)
-  Runner-->>WF: []*imgdom.ImageResponse
+  API-->>PageGen: ページ画像レスポンス群
+  PageGen-->>PageRunner: []*imgdom.ImageResponse
+  PageRunner->>Writer: Save(ctx, imageData, pagePath)
+  PageRunner-->>WF: []*imgdom.ImageResponse
 
 ```
 
