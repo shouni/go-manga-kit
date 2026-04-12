@@ -6,8 +6,6 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-gemini-client/gemini"
 	"github.com/shouni/go-http-kit/httpkit"
-	"github.com/shouni/go-remote-io/remoteio"
-
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
 )
@@ -24,7 +22,7 @@ type ManagerArgs struct {
 	Config          ports.Config
 	HTTPClient      httpkit.HTTPClient
 	Reader          ports.ContentReader
-	Writer          remoteio.Writer
+	Writer          ports.ContentWriter
 	AIClient        gemini.GenerativeModel
 	AIClientQuality gemini.GenerativeModel
 	PromptDeps      *PromptDeps
@@ -48,7 +46,7 @@ type manager struct {
 	cfg             ports.Config
 	httpClient      httpkit.HTTPClient
 	reader          ports.ContentReader
-	writer          remoteio.Writer
+	writer          ports.ContentWriter
 	aiClient        gemini.GenerativeModel
 	aiClientQuality gemini.GenerativeModel
 	layoutManager   layoutManager

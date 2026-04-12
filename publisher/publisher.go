@@ -7,11 +7,9 @@ import (
 	"path"
 	"strings"
 
-	md "github.com/shouni/go-prompt-kit/md/ports"
-	"github.com/shouni/go-remote-io/remoteio"
-
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/ports"
+	md "github.com/shouni/go-prompt-kit/md/ports"
 )
 
 // markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
@@ -28,12 +26,12 @@ var markdownEscaper = strings.NewReplacer(
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
-	writer remoteio.Writer
+	writer ports.ContentWriter
 	md     md.Runner
 }
 
 // NewMangaPublisher は新しいインスタンスを作成します。
-func NewMangaPublisher(writer remoteio.Writer, md md.Runner) *MangaPublisher {
+func NewMangaPublisher(writer ports.ContentWriter, md md.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer: writer,
 		md:     md,

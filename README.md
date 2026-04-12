@@ -90,7 +90,6 @@ sequenceDiagram
 ### 🤝 依存関係 (Dependencies)
 
 * [shouni/gemini-image-kit](https://github.com/shouni/gemini-image-kit) - Gemini画像生成コア
-* [shouni/go-remote-io](https://github.com/shouni/go-remote-io) - マルチストレージ I/O
 
 ### 📜 ライセンス (License)
 

@@ -7,8 +7,6 @@ import (
 	"log/slog"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
-	"github.com/shouni/go-remote-io/remoteio"
-
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/ports"
 )
@@ -16,13 +14,13 @@ import (
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	generator ports.PagesImageGenerator
-	writer    remoteio.Writer
+	writer    ports.ContentWriter
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	generator ports.PagesImageGenerator,
-	writer remoteio.Writer,
+	writer ports.ContentWriter,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		generator: generator,

@@ -9,12 +9,12 @@ import (
 
 // --- Mocks ---
 
-// mockReader は remoteio.Reader インターフェースを満たすテスト用モックです。
+// mockReader は ports.ContentReader インターフェースを満たすテスト用モックです。
 type mockReader struct {
 	openFunc func(ctx context.Context, path string) (io.ReadCloser, error)
 }
 
-// Open は remoteio.Reader インターフェースの実装です。
+// Open は ports.ContentReader インターフェースの実装です。
 func (m *mockReader) Open(ctx context.Context, path string) (io.ReadCloser, error) {
 	return m.openFunc(ctx, path)
 }
