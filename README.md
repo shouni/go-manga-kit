@@ -4,6 +4,9 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/shouni/go-manga-kit)](https://golang.org/)
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/shouni/go-manga-kit)](https://goreportcard.com/report/github.com/shouni/go-manga-kit)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shouni/go-manga-kit.svg)](https://pkg.go.dev/github.com/shouni/go-manga-kit)
+[![Status](https://img.shields.io/badge/Status-Completed-brightgreen)](#)
 
 ## 🚀 概要 (About) - キャラクターDNA維持・画像生成Workflow
 
