@@ -31,6 +31,10 @@ func NewMangaPanelRunner(
 
 // Run は、台本(MangaResponse)を受け取り、パネルの画像を生成します。
 func (r *MangaPanelRunner) Run(ctx context.Context, manga *ports.MangaResponse) ([]*imagePorts.ImageResponse, error) {
+	if manga == nil {
+		return nil, fmt.Errorf("MangaResponse がありません")
+	}
+
 	slog.Info("Starting parallel image generation")
 
 	images, err := r.generator.Execute(ctx, manga.Panels)

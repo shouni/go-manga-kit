@@ -21,14 +21,14 @@
 ## ✨ コア・コンセプト (Core Concepts)
 
 * **🧬 3-Factor Consistency Control**:
-    * キャラクターの一貫性を担保するため、**Seed値**（基盤）、**参照アセット**（外見）、**VisualCues/言語指示**（詳細）の3要素を組み合わせて制御します。
-* **🌍 Multi-Backend Asset Support**: 
-    * Gemini API モードでは **File API**、Vertex AI モードでは **Cloud Storage (GCS)** 上の画像を直接参照可能です。
+  * キャラクターの一貫性を担保するため、**Seed値**（基盤）、**参照アセット**（外見）、**VisualCues/言語指示**（詳細）の3要素を組み合わせて制御します。
+* **🌍 Multi-Backend Asset Support**:
+  * Gemini API モードでは **File API**、Vertex AI モードでは **Cloud Storage (GCS)** 上の画像を直接参照可能です。
 * **🛡 Production-Ready Concurrency Control**:
-    * セマフォ（Semaphore）を用いた細やかな並列実行制御を内包。API の `RESOURCE_EXHAUSTED` (429) エラーを未然に防ぎ、スロットルを効かせた堅牢なバッチ処理を可能にします。
-* **⚡  Smart Asset Management**: 
-    * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドを軽減します。
-    * Gemini API 利用時は `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
+  * セマフォ（Semaphore）を用いた細やかな並列実行制御を内包。API の `RESOURCE_EXHAUSTED` (429) エラーを未然に防ぎ、スロットルを効かせた堅牢なバッチ処理を可能にします。
+* **⚡  Smart Asset Management**:
+  * Vertex AI 利用時は `gs://` パスをそのまま使用することで、アップロードのオーバーヘッドを軽減します。
+  * Gemini API 利用時は `singleflight` により同一URLの二重アップロードを防止。Gemini File API クォータを節約しながら、並列アセット準備を実現します。
 
 ---
 
@@ -69,30 +69,46 @@ go-manga-kit/
 ```mermaid
 sequenceDiagram
   participant WF as workflow.manager
-  participant PrFactory as runner.NewMangaPanelRunner
+  participant PFactory as runner.NewMangaPanelRunner
   participant LPanel as layout.NewPanelGenerator
   participant Composer as layout.MangaComposer
   participant PanelRunner as runner.MangaPanelRunner
   participant PanelGen as layout.PanelGenerator
   participant API as Gemini API / Vertex AI
-  participant Writer as imagePorts.Writer
+  participant Writer as ports.ContentWriter
 
-  Note over WF,LPanel: 1) Runner / layout 初期化
-  WF->>LPanel: NewPanelGenerator(composer, imageGenerator, promptBuilder, opts...)
+  Note over WF,LPanel: 1) GenerationUnit / Runner 初期化
+  WF->>Composer: NewMangaComposer(core, core, charactersMap)
+  Composer-->>WF: *layout.MangaComposer
+  WF->>LPanel: NewPanelGenerator(composer, imageGenerator, imagePrompt, model, opts...)
   LPanel-->>WF: *layout.PanelGenerator
-  WF->>PrFactory: NewMangaPanelRunner(generator, writer)
-  PrFactory-->>WF: *MangaPanelRunner
+  WF->>PFactory: NewMangaPanelRunner(generator, writer)
+  PFactory-->>WF: *MangaPanelRunner
 
   Note over WF,PanelRunner: 2) Panel 単位生成
-  WF->>PanelRunner: Run(ctx, manga)
+  WF->>PanelRunner: Run(ctx, manga) / RunAndSave(ctx, manga, outputPath)
   PanelRunner->>PanelGen: Execute(ctx, manga.Panels)
   PanelGen->>Composer: PrepareCharacterResources(ctx, panels)
-  PanelGen->>Composer: PreparePanelResources(ctx, panels)
-  PanelGen->>API: GenerateMangaPanel(PanelPrompt + CharacterSeed + AssetURIs)
-  API-->>PanelGen: パネル画像レスポンス群
-  PanelGen-->>PanelRunner: []*imgdom.ImageResponse
-  PanelRunner->>Writer: Save(ctx, imageData, panelPath)
-  PanelRunner-->>WF: []*imgdom.ImageResponse
+  Composer-->>PanelGen: Character File API URI or direct ReferenceURL
+
+  loop panels / errgroup + rate limiter
+    PanelGen->>PanelGen: BuildPanel(panel, character)
+    PanelGen->>API: GenerateMangaPanel(prompt + systemPrompt + negativePrompt + character seed + character image)
+    API-->>PanelGen: パネル画像レスポンス
+  end
+
+  PanelGen-->>PanelRunner: []*imagePorts.ImageResponse
+
+  opt RunAndSave
+    PanelRunner->>Writer: Write(ctx, indexedPanelPath, imageData, mimeType)
+    PanelRunner->>PanelRunner: manga.Panels[i].ReferenceURL = indexedPanelPath
+    PanelRunner->>Writer: Write(ctx, manga_plot.json, updatedMangaJSON, application/json)
+    PanelRunner-->>WF: *ports.MangaResponse
+  end
+
+  opt Run only
+    PanelRunner-->>WF: []*imagePorts.ImageResponse
+  end
 
 ```
 
@@ -107,31 +123,47 @@ sequenceDiagram
   participant PageRunner as runner.MangaPageRunner
   participant PageGen as layout.PageGenerator
   participant API as Gemini API / Vertex AI
-  participant Writer as imagePorts.Writer
+  participant Writer as ports.ContentWriter
 
-  Note over WF,LPage: 1) Runner / layout 初期化
-  WF->>LPage: NewPageGenerator(composer, imageGenerator, promptBuilder, opts...)
+  Note over WF,LPage: 1) GenerationUnit / Runner 初期化
+  WF->>Composer: NewMangaComposer(core, core, charactersMap)
+  Composer-->>WF: *layout.MangaComposer
+  WF->>LPage: NewPageGenerator(composer, imageGenerator, imagePrompt, model, opts...)
   LPage-->>WF: *layout.PageGenerator
   WF->>PFactory: NewMangaPageRunner(generator, writer)
   PFactory-->>WF: *MangaPageRunner
 
   Note over WF,PageRunner: 2) Page 単位生成
-  WF->>PageRunner: Run(ctx, manga)
+  WF->>PageRunner: Run(ctx, manga) / RunAndSave(ctx, manga, outputPath)
   PageRunner->>PageGen: Execute(ctx, manga)
   PageGen->>Composer: PrepareCharacterResources(ctx, panels)
   PageGen->>Composer: PreparePanelResources(ctx, panels)
-  PageGen->>PageGen: collectResources + chunkPanels + BuildPagePrompt
+  PageGen->>PageGen: chunkPanels(maxPanelsPerPage)
 
-  alt Vertex AI Mode
-    PageGen->>API: GenerateMangaPage(Prompt + Seed + gs://assets)
-  else Gemini API Mode
-    PageGen->>API: GenerateMangaPage(Prompt + Seed + File API URIs)
+  loop page groups / errgroup + rate limiter
+    PageGen->>PageGen: determineDefaultSeed(group)
+    PageGen->>PageGen: collectResources(character assets + panel assets)
+    PageGen->>PageGen: BuildPage(group, ResourceMap)
+
+    alt Vertex AI Mode
+      PageGen->>API: GenerateMangaPage(prompt + systemPrompt + negativePrompt + seed + gs://assets)
+    else Gemini API Mode
+      PageGen->>API: GenerateMangaPage(prompt + systemPrompt + negativePrompt + seed + File API URIs)
+    end
+
+    API-->>PageGen: ページ画像レスポンス
   end
 
-  API-->>PageGen: ページ画像レスポンス群
-  PageGen-->>PageRunner: []*imgdom.ImageResponse
-  PageRunner->>Writer: Save(ctx, imageData, pagePath)
-  PageRunner-->>WF: []*imgdom.ImageResponse
+  PageGen-->>PageRunner: []*imagePorts.ImageResponse
+
+  opt RunAndSave
+    PageRunner->>Writer: Write(ctx, indexedPagePath, imageData, mimeType)
+    PageRunner-->>WF: []string
+  end
+
+  opt Run only
+    PageRunner-->>WF: []*imagePorts.ImageResponse
+  end
 
 ```
 
