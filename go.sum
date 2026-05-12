@@ -35,8 +35,8 @@ github.com/patrickmn/go-cache v2.1.0+incompatible h1:HRMgzkcYKYpi3C8ajMPV8OFXaaR
 github.com/patrickmn/go-cache v2.1.0+incompatible/go.mod h1:3Qf8kWWT7OJRJbdiICTKqZju1ZixQ/KpMGzzAfe6+WQ=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/shouni/gemini-image-kit v1.6.0 h1:nbh0Vhh7YfbE3j1/Ztg1XmALLrFt7KfA0N8tjIZAKR8=
-github.com/shouni/gemini-image-kit v1.6.0/go.mod h1:vEvOd/HU2Oj2ZKHlAY6RCPpXKn1v4bWjmXwKWefPFck=
+github.com/shouni/gemini-image-kit v1.7.0 h1:+Qv2sMPwI800aem9TXDAFkfctOR2Cl4xqeyaG9HjoZI=
+github.com/shouni/gemini-image-kit v1.7.0/go.mod h1:vEvOd/HU2Oj2ZKHlAY6RCPpXKn1v4bWjmXwKWefPFck=
 github.com/shouni/go-gemini-client v1.2.12 h1:Ji9o63VgsCC8XquIIkeH9sptucI5uJoG2V3bqm3e/bg=
 github.com/shouni/go-gemini-client v1.2.12/go.mod h1:jNN/EvWiZ1IpQ/Ovnjc0tORNL4bwEHSk5XetiT7rPQo=
 github.com/shouni/go-http-kit v1.4.2 h1:V7QetvaZha1xCksZfdenYWhao9735TtoecBwSUCMcFw=

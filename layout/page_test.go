@@ -13,10 +13,10 @@ import (
 
 type mockPageImageGenerator struct {
 	generateCount int
-	generateFunc  func(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error)
+	generateFunc  func(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error)
 }
 
-func (m *mockPageImageGenerator) GenerateMangaPage(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error) {
+func (m *mockPageImageGenerator) GenerateFusedImage(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error) {
 	m.generateCount++
 	if m.generateFunc != nil {
 		return m.generateFunc(ctx, req)
@@ -119,7 +119,7 @@ func TestPageGenerator_Execute(t *testing.T) {
 		}
 
 		var capturedSeed int64
-		genMock.generateFunc = func(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error) {
+		genMock.generateFunc = func(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error) {
 			if req.Seed != nil {
 				capturedSeed = *req.Seed
 			}

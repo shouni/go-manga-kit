@@ -29,7 +29,7 @@ type PanelGenerator struct {
 }
 
 type PanelImageGenerator interface {
-	GenerateMangaPanel(ctx context.Context, req imagePorts.ImagePanelRequest) (*imagePorts.ImageResponse, error)
+	GenerateSingleImage(ctx context.Context, req imagePorts.SingleImageRequest) (*imagePorts.ImageResponse, error)
 }
 
 // NewPanelGenerator は PanelGenerator の新しいインスタンスを初期化します。
@@ -99,7 +99,7 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 			logger.Info("Starting panel generation")
 
 			startTime := time.Now()
-			resp, err := g.generator.GenerateMangaPanel(egCtx, imagePorts.ImagePanelRequest{
+			resp, err := g.generator.GenerateSingleImage(egCtx, imagePorts.SingleImageRequest{
 				GenerationOptions: imagePorts.GenerationOptions{
 					Model:          g.model,
 					Prompt:         userPrompt,
