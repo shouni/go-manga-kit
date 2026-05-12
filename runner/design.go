@@ -35,7 +35,7 @@ var fileNameSanitizer = strings.NewReplacer(
 )
 
 type DesignImageGenerator interface {
-	GenerateMangaPage(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error)
+	GenerateFusedImage(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error)
 }
 
 // MangaDesignRunner はキャラクターデザインシート生成を実行するランナーです。
@@ -78,7 +78,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 3. 生成リクエスト
-	pageReq := imagePorts.ImagePageRequest{
+	pageReq := imagePorts.ImageFusionRequest{
 		GenerationOptions: imagePorts.GenerationOptions{
 			Model:       dr.model,
 			Prompt:      designPrompt,
@@ -90,7 +90,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	}
 
 	// 4. 生成実行
-	resp, err := dr.generator.GenerateMangaPage(ctx, pageReq)
+	resp, err := dr.generator.GenerateFusedImage(ctx, pageReq)
 	if err != nil {
 		slog.Error("Design generation failed", "error", err)
 		return "", 0, fmt.Errorf("画像の生成に失敗しました: %w", err)

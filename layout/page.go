@@ -29,7 +29,7 @@ type PageGenerator struct {
 }
 
 type PageImageGenerator interface {
-	GenerateMangaPage(ctx context.Context, req imagePorts.ImagePageRequest) (*imagePorts.ImageResponse, error)
+	GenerateFusedImage(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error)
 }
 
 // NewPageGenerator は、PageGeneratorの新しいインスタンスを作成します。
@@ -131,7 +131,7 @@ func (g *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Manga
 	userPrompt, systemPrompt := g.pb.BuildPage(manga.Panels, resMap)
 
 	// 3. ImageURI 構造体のスライスを作成
-	req := imagePorts.ImagePageRequest{
+	req := imagePorts.ImageFusionRequest{
 		GenerationOptions: imagePorts.GenerationOptions{
 			Model:          g.model,
 			Prompt:         userPrompt,
@@ -150,7 +150,7 @@ func (g *PageGenerator) generateMangaPage(ctx context.Context, manga ports.Manga
 		"total_assets", len(resMap.OrderedAssets),
 	)
 
-	return g.generator.GenerateMangaPage(ctx, req)
+	return g.generator.GenerateFusedImage(ctx, req)
 }
 
 // collectResources は、ページ内のキャラクター立ち絵とパネル参照画像を整理し、インデックスを割り振ります。

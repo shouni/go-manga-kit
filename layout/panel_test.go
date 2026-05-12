@@ -13,10 +13,10 @@ import (
 
 type mockPanelImageGenerator struct {
 	generateCount int
-	generateFunc  func(ctx context.Context, req imagePorts.ImagePanelRequest) (*imagePorts.ImageResponse, error)
+	generateFunc  func(ctx context.Context, req imagePorts.SingleImageRequest) (*imagePorts.ImageResponse, error)
 }
 
-func (m *mockPanelImageGenerator) GenerateMangaPanel(ctx context.Context, req imagePorts.ImagePanelRequest) (*imagePorts.ImageResponse, error) {
+func (m *mockPanelImageGenerator) GenerateSingleImage(ctx context.Context, req imagePorts.SingleImageRequest) (*imagePorts.ImageResponse, error) {
 	m.generateCount++
 	if m.generateFunc != nil {
 		return m.generateFunc(ctx, req)
@@ -80,7 +80,7 @@ func TestPanelGenerator_Execute(t *testing.T) {
 
 		// リクエストされた Seed を記録するためのスライス
 		capturedSeeds := make([]int64, len(panels))
-		genMock.generateFunc = func(ctx context.Context, req imagePorts.ImagePanelRequest) (*imagePorts.ImageResponse, error) {
+		genMock.generateFunc = func(ctx context.Context, req imagePorts.SingleImageRequest) (*imagePorts.ImageResponse, error) {
 			// どのパネルのリクエストか特定するのが難しいため、
 			// 呼ばれた順ではなく最終的な Seed 値を検証
 			return &imagePorts.ImageResponse{UsedSeed: *req.Seed}, nil
