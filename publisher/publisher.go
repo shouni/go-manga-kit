@@ -1,15 +1,24 @@
 package publisher
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
 	"path"
 	"strings"
 
+	md "github.com/shouni/go-prompt-kit/md/ports"
+	"github.com/shouni/go-remote-io/remoteio"
+
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/ports"
-	md "github.com/shouni/go-prompt-kit/md/ports"
+)
+
+const (
+	mdContentType       = "text/markdown; charset=utf-8"
+	htmlContentType     = "text/html; charset=utf-8"
+	defaultCacheControl = "public, max-age=1800"
 )
 
 // markdownEscaper は Markdown の制御文字と HTML タグ文字を効率的にエスケープするための Replacer です。
@@ -26,12 +35,12 @@ var markdownEscaper = strings.NewReplacer(
 
 // MangaPublisher は成果物の永続化とフォーマット変換を担います。
 type MangaPublisher struct {
-	writer ports.ContentWriter
+	writer remoteio.Writer
 	md     md.Runner
 }
 
 // NewMangaPublisher は新しいインスタンスを作成します。
-func NewMangaPublisher(writer ports.ContentWriter, md md.Runner) *MangaPublisher {
+func NewMangaPublisher(writer remoteio.Writer, md md.Runner) *MangaPublisher {
 	return &MangaPublisher{
 		writer: writer,
 		md:     md,
@@ -65,7 +74,13 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *ports.MangaResponse
 
 	// Markdown の保存
 	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdownPath)
-	if err := p.writer.Write(ctx, markdownPath, strings.NewReader(content), "text/markdown; charset=utf-8"); err != nil {
+
+	// Markdown書き込み
+	contentReader := bytes.NewReader([]byte(content))
+	if err := p.writer.Write(ctx, markdownPath, contentReader,
+		remoteio.WithContentType(mdContentType),
+		remoteio.WithCacheControl(defaultCacheControl),
+	); err != nil {
 		return nil, fmt.Errorf("Markdown 書き込み失敗: %w", err)
 	}
 
@@ -77,7 +92,10 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *ports.MangaResponse
 			return nil, fmt.Errorf("HTML 変換失敗: %w", err)
 		}
 		htmlPath = strings.TrimSuffix(markdownPath, path.Ext(markdownPath)) + ".html"
-		if err := p.writer.Write(ctx, htmlPath, htmlBuffer, "text/html; charset=utf-8"); err != nil {
+		if err := p.writer.Write(ctx, htmlPath, htmlBuffer,
+			remoteio.WithContentType(htmlContentType),
+			remoteio.WithCacheControl(defaultCacheControl),
+		); err != nil {
 			return nil, fmt.Errorf("HTML 書き込み失敗: %w", err)
 		}
 	}

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 )
 
 // --- Mocks ---
@@ -17,7 +18,8 @@ type mockWriter struct {
 	files map[string][]byte
 }
 
-func (m *mockWriter) Write(ctx context.Context, path string, content io.Reader, contentType string) error {
+// remoteio.Writer インターフェースのシグネチャに合わせるため、可変長引数を追加します。
+func (m *mockWriter) Write(ctx context.Context, path string, content io.Reader, _ ...remoteio.WriteOption) error {
 	data, err := io.ReadAll(content)
 	if err != nil {
 		return err
@@ -33,9 +35,9 @@ type mockMDRunner struct {
 	runCalled bool
 }
 
-// 戻り値を *bytes.Buffer に修正し、インターフェースに合わせる
 func (m *mockMDRunner) Run(title string, markdown []byte) (*bytes.Buffer, error) {
 	m.runCalled = true
+	// タイトルと本文を含む簡易的なHTMLをシミュレート
 	html := fmt.Sprintf("<html><head><title>%s</title></head><body>%s</body></html>", title, string(markdown))
 	return bytes.NewBufferString(html), nil
 }
@@ -58,12 +60,14 @@ func TestMangaPublisher_BuildMarkdown(t *testing.T) {
 		},
 	}
 
+	// 構築時に使用する画像パスを明示
 	opts := ports.PublishOptions{
 		ImagePaths: []string{"images/p1.png"},
 	}
 
 	got := p.BuildMarkdown(manga, opts)
 
+	// 各要素が期待通りに含まれ、かつエスケープされているか確認
 	tests := []string{
 		"# テスト漫画",
 		"説明文",
@@ -105,8 +109,7 @@ func TestMangaPublisher_Publish(t *testing.T) {
 		t.Fatalf("Publish failed: %v", err)
 	}
 
-	// 1. パスの解決確認
-	// 実際に出力された "manga_plot.md" に合わせる
+	// 1. パスの解決確認（asset.DefaultMangaPlotName に依存）
 	expectedMDName := "manga_plot.md"
 	expectedHTMLName := "manga_plot.html"
 
@@ -130,7 +133,7 @@ func TestMangaPublisher_Publish(t *testing.T) {
 		t.Error("MD runner was not called")
 	}
 
-	// 4. 画像パスの相対化確認
+	// 4. 画像パスの相対化確認 (ReferenceURL から Base を取り、images と結合しているか)
 	expectedImgPath := "images/metan_01.png"
 	if len(result.ImagePaths) == 0 || result.ImagePaths[0] != expectedImgPath {
 		t.Errorf("Expected image path %s, got %v", expectedImgPath, result.ImagePaths)

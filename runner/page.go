@@ -9,18 +9,19 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 )
 
 // MangaPageRunner は Markdown の解析、複数ページの画像生成、および成果物の保存を管理します。
 type MangaPageRunner struct {
 	generator ports.PagesImageGenerator
-	writer    ports.ContentWriter
+	writer    remoteio.Writer
 }
 
 // NewMangaPageRunner は、設定、パーサー、生成エンジン、およびライターを依存性として注入し、MangaPageRunner を初期化します。
 func NewMangaPageRunner(
 	generator ports.PagesImageGenerator,
-	writer ports.ContentWriter,
+	writer remoteio.Writer,
 ) *MangaPageRunner {
 	return &MangaPageRunner{
 		generator: generator,
@@ -97,7 +98,10 @@ func (r *MangaPageRunner) savePages(ctx context.Context, responses []*imagePorts
 			"path", pagePath,
 		)
 
-		if err = r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+		if err = r.writer.Write(ctx, pagePath, bytes.NewReader(resp.Data),
+			remoteio.WithContentType(resp.MimeType),
+			remoteio.WithCacheControl(defaultCacheControl),
+		); err != nil {
 			return nil, fmt.Errorf("第 %d ページの保存に失敗しました (path: %s): %w", i+1, pagePath, err)
 		}
 		savedPaths = append(savedPaths, pagePath)
