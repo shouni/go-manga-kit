@@ -1,7 +1,6 @@
 package publisher
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -76,7 +75,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *ports.MangaResponse
 	slog.InfoContext(ctx, "Markdown ファイルを保存しています", "path", markdownPath)
 
 	// Markdown書き込み
-	contentReader := bytes.NewReader([]byte(content))
+	contentReader := strings.NewReader(content)
 	if err := p.writer.Write(ctx, markdownPath, contentReader,
 		remoteio.WithContentType(mdContentType),
 		remoteio.WithCacheControl(defaultCacheControl),
