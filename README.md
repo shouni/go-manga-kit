@@ -75,7 +75,7 @@ sequenceDiagram
   participant PanelRunner as runner.MangaPanelRunner
   participant PanelGen as layout.PanelGenerator
   participant API as Gemini API / Vertex AI
-  participant Writer as ports.ContentWriter
+  participant Writer as remoteio.Writer
 
   Note over WF,LPanel: 1) GenerationUnit / Runner 初期化
   WF->>Composer: NewMangaComposer(core, core, charactersMap)
@@ -100,9 +100,9 @@ sequenceDiagram
   PanelGen-->>PanelRunner: []*imagePorts.ImageResponse
 
   opt RunAndSave
-    PanelRunner->>Writer: Write(ctx, indexedPanelPath, imageData, mimeType)
+    PanelRunner->>Writer: Write(ctx, indexedPanelPath, imageData, remoteio.WithContentType(mimeType), ...)
     PanelRunner->>PanelRunner: manga.Panels[i].ReferenceURL = indexedPanelPath
-    PanelRunner->>Writer: Write(ctx, manga_plot.json, updatedMangaJSON, application/json)
+    PanelRunner->>Writer: Write(ctx, manga_plot.json, updatedMangaJSON, remoteio.WithContentType("application/json"), ...)
     PanelRunner-->>WF: *ports.MangaResponse
   end
 
@@ -123,7 +123,7 @@ sequenceDiagram
   participant PageRunner as runner.MangaPageRunner
   participant PageGen as layout.PageGenerator
   participant API as Gemini API / Vertex AI
-  participant Writer as ports.ContentWriter
+  participant Writer as remoteio.Writer
 
   Note over WF,LPage: 1) GenerationUnit / Runner 初期化
   WF->>Composer: NewMangaComposer(core, core, charactersMap)
@@ -157,7 +157,7 @@ sequenceDiagram
   PageGen-->>PageRunner: []*imagePorts.ImageResponse
 
   opt RunAndSave
-    PageRunner->>Writer: Write(ctx, indexedPagePath, imageData, mimeType)
+    PageRunner->>Writer: Write(ctx, indexedPagePath, imageData, remoteio.WithContentType(mimeType), ...)
     PageRunner-->>WF: []string
   end
 

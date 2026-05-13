@@ -11,7 +11,7 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/layout"
-	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 )
 
 const (
@@ -42,13 +42,13 @@ type DesignImageGenerator interface {
 type MangaDesignRunner struct {
 	composer    *layout.MangaComposer
 	generator   DesignImageGenerator
-	writer      ports.ContentWriter
+	writer      remoteio.Writer
 	model       string
 	styleSuffix string
 }
 
 // NewMangaDesignRunner は依存関係を注入して初期化します。
-func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer ports.ContentWriter, model, styleSuffix string) *MangaDesignRunner {
+func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageGenerator, writer remoteio.Writer, model, styleSuffix string) *MangaDesignRunner {
 	return &MangaDesignRunner{
 		composer:    composer,
 		generator:   generator,
@@ -118,7 +118,10 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imagePo
 		return "", fmt.Errorf("画像保存パスの生成に失敗しました (baseDir: %s, relativePath: %s): %w", outputDir, relativePath, err)
 	}
 
-	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data), resp.MimeType); err != nil {
+	if err = dr.writer.Write(ctx, finalPath, bytes.NewReader(resp.Data),
+		remoteio.WithContentType(resp.MimeType),
+		remoteio.WithCacheControl(defaultCacheControl),
+	); err != nil {
 		return "", fmt.Errorf("画像の保存に失敗しました (path: %s): %w", finalPath, err)
 	}
 

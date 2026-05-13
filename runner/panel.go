@@ -10,18 +10,21 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 )
+
+const defaultCacheControl = "public, max-age=1800"
 
 // MangaPanelRunner は、台本を元に並列画像生成を管理します。
 type MangaPanelRunner struct {
 	generator ports.PanelsImageGenerator
-	writer    ports.ContentWriter
+	writer    remoteio.Writer
 }
 
 // NewMangaPanelRunner は、依存関係を注入して初期化します。
 func NewMangaPanelRunner(
 	generator ports.PanelsImageGenerator,
-	writer ports.ContentWriter,
+	writer remoteio.Writer,
 ) *MangaPanelRunner {
 	return &MangaPanelRunner{
 		generator: generator,
@@ -83,7 +86,10 @@ func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *ports.MangaRes
 			"path", panelPath,
 		)
 
-		if err := r.writer.Write(ctx, panelPath, bytes.NewReader(image.Data), image.MimeType); err != nil {
+		if err := r.writer.Write(ctx, panelPath, bytes.NewReader(image.Data),
+			remoteio.WithContentType(image.MimeType),
+			remoteio.WithCacheControl(defaultCacheControl),
+		); err != nil {
 			// エラー発生時は、それまでの成果物は返さず、nilとエラーを返す
 			return nil, fmt.Errorf("第 %d パネルの保存に失敗しました (path: %s): %w", i+1, panelPath, err)
 		}
@@ -102,7 +108,10 @@ func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *ports.MangaRes
 	}
 
 	slog.InfoContext(ctx, "更新された台本を保存しています", "path", plotPath)
-	if err := r.writer.Write(ctx, plotPath, bytes.NewReader(plotData), "application/json"); err != nil {
+	if err := r.writer.Write(ctx, plotPath, bytes.NewReader(plotData),
+		remoteio.WithContentType("application/json"),
+		remoteio.WithCacheControl(defaultCacheControl),
+	); err != nil {
 		return nil, fmt.Errorf("プロットファイルの保存に失敗しました: %w", err)
 	}
 

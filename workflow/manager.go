@@ -8,6 +8,7 @@ import (
 	"github.com/shouni/go-http-kit/httpkit"
 	"github.com/shouni/go-manga-kit/layout"
 	"github.com/shouni/go-manga-kit/ports"
+	"github.com/shouni/go-remote-io/remoteio"
 )
 
 // PromptDeps はプロンプト関連の依存関係をまとめた構造体です。
@@ -22,7 +23,7 @@ type ManagerArgs struct {
 	Config          ports.Config
 	HTTPClient      httpkit.HTTPClient
 	Reader          ports.ContentReader
-	Writer          ports.ContentWriter
+	Writer          remoteio.Writer
 	AIClient        gemini.GenerativeModel
 	AIClientQuality gemini.GenerativeModel
 	PromptDeps      *PromptDeps
@@ -46,7 +47,7 @@ type manager struct {
 	cfg             ports.Config
 	httpClient      httpkit.HTTPClient
 	reader          ports.ContentReader
-	writer          ports.ContentWriter
+	writer          remoteio.Writer
 	aiClient        gemini.GenerativeModel
 	aiClientQuality gemini.GenerativeModel
 	layoutManager   layoutManager
