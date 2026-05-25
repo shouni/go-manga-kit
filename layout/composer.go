@@ -15,7 +15,7 @@ import (
 type MangaComposer struct {
 	AssetManager    imagePorts.AssetManager
 	BackendProvider imagePorts.Backend
-	CharactersMap   ports.CharactersMap
+	CharactersMap   *ports.Characters
 	resourceMap     resourceMap
 	mu              sync.RWMutex
 	uploadGroup     singleflight.Group
@@ -30,7 +30,7 @@ type resourceMap struct {
 func NewMangaComposer(
 	assetMgr imagePorts.AssetManager,
 	backend imagePorts.Backend,
-	cm ports.CharactersMap,
+	cm *ports.Characters,
 ) (*MangaComposer, error) {
 	if assetMgr == nil {
 		return nil, fmt.Errorf("assetMgr is required")

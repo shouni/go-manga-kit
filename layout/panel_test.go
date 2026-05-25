@@ -38,20 +38,25 @@ func TestPanelGenerator_Execute(t *testing.T) {
 	backend := &mockBackend{isVertex: false}
 
 	// 異なる Seed 値を持つキャラクターを用意
-	cm := ports.CharactersMap{
-		"zundamon": ports.Character{
+	cm, err := ports.NewCharacters([]ports.Character{
+		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
 			Seed:         10001,
 			ReferenceURL: "gs://bucket/zunda.png",
+			VisualCues:   []string{"green hair"},
 		},
-		"metan": ports.Character{
+		{
 			ID:           "metan",
 			Name:         "めたん",
 			Seed:         20002,
 			ReferenceURL: "gs://bucket/metan.png",
+			VisualCues:   []string{"purple hair"},
 			IsDefault:    true, // 指定なしの場合のデフォルト
 		},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	composer, _ := NewMangaComposer(assetMgr, backend, cm)
 

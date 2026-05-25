@@ -78,7 +78,7 @@ sequenceDiagram
   participant Writer as remoteio.Writer
 
   Note over WF,LPanel: 1) GenerationUnit / Runner 初期化
-  WF->>Composer: NewMangaComposer(core, core, charactersMap)
+  WF->>Composer: NewMangaComposer(core, core, characters)
   Composer-->>WF: *layout.MangaComposer
   WF->>LPanel: NewPanelGenerator(composer, imageGenerator, imagePrompt, model, opts...)
   LPanel-->>WF: *layout.PanelGenerator
@@ -126,7 +126,7 @@ sequenceDiagram
   participant Writer as remoteio.Writer
 
   Note over WF,LPage: 1) GenerationUnit / Runner 初期化
-  WF->>Composer: NewMangaComposer(core, core, charactersMap)
+  WF->>Composer: NewMangaComposer(core, core, characters)
   Composer-->>WF: *layout.MangaComposer
   WF->>LPage: NewPageGenerator(composer, imageGenerator, imagePrompt, model, opts...)
   LPage-->>WF: *layout.PageGenerator

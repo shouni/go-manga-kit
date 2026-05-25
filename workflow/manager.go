@@ -13,9 +13,9 @@ import (
 
 // PromptDeps はプロンプト関連の依存関係をまとめた構造体です。
 type PromptDeps struct {
-	CharactersMap ports.CharactersMap
-	ScriptPrompt  ports.ScriptPrompt
-	ImagePrompt   ports.ImagePrompt
+	Characters   *ports.Characters
+	ScriptPrompt ports.ScriptPrompt
+	ImagePrompt  ports.ImagePrompt
 }
 
 // ManagerArgs は、ワークフローの初期化と管理に必要な引数の集合を表します。
@@ -110,8 +110,8 @@ func validateArgs(args *ManagerArgs) error {
 	if args.PromptDeps == nil {
 		return fmt.Errorf("PromptDeps is required")
 	}
-	if args.PromptDeps.CharactersMap == nil {
-		return fmt.Errorf("CharactersMap is required")
+	if args.PromptDeps.Characters == nil {
+		return fmt.Errorf("Characters is required")
 	}
 	if args.PromptDeps.ScriptPrompt == nil {
 		return fmt.Errorf("ScriptPrompt is required")
