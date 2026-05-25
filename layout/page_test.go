@@ -47,13 +47,17 @@ func TestPageGenerator_Execute(t *testing.T) {
 	assetMgr := &mockAssetManager{}
 	backend := &mockBackend{isVertex: false}
 
-	cm := ports.CharactersMap{
-		"zundamon": ports.Character{
+	cm, err := ports.NewCharacters([]ports.Character{
+		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
 			Seed:         12345,
 			ReferenceURL: "gs://bucket/zunda.png",
+			VisualCues:   []string{"green hair"},
 		},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 	composer, _ := NewMangaComposer(assetMgr, backend, cm)
 

@@ -9,9 +9,12 @@ import (
 func TestPageResourceCollector(t *testing.T) {
 	// 共通のセットアップ
 	assetMgr := &mockAssetManager{}
-	cm := ports.CharactersMap{
-		"zundamon": {ID: "zundamon", Name: "ずんだもん", ReferenceURL: "gs://bucket/zunda.png"},
-		"metan":    {ID: "metan", Name: "めたん", ReferenceURL: "https://example.com/metan.png"},
+	cm, err := ports.NewCharacters([]ports.Character{
+		{ID: "zundamon", Name: "ずんだもん", ReferenceURL: "gs://bucket/zunda.png", VisualCues: []string{"green hair"}},
+		{ID: "metan", Name: "めたん", ReferenceURL: "https://example.com/metan.png", VisualCues: []string{"purple hair"}},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	t.Run("Standard Asset Collection", func(t *testing.T) {

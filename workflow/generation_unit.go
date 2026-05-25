@@ -18,7 +18,7 @@ func (m *manager) buildGenerationUnit(client gemini.GenerativeModel, modelName s
 		return nil, err
 	}
 
-	composer, err := m.buildComposer(core, m.promptDeps.CharactersMap)
+	composer, err := m.buildComposer(core, m.promptDeps.Characters)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (m *manager) buildCore(aiClient gemini.GenerativeModel) (*generator.GeminiI
 // buildComposer は提供された構成と依存関係を使用して MangaComposerインスタンスを初期化し、返します。
 func (m *manager) buildComposer(
 	core *generator.GeminiImageCore,
-	chars ports.CharactersMap,
+	chars *ports.Characters,
 ) (*layout.MangaComposer, error) {
 	composer, err := layout.NewMangaComposer(
 		core,

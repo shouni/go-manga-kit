@@ -42,18 +42,23 @@ func TestMangaComposer_PrepareCharacterResources(t *testing.T) {
 	assetMgr := &mockAssetManager{}
 	backend := &mockBackend{isVertex: false}
 
-	cm := ports.CharactersMap{
-		"zundamon": ports.Character{
+	cm, err := ports.NewCharacters([]ports.Character{
+		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
 			ReferenceURL: "gs://bucket/zunda.png",
+			VisualCues:   []string{"green hair"},
 		},
-		"metan": ports.Character{
+		{
 			ID:           "metan",
 			Name:         "めたん",
 			ReferenceURL: "gs://bucket/metan.png",
+			VisualCues:   []string{"purple hair"},
 			IsDefault:    true,
 		},
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	mc, _ := NewMangaComposer(assetMgr, backend, cm)
@@ -63,7 +68,7 @@ func TestMangaComposer_PrepareCharacterResources(t *testing.T) {
 		{SpeakerID: "unknown"}, // default (metan) が使用される
 	}
 
-	err := mc.PrepareCharacterResources(ctx, panels)
+	err = mc.PrepareCharacterResources(ctx, panels)
 	if err != nil {
 		t.Fatalf("PrepareCharacterResources failed: %v", err)
 	}
