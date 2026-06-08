@@ -42,14 +42,14 @@ func TestPanelGenerator_Execute(t *testing.T) {
 		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
-			Seed:         10001,
+			Seed:         ptrInt64(10001),
 			ReferenceURL: "gs://bucket/zunda.png",
 			VisualCues:   []string{"green hair"},
 		},
 		{
 			ID:           "metan",
 			Name:         "めたん",
-			Seed:         20002,
+			Seed:         ptrInt64(20002),
 			ReferenceURL: "gs://bucket/metan.png",
 			VisualCues:   []string{"purple hair"},
 			IsDefault:    true, // 指定なしの場合のデフォルト

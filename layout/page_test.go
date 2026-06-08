@@ -28,6 +28,10 @@ func (m *mockPageImageGenerator) GenerateFusedImage(ctx context.Context, req ima
 	return &imagePorts.ImageResponse{Data: []byte("fake-image"), UsedSeed: s}, nil
 }
 
+func ptrInt64(v int64) *int64 {
+	return &v
+}
+
 type mockImagePrompt struct{}
 
 func (m *mockImagePrompt) BuildPanel(panel ports.Panel, char *ports.Character) (string, string) {
@@ -51,7 +55,7 @@ func TestPageGenerator_Execute(t *testing.T) {
 		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
-			Seed:         12345,
+			Seed:         ptrInt64(12345),
 			ReferenceURL: "gs://bucket/zunda.png",
 			VisualCues:   []string{"green hair"},
 		},

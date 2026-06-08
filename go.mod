@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/shouni/gemini-image-kit v1.7.2
+	github.com/shouni/go-character-kit v1.0.0
 	github.com/shouni/go-gemini-client v1.5.0
 	github.com/shouni/go-http-kit v1.4.2
 	github.com/shouni/go-prompt-kit v1.0.4
