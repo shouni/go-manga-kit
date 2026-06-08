@@ -6,6 +6,7 @@ import (
 	"time"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	characterkit "github.com/shouni/go-character-kit/character"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
@@ -28,6 +29,10 @@ func (m *mockPageImageGenerator) GenerateFusedImage(ctx context.Context, req ima
 	return &imagePorts.ImageResponse{Data: []byte("fake-image"), UsedSeed: s}, nil
 }
 
+func ptrInt64(v int64) *int64 {
+	return &v
+}
+
 type mockImagePrompt struct{}
 
 func (m *mockImagePrompt) BuildPanel(panel ports.Panel, char *ports.Character) (string, string) {
@@ -47,11 +52,11 @@ func TestPageGenerator_Execute(t *testing.T) {
 	assetMgr := &mockAssetManager{}
 	backend := &mockBackend{isVertex: false}
 
-	cm, err := ports.NewCharacters([]ports.Character{
+	cm, err := characterkit.NewCharacters([]ports.Character{
 		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
-			Seed:         12345,
+			Seed:         ptrInt64(12345),
 			ReferenceURL: "gs://bucket/zunda.png",
 			VisualCues:   []string{"green hair"},
 		},

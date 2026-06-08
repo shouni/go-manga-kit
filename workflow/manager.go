@@ -34,6 +34,7 @@ type generationUnit struct {
 	imageGenerator imagePorts.ImageGenerator
 	mangaComposer  *layout.MangaComposer
 	model          string
+	cache          *imageCache
 }
 
 // layoutManager は、レイアウトの生成単位を管理します
@@ -52,6 +53,23 @@ type manager struct {
 	aiClientQuality gemini.GenerativeModel
 	layoutManager   layoutManager
 	promptDeps      *PromptDeps
+}
+
+func (u *generationUnit) stop() {
+	if u != nil {
+		u.cache.Stop()
+	}
+}
+
+func (lm *layoutManager) stop() {
+	lm.Standard.stop()
+	lm.Quality.stop()
+}
+
+func (m *manager) stop() {
+	if m != nil {
+		m.layoutManager.stop()
+	}
 }
 
 // New は、設定とキャラクター定義を基に新しい Workflows を初期化します。
@@ -82,15 +100,24 @@ func New(args ManagerArgs) (*ports.Workflows, error) {
 
 	m.layoutManager.Standard, err = m.buildGenerationUnit(m.aiClient, cfg.ImageStandardModel)
 	if err != nil {
+		m.stop()
 		return nil, fmt.Errorf("standard GenerationUnit の構築に失敗: %w", err)
 	}
 
 	m.layoutManager.Quality, err = m.buildGenerationUnit(m.aiClientQuality, cfg.ImageQualityModel)
 	if err != nil {
+		m.stop()
 		return nil, fmt.Errorf("quality GenerationUnit の構築に失敗: %w", err)
 	}
 
-	return m.buildAllRunners()
+	workflows, err := m.buildAllRunners()
+	if err != nil {
+		m.stop()
+		return nil, err
+	}
+
+	workflows.CloseFunc = m.stop
+	return workflows, nil
 }
 
 // validateArgs は引数のバリデーションを行います。

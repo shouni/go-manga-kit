@@ -85,15 +85,19 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 			if char == nil {
 				return fmt.Errorf("character not found for speaker ID '%s'", panel.SpeakerID)
 			}
-			seed := char.Seed
 			userPrompt, systemPrompt := g.pb.BuildPanel(panel, char)
 			fileURI := g.composer.GetCharacterResourceURI(char.ID)
+
+			var seedVal any
+			if char.Seed != nil {
+				seedVal = *char.Seed
+			}
 
 			logger := slog.With(
 				"panel_index", i+1,
 				"character_id", char.ID,
 				"character_name", char.Name,
-				"seed", seed,
+				"seed", seedVal,
 				"use_file_api", fileURI != "",
 			)
 			logger.Info("Starting panel generation")
@@ -107,7 +111,7 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 					NegativePrompt: negativePanelPrompt,
 					AspectRatio:    PanelAspectRatio,
 					ImageSize:      ImageSize1K,
-					Seed:           &seed,
+					Seed:           char.Seed,
 				},
 				Image: imagePorts.ImageURI{
 					FileAPIURI:   fileURI,

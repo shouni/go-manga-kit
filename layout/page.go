@@ -173,13 +173,13 @@ func (g *PageGenerator) determineDefaultSeed(panels []ports.Panel) int64 {
 	cm := g.composer.CharactersMap
 
 	// 最初のパネルの話者 Seed を優先します。
-	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed > 0 {
-		return char.Seed
+	if char := cm.GetCharacter(panels[0].SpeakerID); char != nil && char.Seed != nil && *char.Seed > 0 {
+		return *char.Seed
 	}
 
 	// 次にデフォルトキャラクターの Seed を参照します。
-	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed > 0 {
-		return defaultChar.Seed
+	if defaultChar := cm.GetDefault(); defaultChar != nil && defaultChar.Seed != nil && *defaultChar.Seed > 0 {
+		return *defaultChar.Seed
 	}
 
 	return defaultSeed
