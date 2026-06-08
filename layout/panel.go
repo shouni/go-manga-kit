@@ -88,11 +88,16 @@ func (g *PanelGenerator) Execute(ctx context.Context, panels []ports.Panel) ([]*
 			userPrompt, systemPrompt := g.pb.BuildPanel(panel, char)
 			fileURI := g.composer.GetCharacterResourceURI(char.ID)
 
+			var seedVal any
+			if char.Seed != nil {
+				seedVal = *char.Seed
+			}
+
 			logger := slog.With(
 				"panel_index", i+1,
 				"character_id", char.ID,
 				"character_name", char.Name,
-				"seed", char.Seed,
+				"seed", seedVal,
 				"use_file_api", fileURI != "",
 			)
 			logger.Info("Starting panel generation")

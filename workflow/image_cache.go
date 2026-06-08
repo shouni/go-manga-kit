@@ -15,7 +15,6 @@ func newImageCache(defaultExpiration time.Duration) *imageCache {
 		ttlcache.WithTTL[string, any](defaultExpiration),
 		ttlcache.WithDisableTouchOnHit[string, any](),
 	)
-	go c.Start()
 
 	return &imageCache{cache: c}
 }
