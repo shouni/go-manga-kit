@@ -3,13 +3,14 @@ package layout
 import (
 	"testing"
 
+	characterkit "github.com/shouni/go-character-kit/character"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
 func TestPageResourceCollector(t *testing.T) {
 	// 共通のセットアップ
 	assetMgr := &mockAssetManager{}
-	cm, err := ports.NewCharacters([]ports.Character{
+	cm, err := characterkit.NewCharacters([]ports.Character{
 		{ID: "zundamon", Name: "ずんだもん", ReferenceURL: "gs://bucket/zunda.png", VisualCues: []string{"green hair"}},
 		{ID: "metan", Name: "めたん", ReferenceURL: "https://example.com/metan.png", VisualCues: []string{"purple hair"}},
 	})

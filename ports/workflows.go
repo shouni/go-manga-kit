@@ -13,6 +13,13 @@ type Workflows struct {
 	PanelImage PanelImageRunner
 	PageImage  PageImageRunner
 	Publish    PublishRunner
+	CloseFunc  func()
+}
+
+func (w *Workflows) Close() {
+	if w != nil && w.CloseFunc != nil {
+		w.CloseFunc()
+	}
 }
 
 // DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。

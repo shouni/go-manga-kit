@@ -6,6 +6,7 @@ import (
 	"time"
 
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
+	characterkit "github.com/shouni/go-character-kit/character"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
@@ -38,7 +39,7 @@ func TestPanelGenerator_Execute(t *testing.T) {
 	backend := &mockBackend{isVertex: false}
 
 	// 異なる Seed 値を持つキャラクターを用意
-	cm, err := ports.NewCharacters([]ports.Character{
+	cm, err := characterkit.NewCharacters([]ports.Character{
 		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",

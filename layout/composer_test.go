@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	characterkit "github.com/shouni/go-character-kit/character"
 	"github.com/shouni/go-manga-kit/ports"
 )
 
@@ -42,7 +43,7 @@ func TestMangaComposer_PrepareCharacterResources(t *testing.T) {
 	assetMgr := &mockAssetManager{}
 	backend := &mockBackend{isVertex: false}
 
-	cm, err := ports.NewCharacters([]ports.Character{
+	cm, err := characterkit.NewCharacters([]ports.Character{
 		{
 			ID:           "zundamon",
 			Name:         "ずんだもん",
