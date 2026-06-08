@@ -55,14 +55,13 @@ func (c *imageCache) Stop() {
 		return
 	}
 
-	c.stopOnce.Do(func() {
-		c.mu.Lock()
-		started := c.started
-		c.mu.Unlock()
-		if !started {
-			return
-		}
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-		c.cache.Stop()
-	})
+	if !c.started {
+		return
+	}
+
+	c.started = false
+	c.cache.Stop()
 }
