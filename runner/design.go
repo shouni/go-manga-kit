@@ -1,3 +1,5 @@
+// Package runner は、AIによる漫画スクリプト・デザイン・パネル/ページ画像生成の
+// 各実行ロジックを提供します。
 package runner
 
 import (
@@ -34,6 +36,7 @@ var fileNameSanitizer = strings.NewReplacer(
 	"|", "_",
 )
 
+// DesignImageGenerator は、キャラクターデザインシート画像を生成するインターフェースです。
 type DesignImageGenerator interface {
 	GenerateFusedImage(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error)
 }

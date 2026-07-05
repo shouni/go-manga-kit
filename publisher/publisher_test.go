@@ -19,7 +19,7 @@ type mockWriter struct {
 }
 
 // remoteio.Writer インターフェースのシグネチャに合わせるため、可変長引数を追加します。
-func (m *mockWriter) Write(ctx context.Context, path string, content io.Reader, _ ...remoteio.WriteOption) error {
+func (m *mockWriter) Write(_ context.Context, path string, content io.Reader, _ ...remoteio.WriteOption) error {
 	data, err := io.ReadAll(content)
 	if err != nil {
 		return err

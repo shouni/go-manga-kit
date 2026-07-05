@@ -24,6 +24,7 @@ const (
 // jsonBlockRegex は、Markdown 形式の JSON ブロックを抽出するための正規表現です。
 var jsonBlockRegex = regexp.MustCompile("(?s)```(?:json)?\\s*(.*\\S)\\s*```")
 
+// MangaScriptRunner は、AIによる漫画プロット/スクリプト生成を実行します。
 type MangaScriptRunner struct {
 	promptBuilder ports.ScriptPrompt
 	aiClient      gemini.ContentGenerator
@@ -67,7 +68,7 @@ func (r *MangaScriptRunner) Run(ctx context.Context, sourceURL string, mode stri
 	slog.Info("ScriptRunner: Gemini APIを呼び出し中", "model", r.aiModel)
 	resp, err := r.aiClient.GenerateContent(ctx, r.aiModel, finalPrompt)
 	if err != nil {
-		return nil, fmt.Errorf("Geminiによるコンテンツ生成に失敗しました: %w", err)
+		return nil, fmt.Errorf("geminiによるコンテンツ生成に失敗しました: %w", err)
 	}
 
 	// 4. AI の応答をパース

@@ -1,3 +1,5 @@
+// Package workflow は、漫画生成の各フェーズ（設計・スクリプト・パネル/ページ画像・公開）を
+// 統括するワークフローを提供します。
 package workflow
 
 import (

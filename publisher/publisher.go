@@ -1,3 +1,4 @@
+// Package publisher は、生成された漫画のMarkdown/HTML変換とストレージへの公開を提供します。
 package publisher
 
 import (
@@ -54,7 +55,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *ports.MangaResponse
 
 	markdownPath, err := asset.ResolveOutputPath(opts.OutputDir, asset.DefaultMangaPlotName)
 	if err != nil {
-		return nil, fmt.Errorf("Markdown 出力パスの解決に失敗: %w", err)
+		return nil, fmt.Errorf("markdown 出力パスの解決に失敗: %w", err)
 	}
 
 	// 保存用に相対パスリストを作成し、opts にセットする
@@ -80,7 +81,7 @@ func (p *MangaPublisher) Publish(ctx context.Context, manga *ports.MangaResponse
 		remoteio.WithContentType(mdContentType),
 		remoteio.WithCacheControl(defaultCacheControl),
 	); err != nil {
-		return nil, fmt.Errorf("Markdown 書き込み失敗: %w", err)
+		return nil, fmt.Errorf("markdown 書き込み失敗: %w", err)
 	}
 
 	// HTML の生成
@@ -111,7 +112,7 @@ func (p *MangaPublisher) BuildMarkdown(manga *ports.MangaResponse, opts ports.Pu
 	var sb strings.Builder
 
 	// タイトルと説明文
-	sb.WriteString(fmt.Sprintf("# %s\n\n", escapeMarkdown(manga.Title)))
+	fmt.Fprintf(&sb, "# %s\n\n", escapeMarkdown(manga.Title))
 	if manga.Description != "" {
 		sb.WriteString(escapeMarkdown(manga.Description) + "\n\n")
 	}
@@ -136,22 +137,22 @@ func (p *MangaPublisher) BuildMarkdown(manga *ports.MangaResponse, opts ports.Pu
 
 		// 1. 画像
 		if currentImagePath != "" {
-			sb.WriteString(fmt.Sprintf("![Panel %d](%s)\n\n", i+1, currentImagePath))
+			fmt.Fprintf(&sb, "![Panel %d](%s)\n\n", i+1, currentImagePath)
 		}
 
 		// 2. セリフ
 		if panel.Dialogue != "" {
 			dialogue := escapeMarkdown(panel.Dialogue)
 			if panel.SpeakerID != "" {
-				sb.WriteString(fmt.Sprintf("**%s**: %s\n\n", escapeMarkdown(panel.SpeakerID), dialogue))
+				fmt.Fprintf(&sb, "**%s**: %s\n\n", escapeMarkdown(panel.SpeakerID), dialogue)
 			} else {
-				sb.WriteString(fmt.Sprintf("%s\n\n", dialogue))
+				fmt.Fprintf(&sb, "%s\n\n", dialogue)
 			}
 		}
 
 		// 3. VisualAnchor
 		if panel.VisualAnchor != "" {
-			sb.WriteString(fmt.Sprintf("> **Visual Anchor:** %s\n\n", escapeMarkdown(panel.VisualAnchor)))
+			fmt.Fprintf(&sb, "> **Visual Anchor:** %s\n\n", escapeMarkdown(panel.VisualAnchor))
 		}
 	}
 

@@ -16,6 +16,7 @@ type Workflows struct {
 	CloseFunc  func()
 }
 
+// Close は、保持しているリソースの解放関数（CloseFunc）を呼び出します。
 func (w *Workflows) Close() {
 	if w != nil && w.CloseFunc != nil {
 		w.CloseFunc()

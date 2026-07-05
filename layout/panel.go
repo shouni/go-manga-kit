@@ -28,6 +28,7 @@ type PanelGenerator struct {
 	rateBurst      int
 }
 
+// PanelImageGenerator は、単一パネルの画像を生成するインターフェースです。
 type PanelImageGenerator interface {
 	GenerateSingleImage(ctx context.Context, req imagePorts.SingleImageRequest) (*imagePorts.ImageResponse, error)
 }
