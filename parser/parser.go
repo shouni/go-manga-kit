@@ -1,3 +1,4 @@
+// Package parser は、漫画プロットJSON/テキストの読み込みとパースを提供します。
 package parser
 
 import (

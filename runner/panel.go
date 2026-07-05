@@ -96,7 +96,7 @@ func (r *MangaPanelRunner) RunAndSave(ctx context.Context, manga *ports.MangaRes
 		manga.Panels[i].ReferenceURL = panelPath
 	}
 
-	plotPath, err := asset.ResolveOutputPath(targetDir, asset.DefaultMangaPlotJson)
+	plotPath, err := asset.ResolveOutputPath(targetDir, asset.DefaultMangaPlotJSON)
 	if err != nil {
 		return nil, fmt.Errorf("プロットファイル出力パスの解決に失敗しました: %w", err)
 	}

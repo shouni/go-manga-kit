@@ -2,6 +2,7 @@ package layout
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,12 +14,15 @@ import (
 // --- Mocks ---
 
 type mockPageImageGenerator struct {
+	mu            sync.Mutex
 	generateCount int
 	generateFunc  func(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error)
 }
 
 func (m *mockPageImageGenerator) GenerateFusedImage(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error) {
+	m.mu.Lock()
 	m.generateCount++
+	m.mu.Unlock()
 	if m.generateFunc != nil {
 		return m.generateFunc(ctx, req)
 	}
@@ -35,11 +39,11 @@ func ptrInt64(v int64) *int64 {
 
 type mockImagePrompt struct{}
 
-func (m *mockImagePrompt) BuildPanel(panel ports.Panel, char *ports.Character) (string, string) {
+func (m *mockImagePrompt) BuildPanel(_ ports.Panel, _ *ports.Character) (string, string) {
 	return "user-prompt", "system-prompt"
 }
 
-func (m *mockImagePrompt) BuildPage(panels []ports.Panel, rm *ports.ResourceMap) (string, string) {
+func (m *mockImagePrompt) BuildPage(_ []ports.Panel, _ *ports.ResourceMap) (string, string) {
 	return "page-user-prompt", "page-system-prompt"
 }
 
@@ -128,7 +132,7 @@ func TestPageGenerator_Execute(t *testing.T) {
 		}
 
 		var capturedSeed int64
-		genMock.generateFunc = func(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error) {
+		genMock.generateFunc = func(_ context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error) {
 			if req.Seed != nil {
 				capturedSeed = *req.Seed
 			}

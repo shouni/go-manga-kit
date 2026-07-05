@@ -42,7 +42,7 @@ func TestMangaResponseParser_ParseFromPath(t *testing.T) {
 		}`
 
 		mReader := &mockReader{
-			openFunc: func(ctx context.Context, path string) (io.ReadCloser, error) {
+			openFunc: func(_ context.Context, _ string) (io.ReadCloser, error) {
 				return &stringReadCloser{strings.NewReader(validJSON)}, nil
 			},
 		}
@@ -70,7 +70,7 @@ func TestMangaResponseParser_ParseFromPath(t *testing.T) {
 		invalidJSON := `{ "title": "incomplete json...`
 
 		mReader := &mockReader{
-			openFunc: func(ctx context.Context, path string) (io.ReadCloser, error) {
+			openFunc: func(_ context.Context, _ string) (io.ReadCloser, error) {
 				return &stringReadCloser{strings.NewReader(invalidJSON)}, nil
 			},
 		}
@@ -88,7 +88,7 @@ func TestMangaResponseParser_ParseFromPath(t *testing.T) {
 
 	t.Run("Failure when File Open Fails", func(t *testing.T) {
 		mReader := &mockReader{
-			openFunc: func(ctx context.Context, path string) (io.ReadCloser, error) {
+			openFunc: func(_ context.Context, _ string) (io.ReadCloser, error) {
 				return nil, io.ErrUnexpectedEOF // オープン失敗をシミュレート
 			},
 		}

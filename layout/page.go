@@ -16,6 +16,7 @@ import (
 // negativePagePrompt は生成から除外したい要素を定義します。
 const negativePagePrompt = "monochrome, black and white, greyscale, screentone, hatching, dot shades, ink sketch, line art only, realistic photos, 3d render, watermark, signature, deformed faces, bad anatomy, disfigured, poorly drawn hands, extra panels, unexpected panels, more than specified panels, split panels"
 
+// PageGenerator は、複数パネルを1ページの画像へ合成生成する処理を統括します。
 type PageGenerator struct {
 	composer         *MangaComposer
 	generator        PageImageGenerator
@@ -28,6 +29,7 @@ type PageGenerator struct {
 	maxPanelsPerPage int
 }
 
+// PageImageGenerator は、複数パネルを1枚の画像へ合成生成するインターフェースです。
 type PageImageGenerator interface {
 	GenerateFusedImage(ctx context.Context, req imagePorts.ImageFusionRequest) (*imagePorts.ImageResponse, error)
 }

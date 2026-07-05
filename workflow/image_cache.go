@@ -8,10 +8,9 @@ import (
 )
 
 type imageCache struct {
-	cache    *ttlcache.Cache[string, any]
-	started  bool
-	mu       sync.Mutex
-	stopOnce sync.Once
+	cache   *ttlcache.Cache[string, any]
+	started bool
+	mu      sync.Mutex
 }
 
 func newImageCache(defaultExpiration time.Duration) *imageCache {

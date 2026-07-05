@@ -1,3 +1,5 @@
+// Package asset は、生成された漫画アセット（画像・プロット）のファイル名規約と
+// 出力パス解決を提供します。
 package asset
 
 import (
@@ -15,8 +17,8 @@ const (
 	CharacterDesignDir = "character"
 	// DefaultImageDir は生成された画像を格納するデフォルトのディレクトリ名です。
 	DefaultImageDir = "images"
-	// DefaultMangaPlotJson は生成された漫画プロットのデフォルト JSON ファイル名です。
-	DefaultMangaPlotJson = "manga_plot.json"
+	// DefaultMangaPlotJSON は生成された漫画プロットのデフォルト JSON ファイル名です。
+	DefaultMangaPlotJSON = "manga_plot.json"
 	// DefaultMangaPlotName は生成された漫画プロットのデフォルト Markdown ファイル名です。
 	DefaultMangaPlotName = "manga_plot.md"
 	// DefaultPanelFileName はパネル画像の共通のベースファイル名です。
@@ -32,10 +34,12 @@ var (
 	PageFileRegex = createIndexedRegex(DefaultPageFileName)
 )
 
+// DefaultPanelImagePath は、パネル画像を格納するデフォルトの相対パスを返します。
 func DefaultPanelImagePath() string {
 	return path.Join(DefaultImageDir, DefaultPanelFileName)
 }
 
+// DefaultPageImagePath は、ページ画像を格納するデフォルトの相対パスを返します。
 func DefaultPageImagePath() string {
 	return path.Join(DefaultImageDir, DefaultPageFileName)
 }

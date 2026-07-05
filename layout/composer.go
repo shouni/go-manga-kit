@@ -1,3 +1,4 @@
+// Package layout は、パネル・ページ単位での漫画画像の合成・レイアウト生成を提供します。
 package layout
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/shouni/go-manga-kit/ports"
 )
 
+// MangaComposer は、キャラクター・背景等のアセットを合成して漫画画像を生成する責務を担います。
 type MangaComposer struct {
 	AssetManager    imagePorts.AssetManager
 	BackendProvider imagePorts.Backend
