@@ -24,9 +24,20 @@ func (w *Workflows) Close() {
 }
 
 // DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。
-// aspectRatio・layoutKind は runner.MangaDesignRunner.Run のドキュメントを参照してください。
+// aspectRatio・layoutKind・override は runner.MangaDesignRunner.Run のドキュメントを参照して
+// ください。
 type DesignRunner interface {
-	Run(ctx context.Context, charIDs []string, seed int64, outputDir, aspectRatio, layoutKind string) (string, int64, error)
+	Run(ctx context.Context, charIDs []string, seed int64, outputDir, aspectRatio, layoutKind string, override DesignOverride) (string, int64, error)
+}
+
+// DesignOverride は、Run の1回の呼び出しに限定して、キャラクターの参照画像・visual_cuesを
+// 差し替えるためのその場限りの上書き指定です。go-character-kit 側のキャラクター定義
+// （characters.json）そのものは変更しません。ReferenceURL/VisualCues が空の場合はそのフィール
+// ドのみキャラクター定義の値を使います。charIDs が複数（合成デザインシート）の場合、上書きは
+// どのキャラクターに適用すべきか一意に決まらないため無視されます。
+type DesignOverride struct {
+	ReferenceURL string
+	VisualCues   []string
 }
 
 // ScriptRunner は、ソース（URLやテキスト）を解析し、構造化された漫画台本を生成する責務を持ちます。
