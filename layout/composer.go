@@ -24,7 +24,7 @@ type MangaComposer struct {
 }
 
 type resourceMap struct {
-	character map[string]string // CharacterID -> FileAPIURI
+	character map[string]string // ReferenceURL -> FileAPIURI
 	panel     map[string]string // ReferenceURL -> FileAPIURI
 }
 
@@ -52,11 +52,31 @@ func NewMangaComposer(
 	}, nil
 }
 
-// GetCharacterResourceURI はキャラクターの画像URIを取得します。
+// GetCharacterResourceURI はキャラクターの既定参照画像（ReferenceURL）の画像URIを取得します。
+// アスペクト比別の参照画像（ReferenceURLs）を取得するには GetCharacterResourceURIFor を使って
+// ください。
 func (mc *MangaComposer) GetCharacterResourceURI(charID string) string {
+	char := mc.CharactersMap.GetCharacterWithDefault(charID)
+	if char == nil {
+		return ""
+	}
+	return mc.getReferenceResourceURI(char.ReferenceURL)
+}
+
+// GetCharacterResourceURIFor は、指定したキャラクターの aspectRatio に一致する参照画像
+// （ReferenceURLs）があればその画像URIを、無ければ既定の ReferenceURL の画像URIを取得します。
+func (mc *MangaComposer) GetCharacterResourceURIFor(charID, aspectRatio string) string {
+	char := mc.CharactersMap.GetCharacterWithDefault(charID)
+	if char == nil {
+		return ""
+	}
+	return mc.getReferenceResourceURI(char.ReferenceURLFor(aspectRatio))
+}
+
+func (mc *MangaComposer) getReferenceResourceURI(referenceURL string) string {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
-	return mc.resourceMap.character[charID]
+	return mc.resourceMap.character[referenceURL]
 }
 
 // GetPanelResourceURI はパネルの画像URIを取得します。
@@ -66,22 +86,31 @@ func (mc *MangaComposer) GetPanelResourceURI(referenceURL string) string {
 	return mc.resourceMap.panel[referenceURL]
 }
 
-// PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロードします。
+// PrepareCharacterResources はパネルに使用される全キャラクターの画像を File API に事前アップロード
+// します。各キャラクターの ReferenceURL（既定のフォールバック）と ReferenceURLs（アスペクト比別）の
+// 両方に含まれる参照画像URLをすべて対象にします。
 func (mc *MangaComposer) PrepareCharacterResources(ctx context.Context, panels []ports.Panel) error {
 	targets := make(map[string]string)
+	addCharacterURLs := func(char *ports.Character) {
+		if char == nil {
+			return
+		}
+		if char.ReferenceURL != "" {
+			targets[char.ReferenceURL] = char.ReferenceURL
+		}
+		for _, url := range char.ReferenceURLs {
+			if url != "" {
+				targets[url] = url
+			}
+		}
+	}
 
 	// デフォルトキャラクターをアップロード対象に追加
-	if def := mc.CharactersMap.GetDefault(); def != nil && def.ReferenceURL != "" {
-		targets[def.ID] = def.ReferenceURL
-	}
+	addCharacterURLs(mc.CharactersMap.GetDefault())
 
 	// パネルで使用されているキャラクターをアップロード対象に追加
 	for _, id := range ports.Panels(panels).UniqueSpeakerIDs() {
-		char := mc.CharactersMap.GetCharacterWithDefault(id)
-		if char == nil || char.ReferenceURL == "" {
-			continue
-		}
-		targets[char.ID] = char.ReferenceURL
+		addCharacterURLs(mc.CharactersMap.GetCharacterWithDefault(id))
 	}
 
 	return mc.prepareResources(ctx, targets, mc.getOrUploadAsset, "character")
