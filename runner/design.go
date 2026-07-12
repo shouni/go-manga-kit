@@ -13,6 +13,7 @@ import (
 	imagePorts "github.com/shouni/gemini-image-kit/ports"
 	"github.com/shouni/go-manga-kit/asset"
 	"github.com/shouni/go-manga-kit/layout"
+	"github.com/shouni/go-manga-kit/ports"
 	"github.com/shouni/go-remote-io/remoteio"
 )
 
@@ -35,6 +36,10 @@ const (
 // DesignLayoutSingleView は Run の layoutKind 引数に渡す、単一ポーズレイアウトの指定値です。
 // 空文字列（既定値）を渡すと従来通り3面図（ターンアラウンド）になります。
 const DesignLayoutSingleView = "single"
+
+// DesignOverride は ports.DesignOverride のエイリアスです。詳細はそちらのドキュメントを参照
+// してください。
+type DesignOverride = ports.DesignOverride
 
 // fileNameSanitizer はファイル名として使用できない文字を置換します。
 var fileNameSanitizer = strings.NewReplacer(
@@ -80,9 +85,9 @@ func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageG
 // layout.DesignAspectRatio（16:9）にフォールバックします。layoutKind は DesignLayoutSingleView
 // を渡すと単一ポーズ（他の生成物のアスペクト比別参照アンカー向け）、空文字なら従来通りの
 // 3面図ターンアラウンドになります。
-func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir, aspectRatio, layoutKind string) (string, int64, error) {
+func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir, aspectRatio, layoutKind string, override DesignOverride) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
-	imageURIs, descriptions, err := dr.collectCharacterURIs(charIDs)
+	imageURIs, descriptions, err := dr.collectCharacterURIs(charIDs, override)
 	if err != nil {
 		return "", 0, fmt.Errorf("キャラクター資産の収集に失敗しました: %w", err)
 	}
@@ -188,11 +193,13 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string, layoutKind
 }
 
 // collectCharacterURIs はキャラクター情報を収集し、ImageURIスライスと説明文を返します。
-func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imagePorts.ImageURI, []string, error) {
+// override は ids が単一（合成デザインシートでない）場合のみ適用されます。
+func (dr *MangaDesignRunner) collectCharacterURIs(ids []string, override DesignOverride) ([]imagePorts.ImageURI, []string, error) {
 	var uris []imagePorts.ImageURI
 	var descriptions []string
 	var missingIDs []string
 	processedIDs := make(map[string]struct{})
+	applyOverride := len(ids) == 1
 
 	for _, id := range ids {
 		if _, exists := processedIDs[id]; exists {
@@ -206,22 +213,34 @@ func (dr *MangaDesignRunner) collectCharacterURIs(ids []string) ([]imagePorts.Im
 			continue
 		}
 
-		// File API URI があれば取得
+		referenceURL := char.ReferenceURL
+		visualCues := char.VisualCues
+		// File API URI があれば取得（既定の参照画像に対して事前アップロード済みのもの）
 		fileURI := dr.composer.GetCharacterResourceURI(char.ID)
 
-		if char.ReferenceURL == "" && fileURI == "" {
+		if applyOverride && strings.TrimSpace(override.ReferenceURL) != "" {
+			referenceURL = override.ReferenceURL
+			// 上書きURLは事前アップロード対象に含まれていないため、File API URIは使わず
+			// ReferenceURLをそのまま渡す（Vertex AI + GCS URIの直接参照にフォールバックする）。
+			fileURI = ""
+		}
+		if applyOverride && len(override.VisualCues) > 0 {
+			visualCues = override.VisualCues
+		}
+
+		if referenceURL == "" && fileURI == "" {
 			slog.Warn("キャラクターに有効な参照画像がないためスキップします", "id", id)
 			continue
 		}
 
 		uris = append(uris, imagePorts.ImageURI{
-			ReferenceURL: char.ReferenceURL,
+			ReferenceURL: referenceURL,
 			FileAPIURI:   fileURI,
 		})
 
 		desc := char.Name
-		if len(char.VisualCues) > 0 {
-			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(char.VisualCues, ", "))
+		if len(visualCues) > 0 {
+			desc = fmt.Sprintf("%s (%s)", char.Name, strings.Join(visualCues, ", "))
 		}
 		descriptions = append(descriptions, desc)
 	}
