@@ -23,9 +23,10 @@ func TestPageResourceCollector(t *testing.T) {
 		composer, _ := NewMangaComposer(assetMgr, backend, cm)
 
 		// 偽のキャッシュをセット（本来は PrepareCharacterResources / PreparePanelResources で入るもの）
+		// resourceMap.character は ReferenceURL 自体をキーにする（CharacterID ではない）。
 		// 内部フィールドへのアクセスは Mutex で保護する
 		composer.mu.Lock()
-		composer.resourceMap.character["zundamon"] = "https://file-api/zunda"
+		composer.resourceMap.character["gs://bucket/zunda.png"] = "https://file-api/zunda"
 		composer.resourceMap.panel["gs://bucket/panel1.png"] = "https://file-api/p1"
 		composer.mu.Unlock()
 

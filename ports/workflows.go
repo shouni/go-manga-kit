@@ -24,8 +24,9 @@ func (w *Workflows) Close() {
 }
 
 // DesignRunner は、キャラクターIDに基づいてデザインシートを生成し、Seed値を特定する責務を持ちます。
+// aspectRatio・layoutKind は runner.MangaDesignRunner.Run のドキュメントを参照してください。
 type DesignRunner interface {
-	Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error)
+	Run(ctx context.Context, charIDs []string, seed int64, outputDir, aspectRatio, layoutKind string) (string, int64, error)
 }
 
 // ScriptRunner は、ソース（URLやテキスト）を解析し、構造化された漫画台本を生成する責務を持ちます。

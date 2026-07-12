@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	// DesignAspectRatio はキャラクターデザインシートの推奨アスペクト比です。
+	// DesignAspectRatio はキャラクターデザインシートの既定のアスペクト比です。
+	// aspectRatio を指定せずに MangaDesignRunner.Run を呼んだ場合に使われます。
 	DesignAspectRatio = "16:9"
 	// PanelAspectRatio は単体パネル（1コマ）の推奨アスペクト比です。
 	PanelAspectRatio = "16:9"
@@ -33,4 +34,30 @@ const (
 func IsGCSURI(uri string) bool {
 	const prefixGCS = "gs://"
 	return strings.HasPrefix(uri, prefixGCS)
+}
+
+// designAspectRatios は MangaDesignRunner.Run が受け付けるデザインシートのアスペクト比です。
+// キャラクターの参照画像（go-character-kit の ReferenceURLs）を、実際にその画像を使う先
+// （go-veo-orchestrator のキーフレーム、ap-comp のカバーアート等）と同じアスペクト比で
+// 用意できるようにするための選択肢で、ap-comp の coverArtAspectRatios と揃えています。
+var designAspectRatios = []string{"1:1", "9:16", "16:9"}
+
+// IsDesignAspectRatio は、value がデザインシート生成でサポート対象のアスペクト比かどうかを
+// 判定します。
+func IsDesignAspectRatio(value string) bool {
+	for _, ratio := range designAspectRatios {
+		if value == ratio {
+			return true
+		}
+	}
+	return false
+}
+
+// NormalizeDesignAspectRatio は、value がサポート対象でなければ DesignAspectRatio
+// （既定値）にフォールバックします。
+func NormalizeDesignAspectRatio(value string) string {
+	if IsDesignAspectRatio(value) {
+		return value
+	}
+	return DesignAspectRatio
 }

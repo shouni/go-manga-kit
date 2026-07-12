@@ -85,3 +85,46 @@ func TestMangaComposer_PrepareCharacterResources(t *testing.T) {
 		t.Errorf("Expected 2 uploads, got %d", assetMgr.uploadCount)
 	}
 }
+
+// TestMangaComposer_PrepareCharacterResourcesUploadsAllAspectRatioVariants verifies that
+// PrepareCharacterResources uploads both ReferenceURL and every ReferenceURLs entry, and that
+// GetCharacterResourceURIFor resolves the aspect-ratio-specific variant when present.
+func TestMangaComposer_PrepareCharacterResourcesUploadsAllAspectRatioVariants(t *testing.T) {
+	ctx := context.Background()
+	assetMgr := &mockAssetManager{}
+	backend := &mockBackend{isVertex: false}
+
+	cm, err := characterkit.NewCharacters([]ports.Character{
+		{
+			ID:           "zundamon",
+			Name:         "ずんだもん",
+			ReferenceURL: "gs://bucket/zunda-16x9.png",
+			ReferenceURLs: map[string]string{
+				"1:1": "gs://bucket/zunda-1x1.png",
+			},
+			VisualCues: []string{"green hair"},
+			IsDefault:  true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mc, _ := NewMangaComposer(assetMgr, backend, cm)
+
+	err = mc.PrepareCharacterResources(ctx, []ports.Panel{{SpeakerID: "zundamon"}})
+	if err != nil {
+		t.Fatalf("PrepareCharacterResources failed: %v", err)
+	}
+
+	if uri := mc.GetCharacterResourceURIFor("zundamon", "1:1"); uri == "" {
+		t.Error("1:1 variant resource not cached")
+	}
+	if uri := mc.GetCharacterResourceURIFor("zundamon", "9:16"); uri == "" {
+		t.Error("GetCharacterResourceURIFor should fall back to ReferenceURL when no 9:16 entry exists")
+	}
+
+	if assetMgr.uploadCount != 2 {
+		t.Errorf("Expected 2 uploads (default + 1:1 variant), got %d", assetMgr.uploadCount)
+	}
+}

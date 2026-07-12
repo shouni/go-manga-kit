@@ -19,9 +19,22 @@ import (
 const (
 	// プロンプト構成用の定数
 	designPromptBaseTemplate = "Masterpiece character design sheet of %s"
-	designLayoutDefault      = "multiple views (front, side, back), standing full body"
-	designLayoutPromptFormat = "Layout: %s, side-by-side, separate character charts"
+
+	// designLayoutMultiView は既定のターンアラウンド（前・横・後の3面図）レイアウトです。
+	designLayoutMultiView = "multiple views (front, side, back), standing full body, side-by-side, separate character charts"
+	// designLayoutSingleView は、他の生成物（go-veo-orchestratorのキーフレーム、ap-compの
+	// カバーアート等）の参照アンカーとして使うための、単一ポーズ・正面向きのレイアウトです。
+	// 3面図シートは複数ポーズが1枚の画像に混在するため、それと異なるアスペクト比の生成先の
+	// 参照に使うと色・小物配置・髪型などの細部がブレやすい問題があり、DesignLayoutSingleView
+	// はそのアンカー用途に特化した単一ポーズを生成するためのオプションです。
+	designLayoutSingleView = "single view, front-facing, standing full body, centered composition, plain simple studio background"
+
+	designLayoutPromptFormat = "Layout: %s"
 )
+
+// DesignLayoutSingleView は Run の layoutKind 引数に渡す、単一ポーズレイアウトの指定値です。
+// 空文字列（既定値）を渡すと従来通り3面図（ターンアラウンド）になります。
+const DesignLayoutSingleView = "single"
 
 // fileNameSanitizer はファイル名として使用できない文字を置換します。
 var fileNameSanitizer = strings.NewReplacer(
@@ -62,7 +75,12 @@ func NewMangaDesignRunner(composer *layout.MangaComposer, generator DesignImageG
 }
 
 // Run は、指定されたキャラクターIDのデザインシートを生成し、指定されたディレクトリに保存します。
-func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir string) (string, int64, error) {
+//
+// aspectRatio は "1:1"/"9:16"/"16:9" のいずれかで、未サポート値や空文字の場合は
+// layout.DesignAspectRatio（16:9）にフォールバックします。layoutKind は DesignLayoutSingleView
+// を渡すと単一ポーズ（他の生成物のアスペクト比別参照アンカー向け）、空文字なら従来通りの
+// 3面図ターンアラウンドになります。
+func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int64, outputDir, aspectRatio, layoutKind string) (string, int64, error) {
 	// 1. 複数キャラの情報を集約
 	imageURIs, descriptions, err := dr.collectCharacterURIs(charIDs)
 	if err != nil {
@@ -72,10 +90,12 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	slog.Info("Executing design work generation",
 		slog.Any("chars", charIDs),
 		slog.Int("ref_count", len(imageURIs)),
+		slog.String("aspect_ratio", aspectRatio),
+		slog.String("layout_kind", layoutKind),
 	)
 
 	// 2. プロンプト構築
-	designPrompt := dr.buildDesignPrompt(descriptions)
+	designPrompt := dr.buildDesignPrompt(descriptions, layoutKind)
 	if designPrompt == "" {
 		return "", 0, fmt.Errorf("キャラクター情報が空のため、プロンプトを生成できませんでした")
 	}
@@ -85,7 +105,7 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 		GenerationOptions: imagePorts.GenerationOptions{
 			Model:       dr.model,
 			Prompt:      designPrompt,
-			AspectRatio: layout.DesignAspectRatio,
+			AspectRatio: layout.NormalizeDesignAspectRatio(aspectRatio),
 			ImageSize:   layout.ImageSize2K,
 			Seed:        ptrInt64(seed),
 		},
@@ -132,7 +152,8 @@ func (dr *MangaDesignRunner) saveResponseImage(ctx context.Context, resp imagePo
 }
 
 // buildDesignPrompt はキャラクターデザインシート生成用の詳細なプロンプト文字列を構築します。
-func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
+// layoutKind に DesignLayoutSingleView を渡すと単一ポーズレイアウトになります。
+func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string, layoutKind string) string {
 	numChars := len(descriptions)
 	if numChars == 0 {
 		slog.Warn("buildDesignPrompt called with empty descriptions")
@@ -151,7 +172,11 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string) string {
 	}
 
 	base := fmt.Sprintf(designPromptBaseTemplate, subjects)
-	layoutPrompt := fmt.Sprintf(designLayoutPromptFormat, designLayoutDefault)
+	designLayout := designLayoutMultiView
+	if layoutKind == DesignLayoutSingleView {
+		designLayout = designLayoutSingleView
+	}
+	layoutPrompt := fmt.Sprintf(designLayoutPromptFormat, designLayout)
 
 	promptParts := []string{base, layoutPrompt}
 	if dr.styleSuffix != "" {
