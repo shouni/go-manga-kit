@@ -111,6 +111,28 @@ func TestMangaDesignRunner_RunWithoutOverrideUsesCharacterDefinition(t *testing.
 	}
 }
 
+func TestMangaDesignRunner_RunSetsSystemAndNegativePrompts(t *testing.T) {
+	dr, genMock := newTestDesignRunner(t)
+
+	_, _, err := dr.Run(context.Background(), []string{"tsumugi"}, 42, "gs://bucket/out", "", "", DesignOverride{})
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	if genMock.lastReq.SystemPrompt != designSystemPrompt {
+		t.Errorf("SystemPrompt = %q, want designSystemPrompt", genMock.lastReq.SystemPrompt)
+	}
+	if !strings.Contains(genMock.lastReq.NegativePrompt, "extra fingers") {
+		t.Errorf("NegativePrompt = %q, want finger-anatomy negatives", genMock.lastReq.NegativePrompt)
+	}
+	if !strings.Contains(genMock.lastReq.Prompt, "flat even neutral lighting") {
+		t.Errorf("Prompt = %q, want flat lighting constraint appended after styleSuffix", genMock.lastReq.Prompt)
+	}
+	if !strings.Contains(genMock.lastReq.Prompt, "five fingers per hand") {
+		t.Errorf("Prompt = %q, want positive hand-anatomy constraint", genMock.lastReq.Prompt)
+	}
+}
+
 func TestMangaDesignRunner_RunAppliesOverrideForSingleCharacter(t *testing.T) {
 	dr, genMock := newTestDesignRunner(t)
 
