@@ -22,15 +22,32 @@ const (
 	designPromptBaseTemplate = "Masterpiece character design sheet of %s"
 
 	// designLayoutMultiView は既定のターンアラウンド（前・横・後の3面図）レイアウトです。
-	designLayoutMultiView = "multiple views (front, side, back), standing full body, side-by-side, separate character charts"
+	// 全ビューが同一キャラクターであることと、衣装が隠れないニュートラルな
+	// Aポーズを明示し、面ごとの細部ブレを抑えます。
+	designLayoutMultiView = "multiple views (front, side, back) of the same character, standing full body in a neutral A-pose with arms held slightly away from the body so the costume stays fully visible, views arranged side-by-side and evenly spaced, separate character charts"
 	// designLayoutSingleView は、他の生成物（go-veo-orchestratorのキーフレーム、ap-compの
 	// カバーアート等）の参照アンカーとして使うための、単一ポーズ・正面向きのレイアウトです。
 	// 3面図シートは複数ポーズが1枚の画像に混在するため、それと異なるアスペクト比の生成先の
 	// 参照に使うと色・小物配置・髪型などの細部がブレやすい問題があり、DesignLayoutSingleView
 	// はそのアンカー用途に特化した単一ポーズを生成するためのオプションです。
-	designLayoutSingleView = "single view, front-facing, standing full body, centered composition, plain simple studio background"
+	designLayoutSingleView = "single view, front-facing, standing full body in a neutral relaxed pose, centered composition, the entire body from head to toe inside the frame"
 
 	designLayoutPromptFormat = "Layout: %s"
+
+	// designSystemPrompt はデザインシート生成時にモデルへ与えるシステム指示です。
+	// 生成物は他ワークフロー（カバーアート、キーフレーム等）のキャラクター同一性アンカー
+	// として参照されるため、演出的な絵作りよりも正確さ・一貫性を最優先させます。
+	designSystemPrompt = `You are a professional character designer creating official model sheets for animation and manga production.
+This sheet is the canonical identity reference that other artists and AI generators will rely on, so accuracy and consistency outweigh artistic flair:
+- Anatomical correctness is critical. Draw every hand with exactly five fingers, correct limb proportions, and clean readable silhouettes.
+- Every view on the sheet must depict the SAME character with identical hairstyle, hair color, eye color, skin tone, outfit, and accessories.
+- Use flat, even, neutral studio lighting only. No dramatic shadows, rim light, lens flares, or color grading — lighting baked into this sheet contaminates every downstream generation that references it.
+- The full body must be visible from head to toe and must never be cropped by the frame.
+- Render absolutely no text, labels, arrows, color swatches, logos, or annotations of any kind.`
+
+	// designNegativePrompt はデザインシートに含めたくない要素を指定する負のプロンプトです。
+	// 指の本数・手の崩れ対策と、シート特有の文字注釈・スウォッチ混入対策を含みます。
+	designNegativePrompt = "text, labels, annotations, arrows, color swatches, watermark, logo, signature, malformed hands, fused fingers, extra fingers, missing fingers, extra limbs, deformed anatomy, asymmetrical eyes, cropped body, cut-off feet, dramatic lighting, strong shadows, rim light, lens flare, inconsistent details between views, different character per view, background scenery, props, low quality, blurry"
 )
 
 // DesignLayoutSingleView は Run の layoutKind 引数に渡す、単一ポーズレイアウトの指定値です。
@@ -108,11 +125,13 @@ func (dr *MangaDesignRunner) Run(ctx context.Context, charIDs []string, seed int
 	// 3. 生成リクエスト
 	pageReq := imagePorts.ImageFusionRequest{
 		GenerationOptions: imagePorts.GenerationOptions{
-			Model:       dr.model,
-			Prompt:      designPrompt,
-			AspectRatio: layout.NormalizeDesignAspectRatio(aspectRatio),
-			ImageSize:   layout.ImageSize2K,
-			Seed:        ptrInt64(seed),
+			Model:          dr.model,
+			Prompt:         designPrompt,
+			SystemPrompt:   designSystemPrompt,
+			NegativePrompt: designNegativePrompt,
+			AspectRatio:    layout.NormalizeDesignAspectRatio(aspectRatio),
+			ImageSize:      layout.ImageSize2K,
+			Seed:           ptrInt64(seed),
 		},
 		Images: imageURIs,
 	}
@@ -187,7 +206,14 @@ func (dr *MangaDesignRunner) buildDesignPrompt(descriptions []string, layoutKind
 	if dr.styleSuffix != "" {
 		promptParts = append(promptParts, dr.styleSuffix)
 	}
-	promptParts = append(promptParts, "white background", "sharp focus", "2k resolution")
+	// styleSuffix には演出用の指定（cinematic lighting 等）が含まれ得るため、
+	// 参照アンカーとしての制約（フラットな照明・白背景・手の正確さ）を後置して優先させる。
+	promptParts = append(promptParts,
+		"plain uniform white studio background",
+		"flat even neutral lighting",
+		"sharp focus",
+		"perfectly drawn hands with five fingers per hand",
+	)
 
 	return strings.Join(promptParts, ", ")
 }
