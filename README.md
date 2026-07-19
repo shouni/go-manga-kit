@@ -6,7 +6,10 @@
 [![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/shouni/go-manga-kit)](https://github.com/shouni/go-manga-kit/tags)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shouni/go-manga-kit.svg)](https://pkg.go.dev/github.com/shouni/go-manga-kit)
-[![Status](https://img.shields.io/badge/Status-Completed-brightgreen)](#)
+[![Status](https://img.shields.io/badge/Status-Archived-lightgrey)](#)
+
+> ⚠️ **本リポジトリは凍結されています。** 開発は後継の [go-comic-kit](https://github.com/shouni/go-comic-kit) に移行しました。
+> ここでは ap-manga-web のショーケース用に現状のコードを保持しています。新規開発・機能追加は go-comic-kit 側で行ってください。
 
 ## 🚀 概要 (About) - キャラクターDNA維持・画像生成Workflow
 
